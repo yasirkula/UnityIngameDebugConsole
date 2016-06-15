@@ -88,11 +88,11 @@ public class DebugLogManager : MonoBehaviour
         Application.logMessageReceived -= ReceivedLog;
         Application.logMessageReceived += ReceivedLog;
 
-        Debug.LogAssertion( "assert" );
+        /*Debug.LogAssertion( "assert" );
         Debug.LogError( "error" );
         Debug.LogException( new System.IO.EndOfStreamException() );
         Debug.LogWarning( "warning" );
-        Debug.Log( "log" );
+        Debug.Log( "log" );*/
     }
 
     void OnDisable()
