@@ -3,10 +3,9 @@
 - Simply drag & drop DebugLogCanvas prefab to the first scene of the game. If you don't need the console on every scene, 
 you can deselect the "Singleton" property of the canvas so that it will be destroyed when scene changes.
 
-# NOTES
+- To hide the log window in-game, drag & drop it onto the debug popup (that is visible while the window is being dragged).
 
-- To customize a Log item's appearance properly, drag & drop DebugLogItem prefab to DebugLogCanvas-DebugLogWindow-
-Debugs-Viewport-LogsContainer. Don't forget to Apply your changes to DebugLogItem after you are done.
+# NOTES
 
 - If 2D Rect Mask component does not exist in your version of Unity (pre 5.2 I believe), replace it with Mask component 
 (search for "Viewport" objects). Then change the color alpha value of the attached Image components to 1. Unfortunately, 

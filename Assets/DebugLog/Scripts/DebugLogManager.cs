@@ -6,62 +6,95 @@ using System.Collections.Generic;
 // In-game Debug Console / DebugLogManager
 // Author: Suleyman Yasir Kula
 // 
-// Receives debug entries and custom events (e.g. Clear, Collapse)
-// and creates/destroys log items accordingly
+// Receives debug entries and custom events (e.g. Clear, Collapse, Filter by Type)
+// and notifies the recycled list view of changes to the list of debug entries
 // 
 // - Vocabulary -
 // Debug/Log entry: a Debug.Log/LogError/LogWarning/LogException/LogAssertion request made by
 //                   the client and intercepted by this manager object
 // Debug/Log item: a visual (uGUI) representation of a debug entry
 // 
-// Not every debug entry is necessarly represented by a unique log item: when collapse is enabled,
-// multiple debug entries can be represented by a single log item
+// There can be a lot of debug entries in the system but there will only be a handful of log items 
+// to show their properties on screen (these log items are recycled as the list is scrolled)
+
+// An enum to represent filtered log types
+public enum LogFilter
+{
+	None = 0,
+	Info = 1,
+	Warning = 2,
+	Error = 4,
+	All = 7
+}
 
 public class DebugLogManager : MonoBehaviour
 {
-    private static DebugLogManager instance = null;
-
+	private static DebugLogManager instance = null;
+	
     // Debug console will persist between scenes
     public bool singleton = true;
-    
-    public GameObject logItemPrefab;
 
-    public RectTransform logWindowTR;
+    public DebugLogItem logItemPrefab;
+
+	private Transform canvasTR;
+
+	public RectTransform logWindowTR;
     public RectTransform logItemsContainer;
-    public Transform logItemsPool;
     public Text clickedLogItemDetails;
-    public Image collapseButton;
 
-    public ScrollRect logItemsScrollRect;
+    public Image collapseButton;
+	public Image filterInfoButton, filterWarningButton, filterErrorButton;
+	public Text infoEntryCountText, warningEntryCountText, errorEntryCountText;
+
+	// Number of entries filtered by their types
+	private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
+
+	// Canvas group to modify visibility of the log window
+	public CanvasGroup logWindowCanvasGroup;
+
+	private bool isLogWindowVisible = true;
+
+	public DebugLogPopup popupManager;	
+
+	public ScrollRect logItemsScrollRect;
     public ScrollRect clickedLogItemDetailsScrollRect;
 
-    // Minimum dimensions for the console window
+	// Recycled list view to handle the log items efficiently
+	public DebugLogRecycledListView recycledListView;
+
+    // Minimum size of the console window
     public float logWindowMinWidth = 250f;
     public float logWindowMinHeight = 200f;
 
-    // Maximum number of debug items to pool instead of Destroy
-    public int maximumLogItemsToPool = 10;
-
     // Visuals for different log types
     public Sprite infoLog, warningLog, errorLog;
+	private Dictionary<LogType, Sprite> logSpriteRepresentations;
     
-    public Color logItemNormalColor1, logItemNormalColor2, logItemSelectedColor;
     public Color collapseButtonNormalColor, collapseButtonSelectedColor;
+	public Color filterButtonsNormalColor, filterButtonsSelectedColor;
 
-    private int numberOfLogs = 0;
-    private DebugLogItem lastClickedLogItem = null;
-
+	// Filters to apply to the list of debug entries to show
     private bool isCollapseOn = false;
+	private LogFilter logFilter = LogFilter.All;
+
     // If the last log item is completely visible (scrollbar is at the bottom),
     // scrollbar will remain at the bottom when new debug entries are received
     private bool snapToBottom = true;
 
+	// List of unique debug entries (duplicates of entries are not kept)
+	private List<DebugLogEntry> collapsedLogEntries;
+
+	// The order the collapsedLogEntries are received 
+	// (duplicate entries have the same index (value))
+	private List<int> uncollapsedLogEntriesIndices;
+
+	// Filtered list of debug entries to show
+	private List<int> indicesOfListEntriesToShow;
+	
     private List<DebugLogItem> pooledLogItems;
-    // The debug items to show when collapse is enabled
-    private Dictionary<string, DebugLogItem> collapsedLogItems;
-    // Incoming order of debug entries (used while uncollapsing)
-    private List<DebugLogItem> uncollapsedLogItems;
-    
+
+	// Last known position of the log window before it was closed
+	private Vector3 lastPosition;
     private Vector2 windowDragDeltaPosition;
 
     void OnEnable()
@@ -71,11 +104,35 @@ public class DebugLogManager : MonoBehaviour
         {
             instance = this;
             pooledLogItems = new List<DebugLogItem>();
-            collapsedLogItems = new Dictionary<string, DebugLogItem>();
-            uncollapsedLogItems = new List<DebugLogItem>();
 
-            // If it is a singleton object, don't destroy it between scene changes
-            if( singleton )
+			canvasTR = transform;
+
+			// Associate sprites with log types
+			logSpriteRepresentations = new Dictionary<LogType, Sprite>();
+			logSpriteRepresentations.Add( LogType.Log, infoLog );
+			logSpriteRepresentations.Add( LogType.Warning, warningLog );
+			logSpriteRepresentations.Add( LogType.Error, errorLog );
+			logSpriteRepresentations.Add( LogType.Exception, errorLog );
+			logSpriteRepresentations.Add( LogType.Assert, errorLog );
+
+			// Initially, all log types are visible
+			filterInfoButton.color = filterButtonsSelectedColor;
+			filterWarningButton.color = filterButtonsSelectedColor;
+			filterErrorButton.color = filterButtonsSelectedColor;
+
+			// When collapse is disabled and all log types are visible (initial state),
+			// the order of the debug entries to show on screen is the same as 
+			// the order they were intercepted
+			collapsedLogEntries = new List<DebugLogEntry>();
+			uncollapsedLogEntriesIndices = new List<int>();
+			indicesOfListEntriesToShow = uncollapsedLogEntriesIndices;
+
+			recycledListView.SetLogItemHeight( logItemPrefab.transformComponent.sizeDelta.y );
+			recycledListView.SetCollapsedEntriesList( collapsedLogEntries );
+			recycledListView.SetEntryIndicesList( indicesOfListEntriesToShow );
+
+			// If it is a singleton object, don't destroy it between scene changes
+			if( singleton )
                 DontDestroyOnLoad( gameObject );
         }
         else if( this != instance )
@@ -88,12 +145,12 @@ public class DebugLogManager : MonoBehaviour
         Application.logMessageReceived -= ReceivedLog;
         Application.logMessageReceived += ReceivedLog;
 
-        /*Debug.LogAssertion( "assert" );
+		/*Debug.LogAssertion( "assert" );
         Debug.LogError( "error" );
         Debug.LogException( new System.IO.EndOfStreamException() );
         Debug.LogWarning( "warning" );
         Debug.Log( "log" );*/
-    }
+	}
 
     void OnDisable()
     {
@@ -102,28 +159,13 @@ public class DebugLogManager : MonoBehaviour
     }
 
     // A log item is clicked
-    public static void OnLogClicked( DebugLogItem logItem )
+    public static void OnLogClicked( int entryIndex )
     {
-        // If the clicked log item is not already selected
-        if( instance.lastClickedLogItem != logItem )
-        {
-            // If another log item was selected previously, change its color properly
-            if( instance.lastClickedLogItem != null )
-            {
-                int lastClickedLogItemIndex = instance.lastClickedLogItem.transformComponent.GetSiblingIndex();
-                if( lastClickedLogItemIndex % 2 == 0 )
-                    instance.lastClickedLogItem.imageComponent.color = instance.logItemNormalColor1;
-                else
-                    instance.lastClickedLogItem.imageComponent.color = instance.logItemNormalColor2;
-            }
+		// Show stack trace of the debug entry associated with the clicked log item
+		instance.clickedLogItemDetails.text = instance.collapsedLogEntries[instance.indicesOfListEntriesToShow[entryIndex]].ToString();
 
-            // Highlight the selected log item
-            logItem.imageComponent.color = instance.logItemSelectedColor;
-            // Show full stacktrace of the debug entry
-            instance.clickedLogItemDetails.text = logItem.ToString();
-
-            instance.lastClickedLogItem = logItem;
-        }
+		// Notify recycled list view
+		instance.recycledListView.OnLogItemClicked( entryIndex );
 
         // Move scrollbar of Log Item Details scroll rect to the top
         instance.clickedLogItemDetailsScrollRect.verticalNormalizedPosition = 1f;
@@ -132,49 +174,70 @@ public class DebugLogManager : MonoBehaviour
     // A debug entry is received
     void ReceivedLog( string logString, string stackTrace, LogType logType )
     {
-        DebugLogItem newLogItem;
-        if( isCollapseOn && collapsedLogItems.TryGetValue( string.Concat( logString, "\n", stackTrace ), out newLogItem ) )
-        {
-            // If collapse is enabled and a collapsed log item for this entry already exists,
-            // increment that log item's count property and add this log entry to
-            // uncollapsedLogItems list so that this entry's order in the non-collapsed list
-            // will be known
-            newLogItem.IncrementCount();
-            uncollapsedLogItems.Add( newLogItem );
-        }
-        else
-        {
-            // If either collapse is disabled or a collapsed log item for this entry does not exist,
-            // create a new log item (or fetch it from pool, if it is not empty) and set its properties
-            Sprite logSpriteRepresentation;
-            if( logType == LogType.Log )
-                logSpriteRepresentation = infoLog;
-            else if( logType == LogType.Warning )
-                logSpriteRepresentation = warningLog;
-            else
-                logSpriteRepresentation = errorLog;
+		DebugLogEntry logEntry = new DebugLogEntry( logString, stackTrace, null );
 
-            newLogItem = CreateOrUnpoolLogItem( logString, stackTrace, logSpriteRepresentation );
+		// Check if this entry is a duplicate (i.e. has been received before)
+		int logEntryIndex = collapsedLogEntries.IndexOf( logEntry );
+		bool isEntryInCollapsedEntryList = logEntryIndex != -1;
+		if( !isEntryInCollapsedEntryList )
+		{
+			// It is not a duplicate,
+			// add it to the list of unique debug entries
+			logEntry.logTypeSpriteRepresentation = logSpriteRepresentations[logType];
 
-            numberOfLogs++;
+			collapsedLogEntries.Add( logEntry );
+			logEntryIndex = collapsedLogEntries.Count - 1;
+		}
+		else
+		{
+			// It is a duplicate,
+			// increment the original debug item's collapsed count
+			logEntry = collapsedLogEntries[logEntryIndex];
+			logEntry.count++;
+		}
 
-            if( isCollapseOn )
-            {
-                // If collapse is enabled, add this log item to collapsedLogItems so that
-                // the next time the same debug entry is received, the count property of this
-                // log item will be increased instead of creating a new log item
-                collapsedLogItems.Add( newLogItem.ToString(), newLogItem );
-                // Store the order the debug entries are received
-                uncollapsedLogItems.Add( newLogItem );
-                // Show the count of this collapsed log item
-                newLogItem.ShowCount();
-            }
-            else
-            {
-                // Collapse is disabled, hide the count of this log item (just in case)
-                newLogItem.HideCount();
-            }
-        }
+		// Add the index of the unique debug entry to the list
+		// that stores the order the debug entries are received
+		uncollapsedLogEntriesIndices.Add( logEntryIndex );
+
+		// If this debug entry matches the current filters,
+		// add it to the list of debug entries to show
+		if( ShouldAddEntryToFilteredEntries( logEntry.logTypeSpriteRepresentation, isEntryInCollapsedEntryList ) )
+		{
+			indicesOfListEntriesToShow.Add( logEntryIndex );
+		}
+		
+		if( logType == LogType.Log )
+		{
+			infoEntryCount++;
+			infoEntryCountText.text = "" + infoEntryCount;
+
+			// If debug popup is visible, notify it of the new debug entry
+			if( !isLogWindowVisible )
+				popupManager.NewInfoLogArrived();
+		}
+		else if( logType == LogType.Warning )
+		{
+			warningEntryCount++;
+			warningEntryCountText.text = "" + warningEntryCount;
+
+			// If debug popup is visible, notify it of the new debug entry
+			if( !isLogWindowVisible )
+				popupManager.NewWarningLogArrived();
+		}
+		else
+		{
+			errorEntryCount++;
+			errorEntryCountText.text = "" + errorEntryCount;
+
+			// If debug popup is visible, notify it of the new debug entry
+			if( !isLogWindowVisible )
+				popupManager.NewErrorLogArrived();
+		}
+
+		// If log window is visible, update the recycled list view
+		if( isLogWindowVisible )
+			recycledListView.OnLogEntriesUpdated();
     }
 
     // If snapToBottom is enabled, force the scrollbar to the bottom
@@ -184,7 +247,7 @@ public class DebugLogManager : MonoBehaviour
         {
             logItemsScrollRect.verticalNormalizedPosition = 0f;
         }
-    }
+	}
 
     // Value of snapToBottom is changed (user scrolled the list manually)
     public void OnSnapToBottomChanged( bool snapToBottom )
@@ -192,26 +255,53 @@ public class DebugLogManager : MonoBehaviour
         this.snapToBottom = snapToBottom;
     }
 
+	// Show the log window
+	public void OnSetVisible()
+	{
+		// Set the position of the window to its last known position
+		logWindowTR.position = lastPosition;
+
+		// Update the recycled list view (in case new entries were
+		// intercepted while log window was hidden)
+		recycledListView.OnLogEntriesUpdated();
+
+		logWindowCanvasGroup.interactable = true;
+		logWindowCanvasGroup.blocksRaycasts = true;
+		logWindowCanvasGroup.alpha = 1f;
+		
+		isLogWindowVisible = true;
+	}
+
+	// Hide the log window
+	public void OnSetInvisible()
+	{
+		logWindowCanvasGroup.interactable = false;
+		logWindowCanvasGroup.blocksRaycasts = false;
+		logWindowCanvasGroup.alpha = 0f;
+
+		isLogWindowVisible = false;
+	}
+
     // Clear button is clicked
     public void ClearButtonPressed()
     {
-        numberOfLogs = 0;
-        lastClickedLogItem = null;
-        collapsedLogItems.Clear();
-        uncollapsedLogItems.Clear();
+		snapToBottom = true;
 
-        // Clear all the log items (either pool them or destroy them)
-        for( int i = 0; i < logItemsContainer.childCount; i++ )
-        {
-            if( DestroyOrPoolLogItem( logItemsContainer.GetChild( i ) ) )
-            {
-                // log item is pooled and as a result, child indices for the
-                // following log items are decreased by 1, so compensate it
-                i--;
-            }
-        }
+		infoEntryCount = 0;
+		warningEntryCount = 0;
+		errorEntryCount = 0;
 
-        // Clear the Selected Log Item Details text
+		infoEntryCountText.text = "0";
+		warningEntryCountText.text = "0";
+		errorEntryCountText.text = "0";
+
+		collapsedLogEntries.Clear();
+		uncollapsedLogEntriesIndices.Clear();
+		indicesOfListEntriesToShow.Clear();
+
+		recycledListView.OnLogEntriesUpdated();
+
+		// Clear the Selected Log Item Details text
         clickedLogItemDetails.text = "";
     }
 
@@ -221,97 +311,168 @@ public class DebugLogManager : MonoBehaviour
         // Swap the value of collapse mode
         isCollapseOn = !isCollapseOn;
 
-        if( isCollapseOn )
-        {
-            collapseButton.color = collapseButtonSelectedColor;
+		snapToBottom = true;
 
-            numberOfLogs = 0;
-            for( int i = 0; i < logItemsContainer.childCount; i++ )
-            {
-                // Foreach log item, check if a collapsed version of this log item exists
-                DebugLogItem thisLogItem = logItemsContainer.GetChild( i ).GetComponent<DebugLogItem>();
-                DebugLogItem collapsedLogItem;
-                string key = thisLogItem.ToString();
-                if( collapsedLogItems.TryGetValue( key, out collapsedLogItem ) )
-                {
-                    // If a collapsed version of this log item exists
-                    if( thisLogItem != collapsedLogItem )
-                    {
-                        // If this log item is not the collapsed log item,
-                        // increment the count of the collapsed log item and 
-                        // destroy this log item
-                        collapsedLogItem.IncrementCount();
+		if( isCollapseOn )
+		{
+			collapseButton.color = collapseButtonSelectedColor;
+		}
+		else
+		{
+			collapseButton.color = collapseButtonNormalColor;
+		}
+		
+		recycledListView.SetCollapseMode( isCollapseOn );
 
-                        if( DestroyOrPoolLogItem( thisLogItem ) )
-                        {
-                            // log item is pooled and as a result, child indices for the
-                            // following log items are decreased by 1, so compensate it
-                            i--;
-                        }
-                    }
-                    else
-                    {
-                        // This log item is the collapsed log item,
-                        // simply adjust its color and show its counts property on screen
-                        ColorLogItem( collapsedLogItem );
-                        collapsedLogItem.ShowCount();
-                        numberOfLogs++;
-                    }
+		// Determine the new list of debug entries to show
+		FilterLogs();
+	}
 
-                    // Store the order the debug entries are received in a list 
-                    // (to use while uncollapsing)
-                    uncollapsedLogItems.Add( collapsedLogItem );
-                }
-                else
-                {
-                    // If a collapsed version of this log item does not exist,
-                    // make this log item the collapsed one
-                    collapsedLogItems.Add( key, thisLogItem );
-                    uncollapsedLogItems.Add( thisLogItem );
-                    thisLogItem.ShowCount();
-                    ColorLogItem( thisLogItem );
-                    numberOfLogs++;
-                }
-            }
-        }
-        else
-        {
-            collapseButton.color = collapseButtonNormalColor;
+	// Filtering mode of info logs has been changed
+	public void FilterLogButtonPressed()
+	{
+		logFilter = logFilter ^ LogFilter.Info;
 
-            // Don't destroy the collapsed log items while uncollapsing,
-            // instead use them for their first uncollapsed version
-            HashSet<DebugLogItem> usedLogItems = new HashSet<DebugLogItem>();
-            numberOfLogs = 0;
-            for( int i = 0; i < uncollapsedLogItems.Count; i++ )
-            {
-                // Foreach received debug entry, if the collapsed log item 
-                // for this debug entry is not yet used, use it for the non-collapsed
-                // log item, otherwise create a new log item (or fetch one from pool,
-                // if it is not empty)
-                DebugLogItem logItemToUncollapse = uncollapsedLogItems[i];
-                DebugLogItem newLogItem;
-                if( !usedLogItems.Contains( logItemToUncollapse ) )
-                {
-                    newLogItem = logItemToUncollapse;
-                    usedLogItems.Add( logItemToUncollapse );
-                }
-                else
-                {
-                    newLogItem = CreateOrUnpoolLogItem( logItemToUncollapse );
-                }
+		if( ( logFilter & LogFilter.Info ) == LogFilter.Info )
+			filterInfoButton.color = filterButtonsSelectedColor;
+		else
+			filterInfoButton.color = filterButtonsNormalColor;
 
-                // Set this log item's order and reset its count property (just in case)
-                newLogItem.transformComponent.SetSiblingIndex( numberOfLogs );
-                newLogItem.ResetCount();
-                newLogItem.HideCount();
-                ColorLogItem( newLogItem );
+		FilterLogs();
+	}
 
-                numberOfLogs++;
-            }
-            
-            uncollapsedLogItems.Clear();
-        }
-    }
+	// Filtering mode of warning logs has been changed
+	public void FilterWarningButtonPressed()
+	{
+		logFilter = logFilter ^ LogFilter.Warning;
+
+		if( ( logFilter & LogFilter.Warning ) == LogFilter.Warning )
+			filterWarningButton.color = filterButtonsSelectedColor;
+		else
+			filterWarningButton.color = filterButtonsNormalColor;
+
+		FilterLogs();
+	}
+
+	// Filtering mode of error logs has been changed
+	public void FilterErrorButtonPressed()
+	{
+		logFilter = logFilter ^ LogFilter.Error;
+
+		if( ( logFilter & LogFilter.Error ) == LogFilter.Error )
+			filterErrorButton.color = filterButtonsSelectedColor;
+		else
+			filterErrorButton.color = filterButtonsNormalColor;
+
+		FilterLogs();
+	}
+
+	// Determine the filtered list of debug entries to show on screen
+	private void FilterLogs()
+	{
+		if( logFilter == LogFilter.None )
+		{
+			// Show no entry
+			indicesOfListEntriesToShow = new List<int>();
+		}
+		else if( logFilter == LogFilter.All )
+		{
+			if( isCollapseOn )
+			{
+				// All the unique debug entries will be listed just once.
+				// So, list of debug entries to show is the same as the
+				// order these unique debug entries are added to collapsedLogEntries
+				indicesOfListEntriesToShow = new List<int>( collapsedLogEntries.Count );
+				for( int i = 0; i < collapsedLogEntries.Count; i++ )
+				{
+					indicesOfListEntriesToShow.Add( i );
+				}
+			}
+			else
+			{
+				// Special (and most common) case: when all log types are enabled 
+				// and collapse mode is disabled, list of debug entries to show is 
+				// the same as the order all the debug entries are received.
+				// So, don't create a new list of indices
+				indicesOfListEntriesToShow = uncollapsedLogEntriesIndices;
+			}
+		}
+		else
+		{
+			// Show only the debug entries that match the current filter
+			bool isInfoEnabled = ( logFilter & LogFilter.Info ) == LogFilter.Info;
+			bool isWarningEnabled = ( logFilter & LogFilter.Warning ) == LogFilter.Warning;
+			bool isErrorEnabled = ( logFilter & LogFilter.Error ) == LogFilter.Error;
+
+			if( isCollapseOn )
+			{
+				indicesOfListEntriesToShow = new List<int>( collapsedLogEntries.Count );
+				for( int i = 0; i < collapsedLogEntries.Count; i++ )
+				{
+					DebugLogEntry logEntry = collapsedLogEntries[i];
+					if( logEntry.logTypeSpriteRepresentation == infoLog && isInfoEnabled )
+						indicesOfListEntriesToShow.Add( i );
+					else if( logEntry.logTypeSpriteRepresentation == warningLog && isWarningEnabled )
+						indicesOfListEntriesToShow.Add( i );
+					else if( logEntry.logTypeSpriteRepresentation == errorLog && isErrorEnabled )
+						indicesOfListEntriesToShow.Add( i );
+				}
+			}
+			else
+			{
+				indicesOfListEntriesToShow = new List<int>( uncollapsedLogEntriesIndices.Count );
+				for( int i = 0; i < uncollapsedLogEntriesIndices.Count; i++ )
+				{
+					DebugLogEntry logEntry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
+					if( logEntry.logTypeSpriteRepresentation == infoLog && isInfoEnabled )
+						indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+					else if( logEntry.logTypeSpriteRepresentation == warningLog && isWarningEnabled )
+						indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+					else if( logEntry.logTypeSpriteRepresentation == errorLog && isErrorEnabled )
+						indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+				}
+			}
+		}
+		
+		// Clear the Selected Log Item Details text
+		clickedLogItemDetails.text = "";
+
+		// Update the recycled list view
+		recycledListView.SetEntryIndicesList( indicesOfListEntriesToShow );
+	}
+
+	// Does this new entry match the current filter
+	private bool ShouldAddEntryToFilteredEntries( Sprite logTypeSpriteRepresentation, bool isEntryInCollapsedList )
+	{
+		if( logFilter == LogFilter.None )
+			return false;
+
+		// Special case: if all log types are enabled and collapse mode is disabled, 
+		// then don't add the entry to the list of entries to show because 
+		// in this case indicesOfListEntriesToShow = uncollapsedLogEntriesIndices and
+		// an incoming debug entry is added to uncollapsedLogEntriesIndices, no matter what.
+		// So, if we were to add the debug entry to the indicesOfListEntriesToShow explicitly,
+		// it would be a duplicate
+		if( logFilter == LogFilter.All )
+		{
+			if( isCollapseOn && !isEntryInCollapsedList )
+				return true;
+
+			return false;
+		}
+
+		if( ( logTypeSpriteRepresentation == infoLog && ( ( logFilter & LogFilter.Info ) == LogFilter.Info ) ) ||
+			( logTypeSpriteRepresentation == warningLog && ( ( logFilter & LogFilter.Warning ) == LogFilter.Warning ) ) ||
+			( logTypeSpriteRepresentation == errorLog && ( ( logFilter & LogFilter.Error ) == LogFilter.Error ) ) )
+		{
+			if( isCollapseOn && isEntryInCollapsedList )
+				return false;
+
+			return true;
+		}
+
+		return false;
+	}
 
     // Debug window is about to be moved on screen,
     // cache the offset between pointer and the window position
@@ -320,7 +481,11 @@ public class DebugLogManager : MonoBehaviour
         PointerEventData eventData = (PointerEventData) dat;
         
         windowDragDeltaPosition = (Vector2) logWindowTR.position - eventData.position;
-    }
+		lastPosition = logWindowTR.position;
+
+		// Show the popup that the log window can be dropped onto
+		popupManager.OnSetVisible();
+	}
 
     // Debug window is being dragged,
     // set the new position of the window
@@ -331,97 +496,59 @@ public class DebugLogManager : MonoBehaviour
         logWindowTR.position = eventData.position + windowDragDeltaPosition;
     }
 
-    // Debug window is being resized,
-    // Set the sizeDelta property of the window accordingly while
-    // preventing window dimensions from going below the minimum dimensions
-    public void OnWindowResize( BaseEventData dat )
+	public void OnWindowDragEnded( BaseEventData dat )
+	{
+		// If log window is not dropped onto the popup, hide the popup
+		if( isLogWindowVisible )
+		{
+			popupManager.OnSetInvisible( false );
+		}
+	}
+
+	// Debug window is being resized,
+	// Set the sizeDelta property of the window accordingly while
+	// preventing window dimensions from going below the minimum dimensions
+	public void OnWindowResize( BaseEventData dat )
     {
         PointerEventData eventData = (PointerEventData) dat;
 
-        Vector2 newSize = eventData.position - (Vector2) logWindowTR.position;
+        Vector2 newSize = ( eventData.position - (Vector2) logWindowTR.position ) / canvasTR.localScale.x;
         newSize.y = -newSize.y;
         if( newSize.x < logWindowMinWidth ) newSize.x = logWindowMinWidth;
         if( newSize.y < logWindowMinHeight ) newSize.y = logWindowMinHeight;
         logWindowTR.sizeDelta = newSize;
+
+		// Update the recycled list view
+		recycledListView.OnViewportDimensionsChanged();
     }
 
-    // Color a log item using its order
-    private void ColorLogItem( DebugLogItem logItem )
-    {
-        if( numberOfLogs % 2 == 0 )
-            logItem.imageComponent.color = logItemNormalColor1;
-        else
-            logItem.imageComponent.color = logItemNormalColor2;
-    }
+	// Pool an unused log item
+    public void PoolLogItem( DebugLogItem logItem )
+	{
+		logItem.gameObject.SetActive( false );
+		pooledLogItems.Add( logItem );
+	}
 
-    // Clone a log item for a debug entry
-    private DebugLogItem CreateOrUnpoolLogItem( DebugLogItem logToClone )
-    {
-        return CreateOrUnpoolLogItem( logToClone.GetLogString(), logToClone.GetStackTrace(), logToClone.GetLogSpriteRepresentation() );
-    }
 
-    // Create a log item for a new debug entry
-    private DebugLogItem CreateOrUnpoolLogItem( string logString, string stackTrace, Sprite logSpriteRepresentation )
-    {
-        DebugLogItem newLogItem;
-        // If pool is not empty, fetch a log item from the pool,
-        // create a new log item otherwise
-        if( pooledLogItems.Count > 0 )
-        {
-            newLogItem = pooledLogItems[pooledLogItems.Count - 1];
-            pooledLogItems.RemoveAt( pooledLogItems.Count - 1 );
-            newLogItem.gameObject.SetActive( true );
-        }
-        else
-        {
-            newLogItem = Instantiate<GameObject>( logItemPrefab ).GetComponent<DebugLogItem>();
-        }
+	// Fetch a log item from the pool
+	public DebugLogItem UnpoolLogItem()
+	{
+		DebugLogItem newLogItem;
 
-        newLogItem.SetContent( logString, stackTrace, logSpriteRepresentation );
-
-        ColorLogItem( newLogItem );
-
-        newLogItem.transform.SetParent( logItemsContainer, false );
-
-        return newLogItem;
-    }
-
-    // Destroy a log item and return whether it is pooled or not
-    private bool DestroyOrPoolLogItem( Transform logItemTR )
-    {
-        // If pool has reached maximum capacity, destroy the log item,
-        // pool it otherwise
-        if( pooledLogItems.Count >= maximumLogItemsToPool )
-        {
-            Destroy( logItemTR.gameObject );
-            return false;
-        }
-        else
-        {
-            DebugLogItem logItem = logItemTR.GetComponent<DebugLogItem>();
-            logItem.transformComponent.SetParent( logItemsPool, false );
-            logItem.gameObject.SetActive( false );
-            pooledLogItems.Add( logItem );
-            
-            return true;
-        }
-    }
-
-    // Same as above, without the need for GetComponent
-    private bool DestroyOrPoolLogItem( DebugLogItem logItem )
-    {
-        if( pooledLogItems.Count >= maximumLogItemsToPool )
-        {
-            Destroy( logItem.gameObject );
-            return false;
-        }
-        else
-        {
-            logItem.transformComponent.SetParent( logItemsPool, false );
-            logItem.gameObject.SetActive( false );
-            pooledLogItems.Add( logItem );
-
-            return true;
-        }
-    }
+		// If pool is not empty, fetch a log item from the pool,
+		// create a new log item otherwise
+		if( pooledLogItems.Count > 0 )
+		{
+			newLogItem = pooledLogItems[pooledLogItems.Count - 1];
+			pooledLogItems.RemoveAt( pooledLogItems.Count - 1 );
+			newLogItem.gameObject.SetActive( true );
+		}
+		else
+		{
+			newLogItem = Instantiate<DebugLogItem>( logItemPrefab );
+			newLogItem.transformComponent.SetParent( logItemsContainer, false );
+		}
+		
+		return newLogItem;
+	}
 }

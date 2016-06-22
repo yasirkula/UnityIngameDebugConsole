@@ -9,80 +9,53 @@ using UnityEngine.UI;
 public class DebugLogItem : MonoBehaviour
 {
     // Cached components
-    public Transform transformComponent;
+    public RectTransform transformComponent;
     public Image imageComponent;
 
     public Text logText;
     public Image logTypeImage;
 
-    // Objects related to count of a log item (collapsed mode)
+    // Objects related to the collapsed count of the debug entry
     public GameObject logCountParent;
     public Text logCountText;
 
-    private string stackTrace;
-    private int collapsedCount;
+	// Debug entry to show with this log item
+	private DebugLogEntry logEntry;
 
-    public void SetContent( string logString, string stackTrace, Sprite logType )
-    {
-        logText.text = logString;
-        this.stackTrace = stackTrace;
+	// Index of the entry in the list of entries
+	private int entryIndex;
 
-        logTypeImage.sprite = logType;
+    public void SetContent( DebugLogEntry logEntry, int entryIndex )
+	{
+		this.logEntry = logEntry;
+		this.entryIndex = entryIndex;
 
-        collapsedCount = 1;
-        logCountText.text = "" + collapsedCount;
-    }
+		logText.text = logEntry.logString;
+		logTypeImage.sprite = logEntry.logTypeSpriteRepresentation;
+	}
 
-    // Show count of this log item (collapsed mode)
+    // Show the collapsed count of the debug entry
     public void ShowCount()
     {
-        logCountParent.SetActive( true );
+		logCountText.text = "" + logEntry.count;
+		logCountParent.SetActive( true );
     }
 
-    // Hide count of this log item (non-collapsed mode)
-    public void HideCount()
+	// Hide the collapsed count of the debug entry
+	public void HideCount()
     {
         logCountParent.SetActive( false );
     }
-
-    public void ResetCount()
-    {
-        collapsedCount = 1;
-        logCountText.text = "" + collapsedCount;
-    }
-
-    public void IncrementCount()
-    {
-        collapsedCount++;
-        logCountText.text = "" + collapsedCount;
-    }
-
-    // This log item is clicked, show its stack trace
+	
+    // This log item is clicked, show the debug entry's stack trace
     public void Clicked()
     {
-        DebugLogManager.OnLogClicked( this );
+        DebugLogManager.OnLogClicked( entryIndex );
     }
 
-    // ++ ACCESSOR METHODS ++
-    public string GetLogString()
-    {
-        return logText.text;
-    }
-
-    public string GetStackTrace()
-    {
-        return stackTrace;
-    }
-
-    public Sprite GetLogSpriteRepresentation()
-    {
-        return logTypeImage.sprite;
-    }
-    // -- ACCESSOR METHODS --
-
-    // Return a string containing complete information about this debug entry
+    // Return a string containing complete information about the debug entry
     public override string ToString()
     {
-        return string.Concat( logText.text, "\n", stackTrace );
+		return logEntry.ToString();
     }
 }
