@@ -8,6 +8,8 @@ This package is a simple console window for **Unity 3D** that helps you see debu
 
 ![popup](https://yasirkula.files.wordpress.com/2016/06/ingamedebugconsolepopuppng.png)
 
+Console window is optimized using a customized recycled list view that calls Instantiate and Destroy functions sparingly. 
+
 ### B. HOW TO
 
 Simply drag & drop **DebugLogCanvas** prefab to the first scene of the game. If you don't need the console on every scene, you can deselect the *Singleton* property of the canvas so that it will be destroyed when scene changes.
