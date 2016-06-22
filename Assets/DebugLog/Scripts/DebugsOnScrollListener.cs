@@ -13,49 +13,49 @@ using UnityEngine.EventSystems;
 
 public class DebugsOnScrollListener : MonoBehaviour, IScrollHandler, IBeginDragHandler, IEndDragHandler
 {
-    public ScrollRect debugsScrollRect;
-    public DebugLogManager debugLogManager;
+	public ScrollRect debugsScrollRect;
+	public DebugLogManager debugLogManager;
 
-    public void OnScroll( PointerEventData data )
-    {
-        if( IsScrollbarAtBottom() )
-            debugLogManager.OnSnapToBottomChanged( true );
-        else
-            debugLogManager.OnSnapToBottomChanged( false );
-    }
+	public void OnScroll( PointerEventData data )
+	{
+		if( IsScrollbarAtBottom() )
+			debugLogManager.OnSnapToBottomChanged( true );
+		else
+			debugLogManager.OnSnapToBottomChanged( false );
+	}
 
-    public void OnBeginDrag( PointerEventData data )
-    {
-        debugLogManager.OnSnapToBottomChanged( false );
-    }
+	public void OnBeginDrag( PointerEventData data )
+	{
+		debugLogManager.OnSnapToBottomChanged( false );
+	}
 
-    public void OnEndDrag( PointerEventData data )
-    {
-        if( IsScrollbarAtBottom() )
-            debugLogManager.OnSnapToBottomChanged( true );
-        else
-            debugLogManager.OnSnapToBottomChanged( false );
-    }
+	public void OnEndDrag( PointerEventData data )
+	{
+		if( IsScrollbarAtBottom() )
+			debugLogManager.OnSnapToBottomChanged( true );
+		else
+			debugLogManager.OnSnapToBottomChanged( false );
+	}
 
-    public void OnScrollbarDragStart( BaseEventData data )
-    {
-        debugLogManager.OnSnapToBottomChanged( false );
-    }
+	public void OnScrollbarDragStart( BaseEventData data )
+	{
+		debugLogManager.OnSnapToBottomChanged( false );
+	}
 
-    public void OnScrollbarDragEnd( BaseEventData data )
-    {
-        if( IsScrollbarAtBottom() )
-            debugLogManager.OnSnapToBottomChanged( true );
-        else
-            debugLogManager.OnSnapToBottomChanged( false );
-    }
+	public void OnScrollbarDragEnd( BaseEventData data )
+	{
+		if( IsScrollbarAtBottom() )
+			debugLogManager.OnSnapToBottomChanged( true );
+		else
+			debugLogManager.OnSnapToBottomChanged( false );
+	}
 
-    private bool IsScrollbarAtBottom()
-    {
-        float scrollbarYPos = debugsScrollRect.verticalNormalizedPosition;
-        if( scrollbarYPos <= 1E-6f || Mathf.Approximately( scrollbarYPos, 0f ) )
-            return true;
+	private bool IsScrollbarAtBottom()
+	{
+		float scrollbarYPos = debugsScrollRect.verticalNormalizedPosition;
+		if( scrollbarYPos <= 1E-6f || Mathf.Approximately( scrollbarYPos, 0f ) )
+			return true;
 
-        return false;
-    }
+		return false;
+	}
 }

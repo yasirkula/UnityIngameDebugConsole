@@ -1,6 +1,12 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 
+// In-game Debug Console / DebugLogRecycledListView
+// Author: Suleyman Yasir Kula
+// 
+// Handles the log items in an optimized way such that existing log items are
+// recycled within the list instead of creating a new log item at each chance
+
 public class DebugLogRecycledListView : MonoBehaviour
 {
 	// Cached components
@@ -8,7 +14,7 @@ public class DebugLogRecycledListView : MonoBehaviour
 	public RectTransform viewportTransform;
 
 	public DebugLogManager debugManager;
-	
+
 	public Color logItemNormalColor1, logItemNormalColor2, logItemSelectedColor;
 
 	private float logItemHeight, _1OverLogItemHeight;
@@ -24,7 +30,7 @@ public class DebugLogRecycledListView : MonoBehaviour
 
 	// Log items used to visualize the debug entries at specified indices
 	private Dictionary<int, DebugLogItem> logItemsAtIndices = new Dictionary<int, DebugLogItem>();
-	
+
 	// Should update all the visible log items
 	private bool updateListItemsContents = false;
 
@@ -32,7 +38,7 @@ public class DebugLogRecycledListView : MonoBehaviour
 
 	// Current indices of debug entries shown on screen
 	private int currentTopIndex = -1, currentBottomIndex = -1;
-	
+
 	void Awake()
 	{
 		viewportHeight = viewportTransform.rect.height;
@@ -71,7 +77,7 @@ public class DebugLogRecycledListView : MonoBehaviour
 		DeselectSelectedLogItem();
 
 		indexOfSelectedLogEntry = index;
-		
+
 		if( index >= currentTopIndex && index <= currentBottomIndex )
 		{
 			ColorLogItem( logItemsAtIndices[index], index );
@@ -107,7 +113,7 @@ public class DebugLogRecycledListView : MonoBehaviour
 
 		UpdateItemsInTheList();
 	}
-	
+
 	// Calculate the indices of log entries to show
 	// and handle log items accordingly
 	public void UpdateItemsInTheList()
@@ -179,7 +185,7 @@ public class DebugLogRecycledListView : MonoBehaviour
 							UpdateLogItemContentsBetweenIndices( newTopIndex, currentTopIndex - 1 );
 						}
 					}
-					
+
 					if( newBottomIndex > currentBottomIndex )
 					{
 						CreateLogItemsBetweenIndices( currentBottomIndex + 1, newBottomIndex );
@@ -197,7 +203,7 @@ public class DebugLogRecycledListView : MonoBehaviour
 				currentTopIndex = newTopIndex;
 				currentBottomIndex = newBottomIndex;
 			}
-			
+
 			if( updateListItemsContents )
 			{
 				// Update all the log items

@@ -43,7 +43,7 @@ public class DebugLogPopup : MonoBehaviour, IPointerClickHandler, IDropHandler, 
 	{
 		popupTransform = transform;
 		backgroundImage = GetComponent<Image>();
-		canvasGroup = GetComponent<CanvasGroup>();	
+		canvasGroup = GetComponent<CanvasGroup>();
 	}
 
 	void Start()

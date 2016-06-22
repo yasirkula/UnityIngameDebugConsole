@@ -30,19 +30,19 @@ public enum LogFilter
 public class DebugLogManager : MonoBehaviour
 {
 	private static DebugLogManager instance = null;
-	
-    // Debug console will persist between scenes
-    public bool singleton = true;
 
-    public DebugLogItem logItemPrefab;
+	// Debug console will persist between scenes
+	public bool singleton = true;
+
+	public DebugLogItem logItemPrefab;
 
 	private Transform canvasTR;
 
 	public RectTransform logWindowTR;
-    public RectTransform logItemsContainer;
-    public Text clickedLogItemDetails;
+	public RectTransform logItemsContainer;
+	public Text clickedLogItemDetails;
 
-    public Image collapseButton;
+	public Image collapseButton;
 	public Image filterInfoButton, filterWarningButton, filterErrorButton;
 	public Text infoEntryCountText, warningEntryCountText, errorEntryCountText;
 
@@ -54,32 +54,32 @@ public class DebugLogManager : MonoBehaviour
 
 	private bool isLogWindowVisible = true;
 
-	public DebugLogPopup popupManager;	
+	public DebugLogPopup popupManager;
 
 	public ScrollRect logItemsScrollRect;
-    public ScrollRect clickedLogItemDetailsScrollRect;
+	public ScrollRect clickedLogItemDetailsScrollRect;
 
 	// Recycled list view to handle the log items efficiently
 	public DebugLogRecycledListView recycledListView;
 
-    // Minimum size of the console window
-    public float logWindowMinWidth = 250f;
-    public float logWindowMinHeight = 200f;
+	// Minimum size of the console window
+	public float logWindowMinWidth = 250f;
+	public float logWindowMinHeight = 200f;
 
-    // Visuals for different log types
-    public Sprite infoLog, warningLog, errorLog;
+	// Visuals for different log types
+	public Sprite infoLog, warningLog, errorLog;
 	private Dictionary<LogType, Sprite> logSpriteRepresentations;
-    
-    public Color collapseButtonNormalColor, collapseButtonSelectedColor;
+
+	public Color collapseButtonNormalColor, collapseButtonSelectedColor;
 	public Color filterButtonsNormalColor, filterButtonsSelectedColor;
 
 	// Filters to apply to the list of debug entries to show
-    private bool isCollapseOn = false;
+	private bool isCollapseOn = false;
 	private LogFilter logFilter = LogFilter.All;
 
-    // If the last log item is completely visible (scrollbar is at the bottom),
-    // scrollbar will remain at the bottom when new debug entries are received
-    private bool snapToBottom = true;
+	// If the last log item is completely visible (scrollbar is at the bottom),
+	// scrollbar will remain at the bottom when new debug entries are received
+	private bool snapToBottom = true;
 
 	// List of unique debug entries (duplicates of entries are not kept)
 	private List<DebugLogEntry> collapsedLogEntries;
@@ -90,20 +90,20 @@ public class DebugLogManager : MonoBehaviour
 
 	// Filtered list of debug entries to show
 	private List<int> indicesOfListEntriesToShow;
-	
-    private List<DebugLogItem> pooledLogItems;
+
+	private List<DebugLogItem> pooledLogItems;
 
 	// Last known position of the log window before it was closed
 	private Vector3 lastPosition;
-    private Vector2 windowDragDeltaPosition;
+	private Vector2 windowDragDeltaPosition;
 
-    void OnEnable()
-    {
-        // Only one instance of debug console is allowed
-        if( instance == null )
-        {
-            instance = this;
-            pooledLogItems = new List<DebugLogItem>();
+	void OnEnable()
+	{
+		// Only one instance of debug console is allowed
+		if( instance == null )
+		{
+			instance = this;
+			pooledLogItems = new List<DebugLogItem>();
 
 			canvasTR = transform;
 
@@ -133,17 +133,17 @@ public class DebugLogManager : MonoBehaviour
 
 			// If it is a singleton object, don't destroy it between scene changes
 			if( singleton )
-                DontDestroyOnLoad( gameObject );
-        }
-        else if( this != instance )
-        {
-            Destroy( gameObject );
-            return;
-        }
+				DontDestroyOnLoad( gameObject );
+		}
+		else if( this != instance )
+		{
+			Destroy( gameObject );
+			return;
+		}
 
-        // Intercept debug entries
-        Application.logMessageReceived -= ReceivedLog;
-        Application.logMessageReceived += ReceivedLog;
+		// Intercept debug entries
+		Application.logMessageReceived -= ReceivedLog;
+		Application.logMessageReceived += ReceivedLog;
 
 		/*Debug.LogAssertion( "assert" );
         Debug.LogError( "error" );
@@ -152,28 +152,28 @@ public class DebugLogManager : MonoBehaviour
         Debug.Log( "log" );*/
 	}
 
-    void OnDisable()
-    {
-        // Stop receiving debug entries
-        Application.logMessageReceived -= ReceivedLog;
-    }
+	void OnDisable()
+	{
+		// Stop receiving debug entries
+		Application.logMessageReceived -= ReceivedLog;
+	}
 
-    // A log item is clicked
-    public static void OnLogClicked( int entryIndex )
-    {
+	// A log item is clicked
+	public static void OnLogClicked( int entryIndex )
+	{
 		// Show stack trace of the debug entry associated with the clicked log item
 		instance.clickedLogItemDetails.text = instance.collapsedLogEntries[instance.indicesOfListEntriesToShow[entryIndex]].ToString();
 
 		// Notify recycled list view
 		instance.recycledListView.OnLogItemClicked( entryIndex );
 
-        // Move scrollbar of Log Item Details scroll rect to the top
-        instance.clickedLogItemDetailsScrollRect.verticalNormalizedPosition = 1f;
-    }
+		// Move scrollbar of Log Item Details scroll rect to the top
+		instance.clickedLogItemDetailsScrollRect.verticalNormalizedPosition = 1f;
+	}
 
-    // A debug entry is received
-    void ReceivedLog( string logString, string stackTrace, LogType logType )
-    {
+	// A debug entry is received
+	void ReceivedLog( string logString, string stackTrace, LogType logType )
+	{
 		DebugLogEntry logEntry = new DebugLogEntry( logString, stackTrace, null );
 
 		// Check if this entry is a duplicate (i.e. has been received before)
@@ -206,7 +206,7 @@ public class DebugLogManager : MonoBehaviour
 		{
 			indicesOfListEntriesToShow.Add( logEntryIndex );
 		}
-		
+
 		if( logType == LogType.Log )
 		{
 			infoEntryCount++;
@@ -238,22 +238,22 @@ public class DebugLogManager : MonoBehaviour
 		// If log window is visible, update the recycled list view
 		if( isLogWindowVisible )
 			recycledListView.OnLogEntriesUpdated();
-    }
-
-    // If snapToBottom is enabled, force the scrollbar to the bottom
-    void LateUpdate()
-    {
-        if( snapToBottom )
-        {
-            logItemsScrollRect.verticalNormalizedPosition = 0f;
-        }
 	}
 
-    // Value of snapToBottom is changed (user scrolled the list manually)
-    public void OnSnapToBottomChanged( bool snapToBottom )
-    {
-        this.snapToBottom = snapToBottom;
-    }
+	// If snapToBottom is enabled, force the scrollbar to the bottom
+	void LateUpdate()
+	{
+		if( snapToBottom )
+		{
+			logItemsScrollRect.verticalNormalizedPosition = 0f;
+		}
+	}
+
+	// Value of snapToBottom is changed (user scrolled the list manually)
+	public void OnSnapToBottomChanged( bool snapToBottom )
+	{
+		this.snapToBottom = snapToBottom;
+	}
 
 	// Show the log window
 	public void OnSetVisible()
@@ -268,7 +268,7 @@ public class DebugLogManager : MonoBehaviour
 		logWindowCanvasGroup.interactable = true;
 		logWindowCanvasGroup.blocksRaycasts = true;
 		logWindowCanvasGroup.alpha = 1f;
-		
+
 		isLogWindowVisible = true;
 	}
 
@@ -282,9 +282,9 @@ public class DebugLogManager : MonoBehaviour
 		isLogWindowVisible = false;
 	}
 
-    // Clear button is clicked
-    public void ClearButtonPressed()
-    {
+	// Clear button is clicked
+	public void ClearButtonPressed()
+	{
 		snapToBottom = true;
 
 		infoEntryCount = 0;
@@ -302,14 +302,14 @@ public class DebugLogManager : MonoBehaviour
 		recycledListView.OnLogEntriesUpdated();
 
 		// Clear the Selected Log Item Details text
-        clickedLogItemDetails.text = "";
-    }
+		clickedLogItemDetails.text = "";
+	}
 
-    // Collapse button is clicked
-    public void CollapseButtonPressed()
-    {
-        // Swap the value of collapse mode
-        isCollapseOn = !isCollapseOn;
+	// Collapse button is clicked
+	public void CollapseButtonPressed()
+	{
+		// Swap the value of collapse mode
+		isCollapseOn = !isCollapseOn;
 
 		snapToBottom = true;
 
@@ -321,7 +321,7 @@ public class DebugLogManager : MonoBehaviour
 		{
 			collapseButton.color = collapseButtonNormalColor;
 		}
-		
+
 		recycledListView.SetCollapseMode( isCollapseOn );
 
 		// Determine the new list of debug entries to show
@@ -433,7 +433,7 @@ public class DebugLogManager : MonoBehaviour
 				}
 			}
 		}
-		
+
 		// Clear the Selected Log Item Details text
 		clickedLogItemDetails.text = "";
 
@@ -474,27 +474,27 @@ public class DebugLogManager : MonoBehaviour
 		return false;
 	}
 
-    // Debug window is about to be moved on screen,
-    // cache the offset between pointer and the window position
-    public void OnWindowDragStarted( BaseEventData dat )
-    {
-        PointerEventData eventData = (PointerEventData) dat;
-        
-        windowDragDeltaPosition = (Vector2) logWindowTR.position - eventData.position;
+	// Debug window is about to be moved on screen,
+	// cache the offset between pointer and the window position
+	public void OnWindowDragStarted( BaseEventData dat )
+	{
+		PointerEventData eventData = (PointerEventData) dat;
+
+		windowDragDeltaPosition = (Vector2) logWindowTR.position - eventData.position;
 		lastPosition = logWindowTR.position;
 
 		// Show the popup that the log window can be dropped onto
 		popupManager.OnSetVisible();
 	}
 
-    // Debug window is being dragged,
-    // set the new position of the window
-    public void OnWindowDrag( BaseEventData dat )
-    {
-        PointerEventData eventData = (PointerEventData) dat;
+	// Debug window is being dragged,
+	// set the new position of the window
+	public void OnWindowDrag( BaseEventData dat )
+	{
+		PointerEventData eventData = (PointerEventData) dat;
 
-        logWindowTR.position = eventData.position + windowDragDeltaPosition;
-    }
+		logWindowTR.position = eventData.position + windowDragDeltaPosition;
+	}
 
 	public void OnWindowDragEnded( BaseEventData dat )
 	{
@@ -509,21 +509,21 @@ public class DebugLogManager : MonoBehaviour
 	// Set the sizeDelta property of the window accordingly while
 	// preventing window dimensions from going below the minimum dimensions
 	public void OnWindowResize( BaseEventData dat )
-    {
-        PointerEventData eventData = (PointerEventData) dat;
+	{
+		PointerEventData eventData = (PointerEventData) dat;
 
-        Vector2 newSize = ( eventData.position - (Vector2) logWindowTR.position ) / canvasTR.localScale.x;
-        newSize.y = -newSize.y;
-        if( newSize.x < logWindowMinWidth ) newSize.x = logWindowMinWidth;
-        if( newSize.y < logWindowMinHeight ) newSize.y = logWindowMinHeight;
-        logWindowTR.sizeDelta = newSize;
+		Vector2 newSize = ( eventData.position - (Vector2) logWindowTR.position ) / canvasTR.localScale.x;
+		newSize.y = -newSize.y;
+		if( newSize.x < logWindowMinWidth ) newSize.x = logWindowMinWidth;
+		if( newSize.y < logWindowMinHeight ) newSize.y = logWindowMinHeight;
+		logWindowTR.sizeDelta = newSize;
 
 		// Update the recycled list view
 		recycledListView.OnViewportDimensionsChanged();
-    }
+	}
 
 	// Pool an unused log item
-    public void PoolLogItem( DebugLogItem logItem )
+	public void PoolLogItem( DebugLogItem logItem )
 	{
 		logItem.gameObject.SetActive( false );
 		pooledLogItems.Add( logItem );
@@ -548,7 +548,7 @@ public class DebugLogManager : MonoBehaviour
 			newLogItem = Instantiate<DebugLogItem>( logItemPrefab );
 			newLogItem.transformComponent.SetParent( logItemsContainer, false );
 		}
-		
+
 		return newLogItem;
 	}
 }
