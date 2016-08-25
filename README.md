@@ -1,6 +1,6 @@
 # In-game Debug Console for Unity 3D
 
-![screenshot](https://yasirkula.files.wordpress.com/2016/06/ingamedebugconsolepng1.png)
+![screenshot](https://yasirkula.files.wordpress.com/2016/08/consolepreview.png)
 
 ### A. ABOUT
 
