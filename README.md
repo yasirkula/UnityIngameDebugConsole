@@ -2,6 +2,8 @@
 
 ![screenshot](https://yasirkula.files.wordpress.com/2016/08/consolepreview.png)
 
+**Forum Thread:** http://forum.unity3d.com/threads/in-game-debug-console-with-ugui-free.411323/
+
 ### A. ABOUT
 
 This asset is a means to see debug messages (logs, warnings, errors, exceptions) in-game in a build (also assertions in editor). It also has a built-in console that allows you to enter commands and execute pre-defined functions in-game. It is super easy to configure a new command; the only restriction is that the parameter types should match one of the supported types: int, float, bool, string, Vector2, Vector3 and Vector4. See *README.pdf* for more information and example code snippets...
