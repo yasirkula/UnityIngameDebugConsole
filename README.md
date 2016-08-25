@@ -4,7 +4,9 @@
 
 ### A. ABOUT
 
-This package is a simple console window for **Unity 3D** that helps you see debug messages (logs, errors, exceptions, warnings and assertions) in-game to easily debug your game. User interface is created with **uGUI** and costs 1 SetPass call (and 6 to 9 batches). It is possible to drag, resize and hide the console window during the game. Once the console is hidden, a small popup will take its place to notify the user of new log entries. It is also possible to reposition the popup during the game.
+This asset is a means to see debug messages (logs, warnings, errors, exceptions) in-game in a build (also assertions in editor). It also has a built-in console that allows you to enter commands and execute pre-defined functions in-game. It is super easy to configure a new command; the only restriction is that the parameter types should match one of the supported types: int, float, bool, string, Vector2, Vector3 and Vector4. See *README.pdf* for more information and example code snippets...
+
+User interface is created with **uGUI** and costs 1 SetPass call (and 6 to 10 batches). It is possible to drag, resize and hide the console window during the game. Once the console is hidden, a small popup will take its place (which is also draggable).
 
 ![popup](https://yasirkula.files.wordpress.com/2016/06/ingamedebugconsolepopuppng.png)
 
@@ -16,7 +18,7 @@ Simply drag & drop **DebugLogCanvas** prefab to the first scene of the game. If 
 
 ### C. NOTES
 
-- If **2D Rect Mask** component does not exist in your version of Unity (*pre 5.2* I believe), replace it with **Mask** component (search for *Viewport* objects). Then change the color alpha value of the attached **Image** components to 1. Unfortunately, DebugLogCanvas will now cost more draw calls.
+- If **2D Rect Mask** component does not exist in your version of Unity (*pre 5.2*), replace it with **Mask** component (search for *Viewport* objects). Then change the color alpha value of the attached **Image** components to 1. Unfortunately, DebugLogCanvas will now cost more draw calls.
 
 ### D. LIMITATIONS
 
