@@ -25,3 +25,9 @@ Simply drag & drop **DebugLogCanvas** prefab to the first scene of the game. If 
 ### D. LIMITATIONS
 
 - This asset uses **2D Rect Mask** and thus the DebugLogCanvas can not be rendered in World Space but **only in Screen Space**.
+
+### E. EXTRAS
+
+- Looking for a more flat and modern style? Check out this amazing retouch by EnricoMonese: https://github.com/EnricoMonese/UnityIngameDebugConsole
+
+<img src="https://cloud.githubusercontent.com/assets/19847464/18023979/ebcc5f02-6c00-11e6-9b14-d369e524cb45.png" height=389>
