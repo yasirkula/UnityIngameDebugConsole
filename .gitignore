@@ -36,3 +36,5 @@ ProjectSettings/QualitySettings.asset
 ProjectSettings/ProjectVersion.txt
 
 Assembly-CSharp-firstpass.csproj
+
+UnityIngameDebugConsole.userprefs
