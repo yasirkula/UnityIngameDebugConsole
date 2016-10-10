@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
@@ -33,6 +33,10 @@ public class DebugLogManager : MonoBehaviour
 
 	// Debug console will persist between scenes
 	public bool singleton = true;
+
+	// Debug console will be launched in popup mode
+	[SerializeField]
+	private bool launchInPopupMode = false;
 
 	public DebugLogItem logItemPrefab;
 
@@ -158,6 +162,13 @@ public class DebugLogManager : MonoBehaviour
         Debug.LogException( new System.IO.EndOfStreamException() );
         Debug.LogWarning( "warning" );
         Debug.Log( "log" );*/
+
+		if( launchInPopupMode )
+		{
+			lastPosition = logWindowTR.position;
+			popupManager.OnSetVisible();
+			popupManager.SwitchFromConsoleToPopup();
+		}
 	}
 
 	void OnDisable()
