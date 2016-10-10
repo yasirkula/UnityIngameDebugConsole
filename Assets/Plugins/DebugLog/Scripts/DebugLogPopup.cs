@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections;
@@ -196,14 +196,20 @@ public class DebugLogPopup : MonoBehaviour, IPointerClickHandler, IDropHandler, 
 		// Make sure that we are expecting a drop
 		if( dropHereText.activeSelf )
 		{
-			dropHereText.SetActive( false );
-			newLogCountsParent.SetActive( true );
-
-			// Reset the counters
-			Reset();
-
-			debugManager.OnSetInvisible();
+			SwitchFromConsoleToPopup();
 		}
+	}
+
+	// Hides the log window and shows the popup
+	public void SwitchFromConsoleToPopup()
+	{
+		dropHereText.SetActive( false );
+		newLogCountsParent.SetActive( true );
+
+		// Reset the counters
+		Reset();
+
+		debugManager.OnSetInvisible();
 	}
 
 	public void OnBeginDrag( PointerEventData data )
