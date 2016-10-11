@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ using System.Collections.Generic;
 // to show their properties on screen (these log items are recycled as the list is scrolled)
 
 // An enum to represent filtered log types
-public enum LogFilter
+public enum DebugLogFilter
 {
 	None = 0,
 	Info = 1,
@@ -83,7 +83,7 @@ public class DebugLogManager : MonoBehaviour
 
 	// Filters to apply to the list of debug entries to show
 	private bool isCollapseOn = false;
-	private LogFilter logFilter = LogFilter.All;
+	private DebugLogFilter logFilter = DebugLogFilter.All;
 
 	// If the last log item is completely visible (scrollbar is at the bottom),
 	// scrollbar will remain at the bottom when new debug entries are received
@@ -162,13 +162,6 @@ public class DebugLogManager : MonoBehaviour
         Debug.LogException( new System.IO.EndOfStreamException() );
         Debug.LogWarning( "warning" );
         Debug.Log( "log" );*/
-
-		if( launchInPopupMode )
-		{
-			lastPosition = logWindowTR.position;
-			popupManager.OnSetVisible();
-			popupManager.SwitchFromConsoleToPopup();
-		}
 	}
 
 	void OnDisable()
@@ -178,6 +171,16 @@ public class DebugLogManager : MonoBehaviour
 
 		// Stop receiving commands
 		commandInputField.onValidateInput -= OnValidateCommand;
+	}
+
+	void Start()
+	{
+		if( launchInPopupMode )
+		{
+			lastPosition = logWindowTR.position;
+			popupManager.OnSetVisible();
+			popupManager.SwitchFromConsoleToPopup();
+		}
 	}
 
 	// Command field input is changed, check if command is submitted
@@ -381,9 +384,9 @@ public class DebugLogManager : MonoBehaviour
 	// Filtering mode of info logs has been changed
 	public void FilterLogButtonPressed()
 	{
-		logFilter = logFilter ^ LogFilter.Info;
+		logFilter = logFilter ^ DebugLogFilter.Info;
 
-		if( ( logFilter & LogFilter.Info ) == LogFilter.Info )
+		if( ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info )
 			filterInfoButton.color = filterButtonsSelectedColor;
 		else
 			filterInfoButton.color = filterButtonsNormalColor;
@@ -394,9 +397,9 @@ public class DebugLogManager : MonoBehaviour
 	// Filtering mode of warning logs has been changed
 	public void FilterWarningButtonPressed()
 	{
-		logFilter = logFilter ^ LogFilter.Warning;
+		logFilter = logFilter ^ DebugLogFilter.Warning;
 
-		if( ( logFilter & LogFilter.Warning ) == LogFilter.Warning )
+		if( ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning )
 			filterWarningButton.color = filterButtonsSelectedColor;
 		else
 			filterWarningButton.color = filterButtonsNormalColor;
@@ -407,9 +410,9 @@ public class DebugLogManager : MonoBehaviour
 	// Filtering mode of error logs has been changed
 	public void FilterErrorButtonPressed()
 	{
-		logFilter = logFilter ^ LogFilter.Error;
+		logFilter = logFilter ^ DebugLogFilter.Error;
 
-		if( ( logFilter & LogFilter.Error ) == LogFilter.Error )
+		if( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error )
 			filterErrorButton.color = filterButtonsSelectedColor;
 		else
 			filterErrorButton.color = filterButtonsNormalColor;
@@ -420,12 +423,12 @@ public class DebugLogManager : MonoBehaviour
 	// Determine the filtered list of debug entries to show on screen
 	private void FilterLogs()
 	{
-		if( logFilter == LogFilter.None )
+		if( logFilter == DebugLogFilter.None )
 		{
 			// Show no entry
 			indicesOfListEntriesToShow = new List<int>();
 		}
-		else if( logFilter == LogFilter.All )
+		else if( logFilter == DebugLogFilter.All )
 		{
 			if( isCollapseOn )
 			{
@@ -450,9 +453,9 @@ public class DebugLogManager : MonoBehaviour
 		else
 		{
 			// Show only the debug entries that match the current filter
-			bool isInfoEnabled = ( logFilter & LogFilter.Info ) == LogFilter.Info;
-			bool isWarningEnabled = ( logFilter & LogFilter.Warning ) == LogFilter.Warning;
-			bool isErrorEnabled = ( logFilter & LogFilter.Error ) == LogFilter.Error;
+			bool isInfoEnabled = ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info;
+			bool isWarningEnabled = ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning;
+			bool isErrorEnabled = ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error;
 
 			if( isCollapseOn )
 			{
@@ -494,7 +497,7 @@ public class DebugLogManager : MonoBehaviour
 	// Does this new entry match the current filter
 	private bool ShouldAddEntryToFilteredEntries( Sprite logTypeSpriteRepresentation, bool isEntryInCollapsedList )
 	{
-		if( logFilter == LogFilter.None )
+		if( logFilter == DebugLogFilter.None )
 			return false;
 
 		// Special case: if all log types are enabled and collapse mode is disabled, 
@@ -503,7 +506,7 @@ public class DebugLogManager : MonoBehaviour
 		// an incoming debug entry is added to uncollapsedLogEntriesIndices, no matter what.
 		// So, if we were to add the debug entry to the indicesOfListEntriesToShow explicitly,
 		// it would be a duplicate
-		if( logFilter == LogFilter.All )
+		if( logFilter == DebugLogFilter.All )
 		{
 			if( isCollapseOn && !isEntryInCollapsedList )
 				return true;
@@ -511,9 +514,9 @@ public class DebugLogManager : MonoBehaviour
 			return false;
 		}
 
-		if( ( logTypeSpriteRepresentation == infoLog && ( ( logFilter & LogFilter.Info ) == LogFilter.Info ) ) ||
-			( logTypeSpriteRepresentation == warningLog && ( ( logFilter & LogFilter.Warning ) == LogFilter.Warning ) ) ||
-			( logTypeSpriteRepresentation == errorLog && ( ( logFilter & LogFilter.Error ) == LogFilter.Error ) ) )
+		if( ( logTypeSpriteRepresentation == infoLog && ( ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info ) ) ||
+			( logTypeSpriteRepresentation == warningLog && ( ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning ) ) ||
+			( logTypeSpriteRepresentation == errorLog && ( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) ) )
 		{
 			if( isCollapseOn && isEntryInCollapsedList )
 				return false;
