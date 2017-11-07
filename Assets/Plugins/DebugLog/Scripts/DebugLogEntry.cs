@@ -4,37 +4,39 @@
 // Author: Suleyman Yasir Kula
 // 
 // Container for a simple debug entry
-
-public class DebugLogEntry : System.IEquatable<DebugLogEntry>
+namespace IngameDebugConsole
 {
-	public string logString;
-	public string stackTrace;
-
-	// Sprite to show with this entry
-	public Sprite logTypeSpriteRepresentation;
-
-	// Collapsed count
-	public int count;
-
-	public DebugLogEntry( string logString, string stackTrace, Sprite sprite )
+	public class DebugLogEntry : System.IEquatable<DebugLogEntry>
 	{
-		this.logString = logString;
-		this.stackTrace = stackTrace;
+		public string logString;
+		public string stackTrace;
 
-		logTypeSpriteRepresentation = sprite;
+		// Sprite to show with this entry
+		public Sprite logTypeSpriteRepresentation;
 
-		count = 1;
-	}
+		// Collapsed count
+		public int count;
 
-	// Check if two entries have the same origin
-	public bool Equals( DebugLogEntry other )
-	{
-		return this.logString == other.logString && this.stackTrace == other.stackTrace;
-	}
+		public DebugLogEntry( string logString, string stackTrace, Sprite sprite )
+		{
+			this.logString = logString;
+			this.stackTrace = stackTrace;
 
-	// Return a string containing complete information about this debug entry
-	public override string ToString()
-	{
-		return string.Concat( logString, "\n", stackTrace );
+			logTypeSpriteRepresentation = sprite;
+
+			count = 1;
+		}
+
+		// Check if two entries have the same origin
+		public bool Equals( DebugLogEntry other )
+		{
+			return this.logString == other.logString && this.stackTrace == other.stackTrace;
+		}
+
+		// Return a string containing complete information about this debug entry
+		public override string ToString()
+		{
+			return string.Concat( logString, "\n", stackTrace );
+		}
 	}
 }

@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.yasirkula.unity">
+    <uses-permission android:name="android.permission.READ_LOGS" />
+</manifest>
