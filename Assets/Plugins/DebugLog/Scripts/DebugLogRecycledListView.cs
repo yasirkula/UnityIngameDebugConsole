@@ -243,7 +243,7 @@ namespace IngameDebugConsole
 			DebugLogItem logItem = debugManager.UnpoolLogItem();
 
 			// Reposition the log item
-			logItem.Transform.localPosition = new Vector3( 1f, -index * logItemHeight, 0f );
+			logItem.Transform.anchoredPosition = new Vector2( 1f, -index * logItemHeight );
 
 			// Color the log item
 			ColorLogItem( logItem, index );
