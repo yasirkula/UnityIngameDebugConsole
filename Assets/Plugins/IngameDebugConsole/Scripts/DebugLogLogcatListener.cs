@@ -1,14 +1,11 @@
 ﻿#if !UNITY_EDITOR && UNITY_ANDROID
 using System.Collections.Generic;
 using UnityEngine;
-#endif
 
 // Credit: https://stackoverflow.com/a/41018028/2373034
 namespace IngameDebugConsole
 {
-	public class DebugLogLogcatListener
-#if !UNITY_EDITOR && UNITY_ANDROID
-	: AndroidJavaProxy
+	public class DebugLogLogcatListener : AndroidJavaProxy
 	{
 		private Queue<string> queuedLogs;
 		private AndroidJavaObject nativeObject;
@@ -53,20 +50,5 @@ namespace IngameDebugConsole
 			return null;
 		}
 	}
-#else
-	{
-		public void Start( string arguments )
-		{
-		}
-
-		public void Stop()
-		{
-		}
-
-		public string GetLog()
-		{
-			return null;
-		}
-	}
-#endif
 }
+#endif

@@ -1,9 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
-// In-game Debug Console / DebugLogItem
-// Author: Suleyman Yasir Kula
-// 
 // A UI element to show information about a debug entry
 namespace IngameDebugConsole
 {
@@ -34,20 +31,41 @@ namespace IngameDebugConsole
 
 		// Index of the entry in the list of entries
 		private int entryIndex;
+		public int Index { get { return entryIndex; } }
 
-		public void SetContent( DebugLogEntry logEntry, int entryIndex )
+		private DebugLogRecycledListView manager;
+		
+		public void Initialize( DebugLogRecycledListView manager )
+		{
+			this.manager = manager;
+		}
+
+		public void SetContent( DebugLogEntry logEntry, int entryIndex, bool isExpanded )
 		{
 			this.logEntry = logEntry;
 			this.entryIndex = entryIndex;
+			
+			Vector2 size = transformComponent.sizeDelta;
+			if( isExpanded )
+			{
+				logText.horizontalOverflow = HorizontalWrapMode.Wrap;
+				size.y = manager.SelectedItemHeight;
+			}
+			else
+			{
+				logText.horizontalOverflow = HorizontalWrapMode.Overflow;
+				size.y = manager.ItemHeight;
+			}
+			transformComponent.sizeDelta = size;
 
-			logText.text = logEntry.logString;
+			logText.text = isExpanded ? logEntry.ToString() : logEntry.logString;
 			logTypeImage.sprite = logEntry.logTypeSpriteRepresentation;
 		}
 
 		// Show the collapsed count of the debug entry
 		public void ShowCount()
 		{
-			logCountText.text = "" + logEntry.count;
+			logCountText.text = logEntry.count.ToString();
 			logCountParent.SetActive( true );
 		}
 
@@ -60,7 +78,23 @@ namespace IngameDebugConsole
 		// This log item is clicked, show the debug entry's stack trace
 		public void Clicked()
 		{
-			DebugLogManager.OnLogClicked( entryIndex );
+			manager.OnLogItemClicked( this );
+		}
+
+		public float CalculateExpandedHeight( string content )
+		{
+			string text = logText.text;
+			HorizontalWrapMode wrapMode = logText.horizontalOverflow;
+
+			logText.text = content;
+			logText.horizontalOverflow = HorizontalWrapMode.Wrap;
+
+			float result = logText.preferredHeight;
+
+			logText.text = text;
+			logText.horizontalOverflow = wrapMode;
+
+			return Mathf.Max( manager.ItemHeight, result );
 		}
 
 		// Return a string containing complete information about the debug entry

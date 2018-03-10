@@ -3,15 +3,12 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections;
 
-// In-game Debug Console / DebugLogPopup
-// Author: Suleyman Yasir Kula
-// 
 // Manager class for the debug popup
 namespace IngameDebugConsole
 {
-	public class DebugLogPopup : MonoBehaviour, IPointerClickHandler, IDropHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+	public class DebugLogPopup : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 	{
-		private Transform popupTransform;
+		private RectTransform popupTransform;
 
 		// Dimensions of the popup divided by 2
 		private Vector2 halfSize;
@@ -26,12 +23,6 @@ namespace IngameDebugConsole
 		private DebugLogManager debugManager;
 
 		[SerializeField]
-		private GameObject dropHereText;
-
-		[SerializeField]
-		private GameObject newLogCountsParent;
-
-		[SerializeField]
 		private Text newInfoCountText;
 		[SerializeField]
 		private Text newWarningCountText;
@@ -40,56 +31,65 @@ namespace IngameDebugConsole
 
 		// Number of new debug entries since the log window has been closed
 		private int newInfoCount = 0, newWarningCount = 0, newErrorCount = 0;
+		
+		private Color normalColor;
 
 		[SerializeField]
-		private Color normalColor;
+		private Color alertColorInfo;
 		[SerializeField]
-		private Color alertColor;
+		private Color alertColorWarning;
+		[SerializeField]
+		private Color alertColorError;
 
 		private bool isPopupBeingDragged = false;
 
 		// Coroutines for simple code-based animations
-		private IEnumerator fadeInCoroutine = null, fadeOutCoroutine = null;
 		private IEnumerator moveToPosCoroutine = null;
 
 		void Awake()
 		{
-			popupTransform = transform;
+			popupTransform = (RectTransform) transform;
 			backgroundImage = GetComponent<Image>();
 			canvasGroup = GetComponent<CanvasGroup>();
+
+			normalColor = backgroundImage.color;
 		}
 
 		void Start()
 		{
-			// Simple translation
-			if( Application.systemLanguage == SystemLanguage.Turkish )
-				dropHereText.GetComponent<Text>().text = "Gizlemek için buraya sürükle";
+			halfSize = popupTransform.sizeDelta * 0.5f * popupTransform.root.localScale.x;
+		}
 
-			halfSize = ( (RectTransform) popupTransform ).sizeDelta * 0.5f * popupTransform.root.localScale.x;
+		public void OnViewportDimensionsChanged()
+		{
+			halfSize = popupTransform.sizeDelta * 0.5f * popupTransform.root.localScale.x;
+			OnEndDrag( null );
 		}
 
 		public void NewInfoLogArrived()
 		{
 			newInfoCount++;
-			newInfoCountText.text = "" + newInfoCount;
+			newInfoCountText.text = newInfoCount.ToString();
 
-			backgroundImage.color = alertColor;
+			if( newWarningCount == 0 && newErrorCount == 0 )
+				backgroundImage.color = alertColorInfo;
 		}
 
 		public void NewWarningLogArrived()
 		{
 			newWarningCount++;
-			newWarningCountText.text = "" + newWarningCount;
+			newWarningCountText.text = newWarningCount.ToString();
 
-			backgroundImage.color = alertColor;
+			if( newErrorCount == 0 )
+				backgroundImage.color = alertColorWarning;
 		}
 
 		public void NewErrorLogArrived()
 		{
 			newErrorCount++;
-			newErrorCountText.text = "" + newErrorCount;
+			newErrorCountText.text = newErrorCount.ToString();
 
-			backgroundImage.color = alertColor;
+			backgroundImage.color = alertColorError;
 		}
 
 		private void Reset()
@@ -101,77 +101,10 @@ namespace IngameDebugConsole
 			newInfoCountText.text = "0";
 			newWarningCountText.text = "0";
 			newErrorCountText.text = "0";
-		}
-
-		// Show the popup on screen
-		public void OnSetVisible()
-		{
-			canvasGroup.interactable = true;
-			canvasGroup.blocksRaycasts = true;
 
 			backgroundImage.color = normalColor;
-
-			// If popup was fading out, stop that animation
-			if( fadeOutCoroutine != null )
-				StopCoroutine( fadeOutCoroutine );
-
-			// Fade in with a simple animation
-			fadeInCoroutine = FadeInAnimation();
-			StartCoroutine( fadeInCoroutine );
 		}
-
-		// Hide the popup
-		public void OnSetInvisible( bool instantly )
-		{
-			canvasGroup.interactable = false;
-			canvasGroup.blocksRaycasts = false;
-
-			if( !instantly )
-			{
-				// If popup was fading in, stop that animation
-				if( fadeInCoroutine != null )
-					StopCoroutine( fadeInCoroutine );
-
-				// Fade out with a simple animation
-				fadeOutCoroutine = FadeOutAnimation();
-				StartCoroutine( fadeOutCoroutine );
-			}
-			else
-			{
-				// Fade out instantly
-				canvasGroup.alpha = 0f;
-			}
-		}
-
-		// A simple fade-in animation
-		private IEnumerator FadeInAnimation()
-		{
-			float alpha = canvasGroup.alpha;
-
-			while( alpha < 1f )
-			{
-				alpha += 4f * Time.deltaTime;
-				canvasGroup.alpha = alpha;
-
-				yield return null;
-			}
-		}
-
-
-		// A simple fade-out animation
-		private IEnumerator FadeOutAnimation()
-		{
-			float alpha = canvasGroup.alpha;
-
-			while( alpha > 0f )
-			{
-				alpha -= 4f * Time.deltaTime;
-				canvasGroup.alpha = alpha;
-
-				yield return null;
-			}
-		}
-
+		
 		// A simple smooth movement animation
 		private IEnumerator MoveToPosAnimation( Vector3 targetPos )
 		{
@@ -190,44 +123,46 @@ namespace IngameDebugConsole
 		// Popup is clicked
 		public void OnPointerClick( PointerEventData data )
 		{
-			// If log window is not visible (but instead, popup is),
-			// hide the popup and show the log window again
-			if( newLogCountsParent.activeSelf && !isPopupBeingDragged )
+			// Hide the popup and show the log window
+			if( !isPopupBeingDragged )
 			{
-				dropHereText.SetActive( true );
-				newLogCountsParent.SetActive( false );
-
-				debugManager.OnSetVisible();
-
-				OnSetInvisible( true );
+				debugManager.Show();
+				Hide();
 			}
 		}
-
-		// Log window is dropped onto popup
-		public void OnDrop( PointerEventData data )
-		{
-			// Make sure that we are expecting a drop
-			if( dropHereText.activeSelf )
-			{
-				SwitchFromConsoleToPopup();
-			}
-		}
-
+		
 		// Hides the log window and shows the popup
-		public void SwitchFromConsoleToPopup()
+		public void Show()
 		{
-			dropHereText.SetActive( false );
-			newLogCountsParent.SetActive( true );
+			canvasGroup.interactable = true;
+			canvasGroup.blocksRaycasts = true;
+			canvasGroup.alpha = 1f;
 
 			// Reset the counters
 			Reset();
 
-			debugManager.OnSetInvisible();
+			// Update position in case resolution changed while hidden
+			OnViewportDimensionsChanged();
+		}
+
+		// Hide the popup
+		public void Hide()
+		{
+			canvasGroup.interactable = false;
+			canvasGroup.blocksRaycasts = false;
+			canvasGroup.alpha = 0f;
 		}
 
 		public void OnBeginDrag( PointerEventData data )
 		{
 			isPopupBeingDragged = true;
+
+			// If a smooth movement animation is in progress, cancel it
+			if( moveToPosCoroutine != null )
+			{
+				StopCoroutine( moveToPosCoroutine );
+				moveToPosCoroutine = null;
+			}
 		}
 
 		// Reposition the popup
@@ -261,6 +196,8 @@ namespace IngameDebugConsole
 					pos = new Vector3( halfSize.x, pos.y, 0f );
 				else
 					pos = new Vector3( screenWidth - halfSize.x, pos.y, 0f );
+
+				pos.y = Mathf.Clamp( pos.y, halfSize.y, screenHeight - halfSize.y );
 			}
 			else
 			{
@@ -268,10 +205,11 @@ namespace IngameDebugConsole
 					pos = new Vector3( pos.x, halfSize.y, 0f );
 				else
 					pos = new Vector3( pos.x, screenHeight - halfSize.y, 0f );
+
+				pos.x = Mathf.Clamp( pos.x, halfSize.x, screenWidth - halfSize.x );
 			}
 
-			// If another smooth movement animation is in progress,
-			// cancel it
+			// If another smooth movement animation is in progress, cancel it
 			if( moveToPosCoroutine != null )
 				StopCoroutine( moveToPosCoroutine );
 
