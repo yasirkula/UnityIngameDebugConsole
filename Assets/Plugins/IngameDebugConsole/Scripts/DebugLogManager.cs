@@ -521,7 +521,7 @@ namespace IngameDebugConsole
 			PointerEventData eventData = (PointerEventData) dat;
 
 			// Grab the resize button from top; 36f is the height of the resize button
-			float newHeight = ( eventData.position.y - logWindowTR.position.y - 36f ) / -canvasTR.localScale.y;
+			float newHeight = ( eventData.position.y - logWindowTR.position.y ) / -canvasTR.localScale.y + 36f;
 			if( newHeight < minimumHeight )
 				newHeight = minimumHeight;
 
