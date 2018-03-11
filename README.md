@@ -7,7 +7,7 @@
 
 ## ABOUT
 
-This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) execute commands using its built-in console. It also supports logging *logcat* messages to the console on Android platform.
+This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging *logcat* messages to the console on Android platform.
 
 User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 10 batches). It is possible to resize or hide the console window during the game. Once the console is hidden, a small popup will take its place (which can be dragged around). Console window will reappear after clicking the popup.
 
