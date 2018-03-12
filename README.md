@@ -3,6 +3,8 @@
 ![screenshot](Images/1.png)
 ![screenshot2](Images/2.png)
 
+**Available on Asset Store:** https://www.assetstore.unity3d.com/en/#!/content/68068
+
 **Forum Thread:** http://forum.unity3d.com/threads/in-game-debug-console-with-ugui-free.411323/
 
 ## ABOUT
