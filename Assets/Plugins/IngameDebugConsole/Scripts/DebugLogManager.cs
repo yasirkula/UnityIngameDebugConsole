@@ -41,6 +41,9 @@ namespace IngameDebugConsole
 
 		// Should command input field be cleared after pressing Enter
 		[SerializeField]
+		private bool startInPopupMode = true;
+
+		[SerializeField]
 		private bool clearCommandAfterExecution = true;
 
 		[SerializeField]
@@ -245,7 +248,10 @@ namespace IngameDebugConsole
 		// Launch in popup mode
 		private void Start()
 		{
-			HideButtonPressed();
+			if( startInPopupMode )
+				HideButtonPressed();
+			else
+				popupManager.OnPointerClick( null );
 		}
 
 		// Window is resized, update the list
