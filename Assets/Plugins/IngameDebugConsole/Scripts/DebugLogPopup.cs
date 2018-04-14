@@ -113,7 +113,7 @@ namespace IngameDebugConsole
 
 			while( modifier < 1f )
 			{
-				modifier += 4f * Time.deltaTime;
+				modifier += 4f * Time.unscaledDeltaTime;
 				popupTransform.position = Vector3.Lerp( initialPos, targetPos, modifier );
 
 				yield return null;
