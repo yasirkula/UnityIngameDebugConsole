@@ -96,6 +96,7 @@ namespace IngameDebugConsole
 				{ typeof( Vector4 ), "Vector4" },
 				{ typeof( GameObject ), "GameObject" } };
 
+#if UNITY_EDITOR || !NETFX_CORE
 			// Load commands in most common Unity assemblies
 			HashSet<Assembly> assemblies = new HashSet<Assembly> { Assembly.GetAssembly( typeof( DebugLogConsole ) ) };
 			try
@@ -118,8 +119,12 @@ namespace IngameDebugConsole
 					}
 				}
 			}
+#else
+			AddCommandStatic( "help", "Prints all commands", "LogAllCommands", typeof( DebugLogConsole ) );
+			AddCommandStatic( "sysinfo", "Prints system information", "LogSystemInfo", typeof( DebugLogConsole ) );
+#endif
 		}
-		
+
 		// Logs the list of available commands
 		[ConsoleMethod( "help", "Prints all commands" )]
 		public static void LogAllCommands()

@@ -63,7 +63,7 @@ However, there is some flexibility in the syntax, as well:
 
 If all the parameters of a function are of supported types, you can register the function to the console in three different ways:
 
-- **ConsoleMethod Attribute**
+- **ConsoleMethod Attribute** *(not supported on UWP platform)*
 
 Simply add **IngameDebugConsole.ConsoleMethod** attribute to your functions. These functions must be *public static* and must reside in a *public* class. These constraints do not apply to the other two methods.
 
