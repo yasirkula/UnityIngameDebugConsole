@@ -26,6 +26,8 @@ Simply import **IngameDebugConsole.unitypackage** to your project and place **In
 - **Receive Logcat Logs In Android**: if enabled, on Android platform, logcat entries of the application will also be logged to the console with the prefix "*LOGCAT:*". This may come in handy especially if you want to access the native logs of your Android plugins (like *Admob*)
 - **Logcat Arguments**: on Android, if Logcat logs are enabled, native logs will be filtered using these arguments. If left blank, all native logs of the application will be logged to the console. If you want to, for example, see Admob's logs only, you can enter **-s Ads** here
 
+While testing on Unity editor, right clicking a log entry will open the corresponding line in external script editor, similar to double clicking a log in Unity Console.
+
 ## COMMAND CONSOLE
 
 ### Executing Commands

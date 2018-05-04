@@ -1,10 +1,15 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+#if UNITY_EDITOR
+using UnityEditor;
+using System.Text.RegularExpressions;
+#endif
 
 // A UI element to show information about a debug entry
 namespace IngameDebugConsole
 {
-	public class DebugLogItem : MonoBehaviour
+	public class DebugLogItem : MonoBehaviour, IPointerClickHandler
 	{
 		// Cached components
 		[SerializeField]
@@ -76,9 +81,26 @@ namespace IngameDebugConsole
 		}
 
 		// This log item is clicked, show the debug entry's stack trace
-		public void Clicked()
+		public void OnPointerClick( PointerEventData eventData )
 		{
+#if UNITY_EDITOR
+			if( eventData.button == PointerEventData.InputButton.Right )
+			{
+				Match regex = Regex.Match( logEntry.stackTrace, @"\(at .*\.cs:[0-9]+\)$", RegexOptions.Multiline );
+				if( regex.Success )
+				{
+					string line = logEntry.stackTrace.Substring( regex.Index + 4, regex.Length - 5 );
+					int lineSeparator = line.IndexOf( ':' );
+					MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>( line.Substring( 0, lineSeparator ) );
+					if( script != null )
+						AssetDatabase.OpenAsset( script, int.Parse( line.Substring( lineSeparator + 1 ) ) );
+				}
+			}
+			else
+				manager.OnLogItemClicked( this );
+#else
 			manager.OnLogItemClicked( this );
+#endif
 		}
 
 		public float CalculateExpandedHeight( string content )
