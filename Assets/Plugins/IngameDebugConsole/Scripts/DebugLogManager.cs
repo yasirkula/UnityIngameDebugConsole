@@ -55,6 +55,9 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private KeyCode toggleConsoleShortcutKey=KeyCode.BackQuote;
 
+		[SerializeField]
+		private int commandHistorySize = 100;
+
 		[Header( "Visuals" )]
 		[SerializeField]
 		private DebugLogItem logItemPrefab;
@@ -121,6 +124,9 @@ namespace IngameDebugConsole
 		private bool isLogWindowVisible = true;
 		private bool screenDimensionsChanged = false;
 
+		private LinkedList<string> inputCommandHistory;
+		private LinkedListNode<string> commandHistoryHead;
+
 		[SerializeField]
 		private DebugLogPopup popupManager;
 
@@ -180,6 +186,7 @@ namespace IngameDebugConsole
 					{ LogType.Exception, errorLog },
 					{ LogType.Assert, errorLog }
 				};
+				inputCommandHistory = new LinkedList<string>();
 
 				// Initially, all log types are visible
 				filterInfoButton.color = filterButtonsSelectedColor;
@@ -311,6 +318,7 @@ namespace IngameDebugConsole
 				if( clearCommandAfterExecution )
 					commandInputField.text = "";
 
+				AddhistroyCommand(text);
 				if( text.Length > 0 )
 				{
 					// Execute the command
@@ -651,6 +659,38 @@ namespace IngameDebugConsole
 				if (isLogWindowVisible) Hide();
 				else Show();
 			}
+			if(isLogWindowVisible)
+			{
+				if (Input.GetKeyDown(KeyCode.UpArrow) )
+				{
+					if (commandHistoryHead != null)
+					{
+						if(commandHistoryHead.Next != null)
+						{
+							commandHistoryHead = commandHistoryHead.Next;
+							commandInputField.text = commandHistoryHead.Value;
+						}
+					}
+					else
+					{
+						commandHistoryHead = inputCommandHistory.First;
+						commandInputField.text = commandHistoryHead.Value;
+					}
+				}
+					
+				if (Input.GetKeyDown(KeyCode.DownArrow) && commandHistoryHead != null && commandHistoryHead.Previous != null)
+				{
+					commandHistoryHead = commandHistoryHead.Previous;
+					commandInputField.text = commandHistoryHead.Value;
+				}
+			}
+		}
+
+		private void AddhistroyCommand(string text)
+		{
+			if (inputCommandHistory.Count >= commandHistorySize) inputCommandHistory.RemoveLast();
+			inputCommandHistory.AddFirst(text);
+			commandHistoryHead = null;
 		}
 	}
 }
