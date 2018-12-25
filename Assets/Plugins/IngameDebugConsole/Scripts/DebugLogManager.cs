@@ -425,6 +425,7 @@ namespace IngameDebugConsole
 			logWindowCanvasGroup.alpha = 1f;
 
 			isLogWindowVisible = true;
+			commandInputField.ActivateInputField();
 		}
 
 		// Hide the log window
@@ -435,6 +436,7 @@ namespace IngameDebugConsole
 			logWindowCanvasGroup.alpha = 0f;
 
 			isLogWindowVisible = false;
+			commandInputField.DeactivateInputField();
 		}
 
 		// Hide button is clicked
