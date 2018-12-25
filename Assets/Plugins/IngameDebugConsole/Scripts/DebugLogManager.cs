@@ -52,6 +52,9 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private string logcatArguments;
 
+		[SerializeField]
+		private KeyCode toggleConsoleShortcutKey=KeyCode.BackQuote;
+
 		[Header( "Visuals" )]
 		[SerializeField]
 		private DebugLogItem logItemPrefab;
@@ -639,6 +642,15 @@ namespace IngameDebugConsole
 			}
 
 			return newLogItem;
+		}
+
+		private void Update()
+		{
+			if(Input.GetKeyDown(toggleConsoleShortcutKey))
+			{
+				if (isLogWindowVisible) Hide();
+				else Show();
+			}
 		}
 	}
 }
