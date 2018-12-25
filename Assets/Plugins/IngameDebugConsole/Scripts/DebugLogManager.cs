@@ -311,6 +311,12 @@ namespace IngameDebugConsole
 		// Command field input is changed, check if command is submitted
 		public char OnValidateCommand( string text, int charIndex, char addedChar )
 		{
+			if(addedChar=='\t')
+			{
+				commandInputField.text=DebugLogConsole.GetAutoCompleteCommand(text);
+				return '\0';
+			}
+
 			// If command is submitted
 			if( addedChar == '\n' )
 			{

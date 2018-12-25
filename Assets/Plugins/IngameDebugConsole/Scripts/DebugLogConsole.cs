@@ -676,5 +676,14 @@ namespace IngameDebugConsole
 
 			return true;
 		}
+
+		public static string GetAutoCompleteCommand(string text)
+		{
+			foreach (var method in methods)
+			{
+				if (method.Key==text || method.Key.Substring(0, text.Length) == text) return method.Key;
+			}
+			return text;
+		}
 	}
 }
