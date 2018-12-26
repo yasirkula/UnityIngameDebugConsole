@@ -665,21 +665,18 @@ namespace IngameDebugConsole
 				if (isLogWindowVisible) Hide();
 				else Show();
 			}
-			if(isLogWindowVisible)
+			if(isLogWindowVisible && inputCommandHistory.Count>0)
 			{
 				if (Input.GetKeyDown(KeyCode.UpArrow) )
 				{
-					if (commandHistoryHead != null)
-					{
-						if(commandHistoryHead.Next != null)
-						{
-							commandHistoryHead = commandHistoryHead.Next;
-							commandInputField.text = commandHistoryHead.Value;
-						}
-					}
-					else
+					if (commandHistoryHead == null)
 					{
 						commandHistoryHead = inputCommandHistory.First;
+						commandInputField.text = commandHistoryHead.Value;
+					}
+					else if (commandHistoryHead.Next != null)
+					{
+						commandHistoryHead = commandHistoryHead.Next;
 						commandInputField.text = commandHistoryHead.Value;
 					}
 				}

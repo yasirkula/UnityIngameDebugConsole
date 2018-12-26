@@ -681,7 +681,7 @@ namespace IngameDebugConsole
 		{
 			foreach (var method in methods)
 			{
-				if (method.Key==text || method.Key.Substring(0, text.Length) == text) return method.Key;
+				if (method.Key==text || (text.Length >0 && method.Key.Length> text.Length && method.Key.Substring(0, text.Length) == text) ) return method.Key;
 			}
 			return text;
 		}
