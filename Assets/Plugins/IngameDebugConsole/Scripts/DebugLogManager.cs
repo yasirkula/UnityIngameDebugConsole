@@ -48,6 +48,9 @@ namespace IngameDebugConsole
 		private bool clearCommandAfterExecution = true;
 
 		[SerializeField]
+		private int commandHistorySize = 15;
+
+		[SerializeField]
 		private bool receiveLogcatLogsInAndroid = false;
 
 		[SerializeField]
@@ -152,6 +155,10 @@ namespace IngameDebugConsole
 
 		private List<DebugLogItem> pooledLogItems;
 
+		// History of the previously entered commands
+		private CircularBuffer<string> commandHistory;
+		private int commandHistoryIndex = -1;
+
 		// Required in ValidateScrollPosition() function
 		private PointerEventData nullPointerEventData;
 
@@ -166,6 +173,7 @@ namespace IngameDebugConsole
 			{
 				instance = this;
 				pooledLogItems = new List<DebugLogItem>();
+				commandHistory = new CircularBuffer<string>( commandHistorySize );
 
 				canvasTR = (RectTransform) transform;
 
@@ -225,6 +233,8 @@ namespace IngameDebugConsole
 			if( minimumHeight < 200f )
 				minimumHeight = 200f;
 
+			DebugLogConsole.AddCommandInstance( "save_logs", "Saves logs to a file", "SaveLogsToFile", this );
+
 			//Debug.LogAssertion( "assert" );
 			//Debug.LogError( "error" );
 			//Debug.LogException( new System.IO.EndOfStreamException() );
@@ -234,6 +244,9 @@ namespace IngameDebugConsole
 
 		private void OnDisable()
 		{
+			if( instance != this )
+				return;
+
 			// Stop receiving debug entries
 			Application.logMessageReceived -= ReceivedLog;
 
@@ -244,6 +257,8 @@ namespace IngameDebugConsole
 
 			// Stop receiving commands
 			commandInputField.onValidateInput -= OnValidateCommand;
+
+			DebugLogConsole.RemoveCommand( "save_logs" );
 		}
 
 		// Launch in popup mode
@@ -289,6 +304,33 @@ namespace IngameDebugConsole
 					snapToBottomButton.SetActive( !snapToBottomButton.activeSelf );
 			}
 
+			if( isLogWindowVisible && commandInputField.isFocused )
+			{
+				if( Input.GetKeyDown( KeyCode.UpArrow ) )
+				{
+					if( commandHistoryIndex == -1 )
+						commandHistoryIndex = commandHistory.Count - 1;
+					else if( --commandHistoryIndex < 0 )
+						commandHistoryIndex = 0;
+
+					if( commandHistoryIndex >= 0 && commandHistoryIndex < commandHistory.Count )
+					{
+						commandInputField.text = commandHistory[commandHistoryIndex];
+						commandInputField.caretPosition = commandInputField.text.Length;
+					}
+				}
+				else if( Input.GetKeyDown( KeyCode.DownArrow ) )
+				{
+					if( commandHistoryIndex == -1 )
+						commandHistoryIndex = commandHistory.Count - 1;
+					else if( ++commandHistoryIndex >= commandHistory.Count )
+						commandHistoryIndex = commandHistory.Count - 1;
+
+					if( commandHistoryIndex >= 0 && commandHistoryIndex < commandHistory.Count )
+						commandInputField.text = commandHistory[commandHistoryIndex];
+				}
+			}
+
 #if !UNITY_EDITOR && UNITY_ANDROID
 			if( logcatListener != null )
 			{
@@ -302,8 +344,18 @@ namespace IngameDebugConsole
 		// Command field input is changed, check if command is submitted
 		public char OnValidateCommand( string text, int charIndex, char addedChar )
 		{
-			// If command is submitted
-			if( addedChar == '\n' )
+			if( addedChar == '\t' ) // Autocomplete attempt
+			{
+				if( !string.IsNullOrEmpty( text ) )
+				{
+					string autoCompletedCommand = DebugLogConsole.GetAutoCompleteCommand( text );
+					if( !string.IsNullOrEmpty( autoCompletedCommand ) )
+						commandInputField.text = autoCompletedCommand;
+				}
+
+				return '\0';
+			}
+			else if( addedChar == '\n' ) // Command is submitted
 			{
 				// Clear the command field
 				if( clearCommandAfterExecution )
@@ -311,6 +363,11 @@ namespace IngameDebugConsole
 
 				if( text.Length > 0 )
 				{
+					if( commandHistory.Count == 0 || commandHistory[commandHistory.Count - 1] != text )
+						commandHistory.Add( text );
+
+					commandHistoryIndex = -1;
+
 					// Execute the command
 					DebugLogConsole.ExecuteCommand( text );
 
@@ -435,6 +492,7 @@ namespace IngameDebugConsole
 			logWindowCanvasGroup.blocksRaycasts = false;
 			logWindowCanvasGroup.alpha = 0f;
 
+			commandHistoryIndex = -1;
 			isLogWindowVisible = false;
 		}
 
@@ -633,24 +691,12 @@ namespace IngameDebugConsole
 			return sb.ToString();
 		}
 
-		public static void SaveLogsToFile()
+		private void SaveLogsToFile()
 		{
 			string path = Path.Combine( Application.persistentDataPath, System.DateTime.Now.ToString( "dd-MM-yyyy--HH-mm-ss" ) + ".txt" );
 			File.WriteAllText( path, instance.GetAllLogs() );
 
 			Debug.Log( "Logs saved to: " + path );
-		}
-
-		public static void ShareLogsWithMail()
-		{
-			// Credit: https://answers.unity.com/questions/61669/applicationopenurl-for-email-on-mobile.html
-#if UNITY_2017_3_OR_NEWER
-			string body = UnityEngine.Networking.UnityWebRequest.EscapeURL( instance.GetAllLogs() ).Replace( "+", "%20" );
-#else
-			string body = WWW.EscapeURL( instance.GetAllLogs() ).Replace( "+", "%20" );
-#endif
-
-			Application.OpenURL( "mailto:?subject=Logs&body=" + body );
 		}
 
 		// Pool an unused log item

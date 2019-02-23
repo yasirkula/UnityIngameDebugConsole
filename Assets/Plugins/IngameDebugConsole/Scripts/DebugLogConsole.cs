@@ -124,14 +124,12 @@ namespace IngameDebugConsole
 
 			AddCommandStatic( "help", "Prints all commands", "LogAllCommands", typeof( DebugLogConsole ) );
 			AddCommandStatic( "sysinfo", "Prints system information", "LogSystemInfo", typeof( DebugLogConsole ) );
-			AddCommandStatic( "save_logs", "Saves logs to a file", "SaveLogsToFile", typeof( DebugLogManager ) );
-			AddCommandStatic( "mail_logs", "Composes an e-mail with the logs", "ShareLogsWithMail", typeof( DebugLogManager ) );
 		}
 
 		// Logs the list of available commands
 		public static void LogAllCommands()
 		{
-			int length = 20;
+			int length = 25;
 			foreach( var entry in methods )
 			{
 				if( entry.Value.IsValid() )
@@ -237,6 +235,18 @@ namespace IngameDebugConsole
 		{
 			if( !string.IsNullOrEmpty( command ) )
 				methods.Remove( command );
+		}
+
+		// Returns the first command that starts with the entered argument
+		public static string GetAutoCompleteCommand( string commandStart )
+		{
+			foreach( var entry in methods )
+			{
+				if( entry.Key.StartsWith( commandStart ) )
+					return entry.Key;
+			}
+
+			return null;
 		}
 
 		// Create a new command and set its properties
