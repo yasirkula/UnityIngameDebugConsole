@@ -16,4 +16,5 @@ namespace IngameDebugConsole
 			m_command = command;
 			m_description = description;
 		}
-	} }
+	}
+}

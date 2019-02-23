@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using System.IO;
 
 // Receives debug entries and custom events (e.g. Clear, Collapse, Filter by Type)
 // and notifies the recycled list view of changes to the list of debug entries
@@ -609,13 +610,55 @@ namespace IngameDebugConsole
 			ValidateScrollPosition();
 		}
 
+		public string GetAllLogs()
+		{
+			int count = uncollapsedLogEntriesIndices.Count;
+			int length = 0;
+			int newLineLength = System.Environment.NewLine.Length;
+			for( int i = 0; i < count; i++ )
+			{
+				DebugLogEntry entry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
+				length += entry.logString.Length + entry.stackTrace.Length + newLineLength * 3;
+			}
+
+			length += 100; // Just in case...
+
+			System.Text.StringBuilder sb = new System.Text.StringBuilder( length );
+			for( int i = 0; i < count; i++ )
+			{
+				DebugLogEntry entry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
+				sb.AppendLine( entry.logString ).AppendLine( entry.stackTrace ).AppendLine();
+			}
+
+			return sb.ToString();
+		}
+
+		public static void SaveLogsToFile()
+		{
+			string path = Path.Combine( Application.persistentDataPath, System.DateTime.Now.ToString( "dd-MM-yyyy--HH-mm-ss" ) + ".txt" );
+			File.WriteAllText( path, instance.GetAllLogs() );
+
+			Debug.Log( "Logs saved to: " + path );
+		}
+
+		public static void ShareLogsWithMail()
+		{
+			// Credit: https://answers.unity.com/questions/61669/applicationopenurl-for-email-on-mobile.html
+#if UNITY_2017_3_OR_NEWER
+			string body = UnityEngine.Networking.UnityWebRequest.EscapeURL( instance.GetAllLogs() ).Replace( "+", "%20" );
+#else
+			string body = WWW.EscapeURL( instance.GetAllLogs() ).Replace( "+", "%20" );
+#endif
+
+			Application.OpenURL( "mailto:?subject=Logs&body=" + body );
+		}
+
 		// Pool an unused log item
 		public void PoolLogItem( DebugLogItem logItem )
 		{
 			logItem.gameObject.SetActive( false );
 			pooledLogItems.Add( logItem );
 		}
-
 
 		// Fetch a log item from the pool
 		public DebugLogItem PopLogItem()
@@ -632,7 +675,7 @@ namespace IngameDebugConsole
 			}
 			else
 			{
-				newLogItem = Instantiate<DebugLogItem>( logItemPrefab, logItemsContainer, false );
+				newLogItem = (DebugLogItem) Instantiate( logItemPrefab, logItemsContainer, false );
 				newLogItem.Initialize( recycledListView );
 			}
 

@@ -31,7 +31,7 @@ namespace IngameDebugConsole
 
 		// Number of new debug entries since the log window has been closed
 		private int newInfoCount = 0, newWarningCount = 0, newErrorCount = 0;
-		
+
 		private Color normalColor;
 
 		[SerializeField]
@@ -104,7 +104,7 @@ namespace IngameDebugConsole
 
 			backgroundImage.color = normalColor;
 		}
-		
+
 		// A simple smooth movement animation
 		private IEnumerator MoveToPosAnimation( Vector3 targetPos )
 		{
@@ -130,7 +130,7 @@ namespace IngameDebugConsole
 				Hide();
 			}
 		}
-		
+
 		// Hides the log window and shows the popup
 		public void Show()
 		{

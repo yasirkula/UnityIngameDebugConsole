@@ -39,7 +39,7 @@ namespace IngameDebugConsole
 		public int Index { get { return entryIndex; } }
 
 		private DebugLogRecycledListView manager;
-		
+
 		public void Initialize( DebugLogRecycledListView manager )
 		{
 			this.manager = manager;
@@ -49,7 +49,7 @@ namespace IngameDebugConsole
 		{
 			this.logEntry = logEntry;
 			this.entryIndex = entryIndex;
-			
+
 			Vector2 size = transformComponent.sizeDelta;
 			if( isExpanded )
 			{

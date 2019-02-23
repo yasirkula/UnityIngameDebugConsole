@@ -102,7 +102,8 @@ namespace IngameDebugConsole
 			try
 			{
 				assemblies.Add( Assembly.Load( "Assembly-CSharp" ) );
-			} catch { }
+			}
+			catch { }
 
 			foreach( var assembly in assemblies )
 			{
@@ -119,14 +120,15 @@ namespace IngameDebugConsole
 					}
 				}
 			}
-#else
+#endif
+
 			AddCommandStatic( "help", "Prints all commands", "LogAllCommands", typeof( DebugLogConsole ) );
 			AddCommandStatic( "sysinfo", "Prints system information", "LogSystemInfo", typeof( DebugLogConsole ) );
-#endif
+			AddCommandStatic( "save_logs", "Saves logs to a file", "SaveLogsToFile", typeof( DebugLogManager ) );
+			AddCommandStatic( "mail_logs", "Composes an e-mail with the logs", "ShareLogsWithMail", typeof( DebugLogManager ) );
 		}
 
 		// Logs the list of available commands
-		[ConsoleMethod( "help", "Prints all commands" )]
 		public static void LogAllCommands()
 		{
 			int length = 20;
@@ -149,7 +151,6 @@ namespace IngameDebugConsole
 		}
 
 		// Logs system information
-		[ConsoleMethod( "sysinfo", "Prints system information" )]
 		public static void LogSystemInfo()
 		{
 			StringBuilder stringBuilder = new StringBuilder( 1024 );
@@ -337,10 +338,10 @@ namespace IngameDebugConsole
 
 			if( command.Length == 0 )
 				return;
-			
+
 			// Parse the arguments
 			commandArguments.Clear();
-			
+
 			int endIndex = IndexOfChar( command, ' ', 0 );
 			commandArguments.Add( command.Substring( 0, endIndex ) );
 
@@ -360,7 +361,7 @@ namespace IngameDebugConsole
 					endIndex = IndexOfChar( command, ' ', i + 1 );
 					commandArguments.Add( command.Substring( i, endIndex - i ) );
 				}
-				
+
 				i = endIndex;
 			}
 
