@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
@@ -58,79 +58,79 @@ namespace IngameDebugConsole
 
 		[Header( "Visuals" )]
 		[SerializeField]
-		private DebugLogItem logItemPrefab;
+		private DebugLogItem logItemPrefab = null;
 
 		// Visuals for different log types
 		[SerializeField]
-		private Sprite infoLog;
+		private Sprite infoLog = null;
 		[SerializeField]
-		private Sprite warningLog;
+		private Sprite warningLog = null;
 		[SerializeField]
-		private Sprite errorLog;
+		private Sprite errorLog = null;
 
 		private Dictionary<LogType, Sprite> logSpriteRepresentations;
 
 		[SerializeField]
-		private Color collapseButtonNormalColor;
+		private Color collapseButtonNormalColor = Color.clear;
 		[SerializeField]
-		private Color collapseButtonSelectedColor;
+		private Color collapseButtonSelectedColor = Color.clear;
 
 		[SerializeField]
-		private Color filterButtonsNormalColor;
+		private Color filterButtonsNormalColor = Color.clear;
 		[SerializeField]
-		private Color filterButtonsSelectedColor;
+		private Color filterButtonsSelectedColor = Color.clear;
 
 		[Header( "Internal References" )]
 		[SerializeField]
-		private RectTransform logWindowTR;
+		private RectTransform logWindowTR = null;
 
 		private RectTransform canvasTR;
 
 		[SerializeField]
-		private RectTransform logItemsContainer;
+		private RectTransform logItemsContainer = null;
 
 		[SerializeField]
-		private InputField commandInputField;
+		private InputField commandInputField = null;
 
 		[SerializeField]
-		private Image collapseButton;
+		private Image collapseButton = null;
 
 		[SerializeField]
-		private Image filterInfoButton;
+		private Image filterInfoButton = null;
 		[SerializeField]
-		private Image filterWarningButton;
+		private Image filterWarningButton = null;
 		[SerializeField]
-		private Image filterErrorButton;
+		private Image filterErrorButton = null;
 
 		[SerializeField]
-		private Text infoEntryCountText;
+		private Text infoEntryCountText = null;
 		[SerializeField]
-		private Text warningEntryCountText;
+		private Text warningEntryCountText = null;
 		[SerializeField]
-		private Text errorEntryCountText;
+		private Text errorEntryCountText = null;
 
 		[SerializeField]
-		private GameObject snapToBottomButton;
+		private GameObject snapToBottomButton = null;
 
 		// Number of entries filtered by their types
 		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
 
 		// Canvas group to modify visibility of the log window
 		[SerializeField]
-		private CanvasGroup logWindowCanvasGroup;
+		private CanvasGroup logWindowCanvasGroup = null;
 
 		private bool isLogWindowVisible = true;
 		private bool screenDimensionsChanged = false;
 
 		[SerializeField]
-		private DebugLogPopup popupManager;
+		private DebugLogPopup popupManager = null;
 
 		[SerializeField]
-		private ScrollRect logItemsScrollRect;
+		private ScrollRect logItemsScrollRect = null;
 
 		// Recycled list view to handle the log items efficiently
 		[SerializeField]
-		private DebugLogRecycledListView recycledListView;
+		private DebugLogRecycledListView recycledListView = null;
 
 		// Filters to apply to the list of debug entries to show
 		private bool isCollapseOn = false;
