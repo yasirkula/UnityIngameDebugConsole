@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 // Handles the log items in an optimized way such that existing log items are
@@ -9,19 +9,19 @@ namespace IngameDebugConsole
 	{
 		// Cached components
 		[SerializeField]
-		private RectTransform transformComponent;
+		private RectTransform transformComponent = null;
 		[SerializeField]
-		private RectTransform viewportTransform;
+		private RectTransform viewportTransform = null;
 
 		[SerializeField]
-		private DebugLogManager debugManager;
+		private DebugLogManager debugManager = null;
 
 		[SerializeField]
-		private Color logItemNormalColor1;
+		private Color logItemNormalColor1 = Color.clear;
 		[SerializeField]
-		private Color logItemNormalColor2;
+		private Color logItemNormalColor2 = Color.clear;
 		[SerializeField]
-		private Color logItemSelectedColor;
+		private Color logItemSelectedColor = Color.clear;
 
 		private DebugLogManager manager;
 
