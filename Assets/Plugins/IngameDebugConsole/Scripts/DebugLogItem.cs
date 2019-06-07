@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 #if UNITY_EDITOR
@@ -13,23 +13,23 @@ namespace IngameDebugConsole
 	{
 		// Cached components
 		[SerializeField]
-		private RectTransform transformComponent;
+		private RectTransform transformComponent = null;
 		public RectTransform Transform { get { return transformComponent; } }
 
 		[SerializeField]
-		private Image imageComponent;
+		private Image imageComponent = null;
 		public Image Image { get { return imageComponent; } }
 
 		[SerializeField]
-		private Text logText;
+		private Text logText = null;
 		[SerializeField]
-		private Image logTypeImage;
+		private Image logTypeImage = null;
 
 		// Objects related to the collapsed count of the debug entry
 		[SerializeField]
-		private GameObject logCountParent;
+		private GameObject logCountParent = null;
 		[SerializeField]
-		private Text logCountText;
+		private Text logCountText = null;
 
 		// Debug entry to show with this log item
 		private DebugLogEntry logEntry;
