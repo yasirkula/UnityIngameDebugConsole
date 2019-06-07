@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections;
@@ -20,14 +20,14 @@ namespace IngameDebugConsole
 		private CanvasGroup canvasGroup;
 
 		[SerializeField]
-		private DebugLogManager debugManager;
+		private DebugLogManager debugManager = null;
 
 		[SerializeField]
-		private Text newInfoCountText;
+		private Text newInfoCountText = null;
 		[SerializeField]
-		private Text newWarningCountText;
+		private Text newWarningCountText = null;
 		[SerializeField]
-		private Text newErrorCountText;
+		private Text newErrorCountText = null;
 
 		// Number of new debug entries since the log window has been closed
 		private int newInfoCount = 0, newWarningCount = 0, newErrorCount = 0;
@@ -35,11 +35,11 @@ namespace IngameDebugConsole
 		private Color normalColor;
 
 		[SerializeField]
-		private Color alertColorInfo;
+		private Color alertColorInfo = Color.clear;
 		[SerializeField]
-		private Color alertColorWarning;
+		private Color alertColorWarning = Color.clear;
 		[SerializeField]
-		private Color alertColorError;
+		private Color alertColorError = Color.clear;
 
 		private bool isPopupBeingDragged = false;
 
