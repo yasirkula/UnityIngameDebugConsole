@@ -31,29 +31,49 @@ namespace IngameDebugConsole
 	{
 		private static DebugLogManager instance = null;
 
+#pragma warning disable 0649
 		// Debug console will persist between scenes
 		[Header( "Properties" )]
 		[SerializeField]
+		[HideInInspector]
 		private bool singleton = true;
 
 		// Minimum height of the console window
 		[SerializeField]
+		[HideInInspector]
 		private float minimumHeight = 200f;
 
-		// Should command input field be cleared after pressing Enter
 		[SerializeField]
+		[HideInInspector]
+		private bool enablePopup = true;
+
+		[SerializeField]
+		[HideInInspector]
 		private bool startInPopupMode = true;
 
 		[SerializeField]
+		[HideInInspector]
+		private bool toggleWithKey = false;
+
+		[SerializeField]
+		[HideInInspector]
+		private KeyCode toggleKey = KeyCode.BackQuote;
+
+		// Should command input field be cleared after pressing Enter
+		[SerializeField]
+		[HideInInspector]
 		private bool clearCommandAfterExecution = true;
 
 		[SerializeField]
+		[HideInInspector]
 		private int commandHistorySize = 15;
 
 		[SerializeField]
+		[HideInInspector]
 		private bool receiveLogcatLogsInAndroid = false;
 
 		[SerializeField]
+		[HideInInspector]
 		private string logcatArguments;
 
 		[Header( "Visuals" )]
@@ -112,15 +132,9 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private GameObject snapToBottomButton;
 
-		// Number of entries filtered by their types
-		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
-
 		// Canvas group to modify visibility of the log window
 		[SerializeField]
 		private CanvasGroup logWindowCanvasGroup;
-
-		private bool isLogWindowVisible = true;
-		private bool screenDimensionsChanged = false;
 
 		[SerializeField]
 		private DebugLogPopup popupManager;
@@ -131,6 +145,13 @@ namespace IngameDebugConsole
 		// Recycled list view to handle the log items efficiently
 		[SerializeField]
 		private DebugLogRecycledListView recycledListView;
+#pragma warning restore 0649
+
+		// Number of entries filtered by their types
+		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
+
+		private bool isLogWindowVisible = true;
+		private bool screenDimensionsChanged = false;
 
 		// Filters to apply to the list of debug entries to show
 		private bool isCollapseOn = false;
@@ -166,41 +187,12 @@ namespace IngameDebugConsole
 		private DebugLogLogcatListener logcatListener;
 #endif
 
-		private void OnEnable()
+		private void Awake()
 		{
 			// Only one instance of debug console is allowed
 			if( instance == null )
 			{
 				instance = this;
-				pooledLogItems = new List<DebugLogItem>();
-				commandHistory = new CircularBuffer<string>( commandHistorySize );
-
-				canvasTR = (RectTransform) transform;
-
-				// Associate sprites with log types
-				logSpriteRepresentations = new Dictionary<LogType, Sprite>
-				{
-					{ LogType.Log, infoLog },
-					{ LogType.Warning, warningLog },
-					{ LogType.Error, errorLog },
-					{ LogType.Exception, errorLog },
-					{ LogType.Assert, errorLog }
-				};
-
-				// Initially, all log types are visible
-				filterInfoButton.color = filterButtonsSelectedColor;
-				filterWarningButton.color = filterButtonsSelectedColor;
-				filterErrorButton.color = filterButtonsSelectedColor;
-
-				collapsedLogEntries = new List<DebugLogEntry>( 128 );
-				collapsedLogEntriesMap = new Dictionary<DebugLogEntry, int>( 128 );
-				uncollapsedLogEntriesIndices = new DebugLogIndexList();
-				indicesOfListEntriesToShow = new DebugLogIndexList();
-
-				recycledListView.Initialize( this, collapsedLogEntries, indicesOfListEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
-				recycledListView.UpdateItemsInTheList( true );
-
-				nullPointerEventData = new PointerEventData( null );
 
 				// If it is a singleton object, don't destroy it between scene changes
 				if( singleton )
@@ -212,9 +204,49 @@ namespace IngameDebugConsole
 				return;
 			}
 
+			pooledLogItems = new List<DebugLogItem>();
+			commandHistory = new CircularBuffer<string>( commandHistorySize );
+
+			canvasTR = (RectTransform) transform;
+
+			// Associate sprites with log types
+			logSpriteRepresentations = new Dictionary<LogType, Sprite>
+				{
+					{ LogType.Log, infoLog },
+					{ LogType.Warning, warningLog },
+					{ LogType.Error, errorLog },
+					{ LogType.Exception, errorLog },
+					{ LogType.Assert, errorLog }
+				};
+
+			// Initially, all log types are visible
+			filterInfoButton.color = filterButtonsSelectedColor;
+			filterWarningButton.color = filterButtonsSelectedColor;
+			filterErrorButton.color = filterButtonsSelectedColor;
+
+			collapsedLogEntries = new List<DebugLogEntry>( 128 );
+			collapsedLogEntriesMap = new Dictionary<DebugLogEntry, int>( 128 );
+			uncollapsedLogEntriesIndices = new DebugLogIndexList();
+			indicesOfListEntriesToShow = new DebugLogIndexList();
+
+			recycledListView.Initialize( this, collapsedLogEntries, indicesOfListEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
+			recycledListView.UpdateItemsInTheList( true );
+
+			if( minimumHeight < 200f )
+				minimumHeight = 200f;
+
+			nullPointerEventData = new PointerEventData( null );
+		}
+
+		private void OnEnable()
+		{
 			// Intercept debug entries
 			Application.logMessageReceived -= ReceivedLog;
 			Application.logMessageReceived += ReceivedLog;
+
+			// Listen for entered commands
+			commandInputField.onValidateInput -= OnValidateCommand;
+			commandInputField.onValidateInput += OnValidateCommand;
 
 			if( receiveLogcatLogsInAndroid )
 			{
@@ -225,13 +257,6 @@ namespace IngameDebugConsole
 				logcatListener.Start( logcatArguments );
 #endif
 			}
-
-			// Listen for entered commands
-			commandInputField.onValidateInput -= OnValidateCommand;
-			commandInputField.onValidateInput += OnValidateCommand;
-
-			if( minimumHeight < 200f )
-				minimumHeight = 200f;
 
 			DebugLogConsole.AddCommandInstance( "save_logs", "Saves logs to a file", "SaveLogsToFile", this );
 
@@ -264,10 +289,13 @@ namespace IngameDebugConsole
 		// Launch in popup mode
 		private void Start()
 		{
-			if( startInPopupMode )
-				HideButtonPressed();
+			if( enablePopup && startInPopupMode )
+				ShowPopup();
 			else
-				popupManager.OnPointerClick( null );
+			{
+				ShowLogWindow();
+				popupManager.gameObject.SetActive( enablePopup );
+			}
 		}
 
 		// Window is resized, update the list
@@ -302,6 +330,17 @@ namespace IngameDebugConsole
 				float scrollPos = logItemsScrollRect.verticalNormalizedPosition;
 				if( snapToBottomButton.activeSelf != ( scrollPos > 1E-6f && scrollPos < 0.9999f ) )
 					snapToBottomButton.SetActive( !snapToBottomButton.activeSelf );
+			}
+
+			if( toggleWithKey )
+			{
+				if( Input.GetKeyDown( toggleKey ) )
+				{
+					if( isLogWindowVisible )
+						ShowPopup();
+					else
+						ShowLogWindow();
+				}
 			}
 
 			if( isLogWindowVisible && commandInputField.isFocused )
@@ -339,6 +378,35 @@ namespace IngameDebugConsole
 					ReceivedLog( "LOGCAT: " + log, string.Empty, LogType.Log );
 			}
 #endif
+		}
+
+		public void ShowLogWindow()
+		{
+			// Show the log window
+			logWindowCanvasGroup.interactable = true;
+			logWindowCanvasGroup.blocksRaycasts = true;
+			logWindowCanvasGroup.alpha = 1f;
+
+			popupManager.Hide();
+
+			// Update the recycled list view 
+			// (in case new entries were intercepted while log window was hidden)
+			recycledListView.OnLogEntriesUpdated( true );
+
+			isLogWindowVisible = true;
+		}
+
+		public void ShowPopup()
+		{
+			// Hide the log window
+			logWindowCanvasGroup.interactable = false;
+			logWindowCanvasGroup.blocksRaycasts = false;
+			logWindowCanvasGroup.alpha = 0f;
+
+			popupManager.Show();
+
+			commandHistoryIndex = -1;
+			isLogWindowVisible = false;
 		}
 
 		// Command field input is changed, check if command is submitted
@@ -471,36 +539,10 @@ namespace IngameDebugConsole
 			logItemsScrollRect.OnScroll( nullPointerEventData );
 		}
 
-		// Show the log window
-		public void Show()
-		{
-			// Update the recycled list view (in case new entries were
-			// intercepted while log window was hidden)
-			recycledListView.OnLogEntriesUpdated( true );
-
-			logWindowCanvasGroup.interactable = true;
-			logWindowCanvasGroup.blocksRaycasts = true;
-			logWindowCanvasGroup.alpha = 1f;
-
-			isLogWindowVisible = true;
-		}
-
-		// Hide the log window
-		public void Hide()
-		{
-			logWindowCanvasGroup.interactable = false;
-			logWindowCanvasGroup.blocksRaycasts = false;
-			logWindowCanvasGroup.alpha = 0f;
-
-			commandHistoryIndex = -1;
-			isLogWindowVisible = false;
-		}
-
 		// Hide button is clicked
 		public void HideButtonPressed()
 		{
-			Hide();
-			popupManager.Show();
+			ShowPopup();
 		}
 
 		// Clear button is clicked

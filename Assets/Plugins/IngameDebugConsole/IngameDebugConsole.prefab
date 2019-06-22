@@ -1289,7 +1289,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   singleton: 1
   minimumHeight: 200
+  enablePopup: 1
+  startInPopupMode: 1
+  toggleWithKey: 1
+  toggleKey: 96
   clearCommandAfterExecution: 1
+  commandHistorySize: 15
   receiveLogcatLogsInAndroid: 0
   logcatArguments: 
   logItemPrefab: {fileID: 11408050, guid: 391be5df5ef62f345bb76a1051c04da7, type: 2}

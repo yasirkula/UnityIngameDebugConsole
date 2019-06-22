@@ -7,6 +7,7 @@ namespace IngameDebugConsole
 {
 	public class DebugLogRecycledListView : MonoBehaviour
 	{
+#pragma warning disable 0649
 		// Cached components
 		[SerializeField]
 		private RectTransform transformComponent;
@@ -22,6 +23,7 @@ namespace IngameDebugConsole
 		private Color logItemNormalColor2;
 		[SerializeField]
 		private Color logItemSelectedColor;
+#pragma warning restore 0649
 
 		private DebugLogManager manager;
 

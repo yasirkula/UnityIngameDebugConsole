@@ -19,6 +19,7 @@ namespace IngameDebugConsole
 		// Canvas group to modify visibility of the popup
 		private CanvasGroup canvasGroup;
 
+#pragma warning disable 0649
 		[SerializeField]
 		private DebugLogManager debugManager;
 
@@ -29,17 +30,18 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private Text newErrorCountText;
 
-		// Number of new debug entries since the log window has been closed
-		private int newInfoCount = 0, newWarningCount = 0, newErrorCount = 0;
-
-		private Color normalColor;
-
 		[SerializeField]
 		private Color alertColorInfo;
 		[SerializeField]
 		private Color alertColorWarning;
 		[SerializeField]
 		private Color alertColorError;
+#pragma warning restore 0649
+
+		// Number of new debug entries since the log window has been closed
+		private int newInfoCount = 0, newWarningCount = 0, newErrorCount = 0;
+
+		private Color normalColor;
 
 		private bool isPopupBeingDragged = false;
 
@@ -62,6 +64,9 @@ namespace IngameDebugConsole
 
 		public void OnViewportDimensionsChanged()
 		{
+			if( !gameObject.activeSelf )
+				return;
+
 			halfSize = popupTransform.sizeDelta * 0.5f * popupTransform.root.localScale.x;
 			OnEndDrag( null );
 		}
@@ -125,10 +130,7 @@ namespace IngameDebugConsole
 		{
 			// Hide the popup and show the log window
 			if( !isPopupBeingDragged )
-			{
-				debugManager.Show();
-				Hide();
-			}
+				debugManager.ShowLogWindow();
 		}
 
 		// Hides the log window and shows the popup
@@ -151,6 +153,8 @@ namespace IngameDebugConsole
 			canvasGroup.interactable = false;
 			canvasGroup.blocksRaycasts = false;
 			canvasGroup.alpha = 0f;
+
+			isPopupBeingDragged = false;
 		}
 
 		public void OnBeginDrag( PointerEventData data )
