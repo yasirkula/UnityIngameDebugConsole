@@ -174,6 +174,9 @@ namespace IngameDebugConsole
 		// Filtered list of debug entries to show
 		private DebugLogIndexList indicesOfListEntriesToShow;
 
+		// Logs that should be registered in Update-loop
+		private List<QueuedDebugLogEntry> queuedLogs;
+
 		private List<DebugLogItem> pooledLogItems;
 
 		// History of the previously entered commands
@@ -205,6 +208,7 @@ namespace IngameDebugConsole
 			}
 
 			pooledLogItems = new List<DebugLogItem>();
+			queuedLogs = new List<QueuedDebugLogEntry>();
 			commandHistory = new CircularBuffer<string>( commandHistorySize );
 
 			canvasTR = (RectTransform) transform;
@@ -307,6 +311,18 @@ namespace IngameDebugConsole
 		// If snapToBottom is enabled, force the scrollbar to the bottom
 		private void LateUpdate()
 		{
+			int queuedLogCount = queuedLogs.Count;
+			if( queuedLogCount > 0 )
+			{
+				for( int i = 0; i < queuedLogCount; i++ )
+				{
+					QueuedDebugLogEntry logEntry = queuedLogs[i];
+					ReceivedLog( logEntry.logString, logEntry.stackTrace, logEntry.logType );
+				}
+
+				queuedLogs.Clear();
+			}
+
 			if( screenDimensionsChanged )
 			{
 				// Update the recycled list view
@@ -452,6 +468,13 @@ namespace IngameDebugConsole
 		// A debug entry is received
 		private void ReceivedLog( string logString, string stackTrace, LogType logType )
 		{
+			if( CanvasUpdateRegistry.IsRebuildingGraphics() || CanvasUpdateRegistry.IsRebuildingLayout() )
+			{
+				// Trying to update the UI while the canvas is being rebuilt will throw warnings in the Unity console
+				queuedLogs.Add( new QueuedDebugLogEntry( logString, stackTrace, logType ) );
+				return;
+			}
+
 			DebugLogEntry logEntry = new DebugLogEntry( logString, stackTrace, null );
 
 			// Check if this entry is a duplicate (i.e. has been received before)
