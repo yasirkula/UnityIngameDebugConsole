@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
@@ -302,6 +303,7 @@ namespace IngameDebugConsole
 			if( !enablePopup )
 			{
 				ShowLogWindow();
+
 				popupManager.gameObject.SetActive( enablePopup );
 			}
 
@@ -403,6 +405,15 @@ namespace IngameDebugConsole
 #endif
 		}
 
+		// For some reason input fields don't like it when they are started the first frame that there's input
+		// so disable input for one frame
+		private IEnumerator selectInputBox() {
+			yield return null;
+			if (isLogWindowVisible) {
+				commandInputField.ActivateInputField();
+			}
+		}
+
 		public void ShowLogWindow()
 		{
 			// Show the log window
@@ -417,6 +428,10 @@ namespace IngameDebugConsole
 			recycledListView.OnLogEntriesUpdated( true );
 
 			isLogWindowVisible = true;
+
+			// This has to be done on the first frame otherwise we'll get an error. It's not really necessary on
+			// other frames
+			StartCoroutine(selectInputBox());
 		}
 
 		public void ShowPopup()
