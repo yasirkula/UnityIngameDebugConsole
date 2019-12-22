@@ -303,7 +303,7 @@ namespace IngameDebugConsole
 				popupManager.gameObject.SetActive( enablePopup );
 			}
 
-			if ( startInPopupMode )
+			if ( !startInPopupMode )
 				ShowPopup();
 		}
 
