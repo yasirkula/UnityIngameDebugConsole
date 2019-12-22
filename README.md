@@ -8,17 +8,17 @@
 
 ## ABOUT
 
-This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging *logcat* messages to the console on Android platform.
+This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging *logcat* messages to the console on the Android platform.
 
-User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 10 batches). It is possible to resize or hide the console window during the game. Once the console is hidden, a small popup will take its place (which can be dragged around). The popup will show the number of logs that arrived since it had appeared. Console window will reappear after clicking the popup.
+User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 10 batches). It is possible to resize or hide the console window in-game. Once the console is hidden, a small popup will take its place (which can be dragged around). The popup will show the number of logs that arrived since it appeared and can be expanded by clicking.
 
 ![popup](Images/3.png)
 
-Console window is optimized using a customized recycled list view that calls *Instantiate* function sparingly. 
+The console window is optimized using a customized recycled list view that calls *Instantiate* sparingly. 
 
 ## HOW TO
 
-Simply import **IngameDebugConsole.unitypackage** to your project and place **IngameDebugConsole** prefab to your scene. You may want to tweak the following settings:
+Simply import **IngameDebugConsole.unitypackage** to your project and place **IngameDebugConsole** prefab in your scene. You may want to tweak the following settings:
 
 - **Singleton**: if enabled, console window will persist between scenes (recommended). If, however, you don't want the console on each scene, then deselect this option and manually drag & drop the DebugLogCanvas prefab to the scenes you want
 - **Enable Popup**: if disabled, no popup will be shown when the console window is hidden
@@ -26,10 +26,10 @@ Simply import **IngameDebugConsole.unitypackage** to your project and place **In
 - **Toggle With Key**: if enabled, pressing the **Toggle Key** will show/hide (i.e. toggle) the console window at runtime
 - **Clear Command After Execution**: if enabled, the command input field at the bottom of the console window will automatically be cleared after entering a command. If you want to spam a command, or make small tweaks to the previous command without having to write the whole command again, then deselect this option
 - **Command History Size**: console keeps track of the previously entered commands, this value determines how many will be remembered (you can scroll through the history via up and down arrow keys while the command input field is focused)
-- **Receive Logcat Logs In Android**: if enabled, on Android platform, logcat entries of the application will also be logged to the console with the prefix "*LOGCAT:*". This may come in handy especially if you want to access the native logs of your Android plugins (like *Admob*)
-- **Logcat Arguments**: on Android, if Logcat logs are enabled, native logs will be filtered using these arguments. If left blank, all native logs of the application will be logged to the console. If you want to, for example, see Admob's logs only, you can enter **-s Ads** here
+- **Receive Logcat Logs In Android**: if enabled, on Android, logcat entries of the application will also be logged to the console with the prefix "*LOGCAT:*". This may come in handy especially if you want to access the native logs of your Android plugins (like *Admob*)
+- **Logcat Arguments**: on Android, if Logcat logs are enabled, native logs will be filtered using these arguments. If left blank, all native logs of the application will be logged to the console. If you want to, for example, see Admob's logs only, you can enter '**-s Ads**' here
 
-While testing on Unity editor, right clicking a log entry will open the corresponding line in external script editor, similar to double clicking a log in Unity Console.
+While testing on Unity editor, right clicking a log entry will open the corresponding line in the external script editor, similar to double clicking a log in Unity Console.
 
 ## COMMAND CONSOLE
 
@@ -37,11 +37,11 @@ While testing on Unity editor, right clicking a log entry will open the correspo
 
 You can enter commands using the input field at the bottom of the console. Initially, only "*help*" and "*sysinfo*" commands are available.
 
-A command is basically a function that can be called from the console via the command input field. This function can be **static** or an **instance function** (non static), in which case, a living instance is required to call the function. The return type of the function can be anything (including *void*). If the function returns an object, it will be printed to the console. The function can also take any number of parameters; the only restriction applies to the types of these parameters. Supported parameter types are:
+A command is basically a function that can be called from the console via the command input field. This function can be **static** or an **instance function** (non static), in which case a living instance is required to call the function. The return type of the function can be anything (including *void*). If the function returns an object, it will be printed to the console. The function can also take any number of parameters; the only restriction applies to the types of these parameters. Supported parameter types are:
 
 **Primitive types, string, Vector2, Vector3, Vector4, GameObject**
 
-Note that *GameObject* parameters are assigned value using *GameObject.Find*.
+Note that *GameObject* parameters are assigned values using *GameObject.Find*.
 
 To call a registered command, simply write down the command and then provide the necessary parameters. For example: 
 
@@ -51,9 +51,9 @@ To see the syntax of a command, see the help log:
 
 `- cube: Creates a cube at specified position -> TestScript.CreateCubeAt(Vector3)`
 
-Here, command is *cube* and the only necessary parameter is a *Vector3*. This command calls the *CreateCubeAt* function in the *TestScript* script (this demo script is not shipped with the asset).
+Here the command is *cube* and the only necessary parameter is a *Vector3*. This command calls the *CreateCubeAt* function in the *TestScript* script (this demo script is not shipped with the asset).
 
-Console uses a simple algorithm to parse the command input and has some restrictions:
+The console uses a simple algorithm to parse the command input and has some restrictions:
 
 - Don't put an f character after a float parameter
 - Wrap strings with quotation marks ( " )
@@ -70,7 +70,7 @@ If all the parameters of a function are of supported types, you can register the
 
 - **ConsoleMethod Attribute** *(not supported on UWP platform)*
 
-Simply add **IngameDebugConsole.ConsoleMethod** attribute to your functions. These functions must be *public static* and must reside in a *public* class. These constraints do not apply to the other two methods.
+Simply add the **IngameDebugConsole.ConsoleMethod** attribute to your functions. These functions must be *public static* and must reside in a *public* class. These constraints do not apply to the other two methods.
 
 ```csharp
 using UnityEngine;
@@ -130,6 +130,6 @@ public class TestScript : MonoBehaviour
 }
 ```
 
-The only difference with *AddCommandStatic* is that, you have to provide an actual instance of the class that owns the function, instead of the type of the class.
+The only difference with *AddCommandStatic* is that you have to provide an actual instance of the class that owns the function, instead of the type of the class.
 
 To remove a command, use `DebugLogConsole.RemoveCommand( string command )`.
