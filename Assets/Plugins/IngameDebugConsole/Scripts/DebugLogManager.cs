@@ -48,7 +48,6 @@ namespace IngameDebugConsole
 		private bool enablePopup = true;
 
 		[SerializeField]
-		[HideInInspector]
 		private bool startInPopupMode = true;
 
 		[SerializeField]
@@ -297,13 +296,14 @@ namespace IngameDebugConsole
 		// Launch in popup mode
 		private void Start()
 		{
-			if( enablePopup && startInPopupMode )
-				ShowPopup();
-			else
+			if( !enablePopup )
 			{
 				ShowLogWindow();
 				popupManager.gameObject.SetActive( enablePopup );
 			}
+
+			if ( startInPopupMode )
+				ShowPopup();
 		}
 
 		// Window is resized, update the list
