@@ -48,6 +48,7 @@ namespace IngameDebugConsole
 		private bool enablePopup = true;
 
 		[SerializeField]
+		[HideInInspector]
 		private bool startInPopupMode = true;
 
 		[SerializeField]
