@@ -6,13 +6,13 @@ using System.IO;
 
 // Receives debug entries and custom events (e.g. Clear, Collapse, Filter by Type)
 // and notifies the recycled list view of changes to the list of debug entries
-// 
+//
 // - Vocabulary -
 // Debug/Log entry: a Debug.Log/LogError/LogWarning/LogException/LogAssertion request made by
 //                   the client and intercepted by this manager object
 // Debug/Log item: a visual (uGUI) representation of a debug entry
-// 
-// There can be a lot of debug entries in the system but there will only be a handful of log items 
+//
+// There can be a lot of debug entries in the system but there will only be a handful of log items
 // to show their properties on screen (these log items are recycled as the list is scrolled)
 
 // An enum to represent filtered log types
@@ -150,6 +150,10 @@ namespace IngameDebugConsole
 		// Number of entries filtered by their types
 		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
 
+		public bool logWindowVisible {
+			get { return isLogWindowVisible; }
+		}
+
 		private bool isLogWindowVisible = true;
 		private bool screenDimensionsChanged = false;
 
@@ -167,7 +171,7 @@ namespace IngameDebugConsole
 		// Dictionary to quickly find if a log already exists in collapsedLogEntries
 		private Dictionary<DebugLogEntry, int> collapsedLogEntriesMap;
 
-		// The order the collapsedLogEntries are received 
+		// The order the collapsedLogEntries are received
 		// (duplicate entries have the same index (value))
 		private DebugLogIndexList uncollapsedLogEntriesIndices;
 
@@ -405,7 +409,7 @@ namespace IngameDebugConsole
 
 			popupManager.Hide();
 
-			// Update the recycled list view 
+			// Update the recycled list view
 			// (in case new entries were intercepted while log window was hidden)
 			recycledListView.OnLogEntriesUpdated( true );
 
