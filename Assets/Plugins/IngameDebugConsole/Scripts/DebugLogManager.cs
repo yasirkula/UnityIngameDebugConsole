@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using System.IO;
+using UnityEngine.Serialization;
 
 // Receives debug entries and custom events (e.g. Clear, Collapse, Filter by Type)
 // and notifies the recycled list view of changes to the list of debug entries
@@ -47,9 +48,10 @@ namespace IngameDebugConsole
 		[HideInInspector]
 		private bool enablePopup = true;
 
+		[FormerlySerializedAs("startInPopupMode")]
 		[SerializeField]
 		[HideInInspector]
-		private bool startInPopupMode = true;
+		private bool startMinimized = true;
 
 		[SerializeField]
 		[HideInInspector]
@@ -303,7 +305,7 @@ namespace IngameDebugConsole
 				popupManager.gameObject.SetActive( enablePopup );
 			}
 
-			if ( !startInPopupMode )
+			if ( !startMinimized )
 				ShowPopup();
 		}
 

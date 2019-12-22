@@ -22,7 +22,7 @@ Simply import **IngameDebugConsole.unitypackage** and place the **IngameDebugCon
 
 - **Singleton**: if enabled, console window will persist between scenes (recommended). If, however, you don't want the console on each scene, then deselect this option and manually drag & drop the DebugLogCanvas prefab to the scenes you want
 - **Enable Popup**: if disabled, no popup will be shown when the console window is hidden
-- **Start In Popup Mode**: if enabled, console will be initialized as a popup
+- **Start Minimized**: if enabled, console will be initialized as a popup
 - **Toggle With Key**: if enabled, pressing the **Toggle Key** will show/hide (i.e. toggle) the console window at runtime
 - **Clear Command After Execution**: if enabled, the command input field at the bottom of the console window will automatically be cleared after entering a command. If you want to spam a command, or make small tweaks to the previous command without having to write the whole command again, then deselect this option
 - **Command History Size**: console keeps track of the previously entered commands, this value determines how many will be remembered (you can scroll through the history via up and down arrow keys while the command input field is focused)
