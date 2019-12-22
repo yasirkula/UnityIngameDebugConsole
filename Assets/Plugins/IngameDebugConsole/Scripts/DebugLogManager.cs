@@ -311,8 +311,8 @@ namespace IngameDebugConsole
 				popupManager.gameObject.SetActive( enablePopup );
 			}
 
-			if ( !startMinimized )
-				ShowPopup();
+			if ( startMinimized )
+				Minimize();
 		}
 
 		// Window is resized, update the list
@@ -366,7 +366,7 @@ namespace IngameDebugConsole
 				if( Input.GetKeyDown( toggleKey ) )
 				{
 					if( isLogWindowVisible )
-						ShowPopup();
+						Minimize();
 					else
 						ShowLogWindow();
 				}
@@ -444,7 +444,7 @@ namespace IngameDebugConsole
 			StartCoroutine(selectInputBox());
 		}
 
-		public void ShowPopup()
+		public void Minimize()
 		{
 			// Hide the log window
 			logWindowCanvasGroup.interactable = false;
@@ -599,7 +599,7 @@ namespace IngameDebugConsole
 		// Hide button is clicked
 		public void HideButtonPressed()
 		{
-			ShowPopup();
+			Minimize();
 		}
 
 		// Clear button is clicked
