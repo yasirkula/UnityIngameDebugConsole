@@ -304,15 +304,12 @@ namespace IngameDebugConsole
 		// Launch in popup mode
 		private void Start()
 		{
-			if( !enablePopup )
-			{
-				ShowLogWindow();
+			popupManager.gameObject.SetActive( enablePopup );
 
-				popupManager.gameObject.SetActive( enablePopup );
-			}
-
-			if ( startMinimized )
+			if( startMinimized )
 				Minimize();
+			else
+				ShowLogWindow();
 		}
 
 		// Window is resized, update the list
