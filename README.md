@@ -10,7 +10,7 @@
 
 This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging *logcat* messages to the console on the Android platform.
 
-User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 10 batches). It is possible to resize or hide the console window in-game. Once the console is hidden, a small popup will take its place (which can be dragged around). The popup will show the number of logs that arrived since it appeared and can be expanded by clicking.
+User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 10 batches). It is possible to resize or hide the console window in-game. Once the console is hidden, a small popup will take its place (which can be dragged around). The popup will show the number of logs that arrived since it appeared and can be shown again by clicking.
 
 ![popup](Images/3.png)
 
@@ -18,7 +18,7 @@ The console window is optimized using a customized recycled list view that calls
 
 ## HOW TO
 
-Simply import **IngameDebugConsole.unitypackage** to your project and place **IngameDebugConsole** prefab in your scene. You may want to tweak the following settings:
+Simply import **IngameDebugConsole.unitypackage** and place the **IngameDebugConsole** prefab in your scene. You may want to tweak the following settings:
 
 - **Singleton**: if enabled, console window will persist between scenes (recommended). If, however, you don't want the console on each scene, then deselect this option and manually drag & drop the DebugLogCanvas prefab to the scenes you want
 - **Enable Popup**: if disabled, no popup will be shown when the console window is hidden
