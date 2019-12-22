@@ -193,6 +193,10 @@ namespace IngameDebugConsole
 		// Required in ValidateScrollPosition() function
 		private PointerEventData nullPointerEventData;
 
+		// Opening and closing can add extra characters and move the cursor so we remember some values so we can
+		// restore them
+		private int? textLengthOnHide;
+
 #if !UNITY_EDITOR && UNITY_ANDROID
 		private DebugLogLogcatListener logcatListener;
 #endif
@@ -412,6 +416,12 @@ namespace IngameDebugConsole
 			if (isLogWindowVisible) {
 				commandInputField.ActivateInputField();
 			}
+			// Restore previous text length. We need to overcompensate because this will only tell us about characters
+			// added from making the console visible again
+			if (textLengthOnHide != null && commandInputField.text.Length - 1 == textLengthOnHide.Value
+				&& textLengthOnHide.Value >= 1) {
+				commandInputField.text = commandInputField.text.Substring(0, commandInputField.text.Length - 2);
+			}
 		}
 
 		public void ShowLogWindow()
@@ -445,6 +455,8 @@ namespace IngameDebugConsole
 
 			commandHistoryIndex = -1;
 			isLogWindowVisible = false;
+
+			textLengthOnHide = commandInputField.text.Length;
 		}
 
 		// Command field input is changed, check if command is submitted
