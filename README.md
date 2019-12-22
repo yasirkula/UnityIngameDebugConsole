@@ -10,7 +10,7 @@
 
 This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging *logcat* messages to the console on the Android platform.
 
-User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 10 batches). It is possible to resize or hide the console window in-game. Once the console is hidden, a small popup will take its place (which can be dragged around). The popup will show the number of logs that arrived since it appeared and can be shown again by clicking.
+User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 10 batches). It is possible to resize or hide the console window in-game. Once the console is hidden, a small popup will take its place (which can be dragged around). The popup will show the number of logs that arrived since it appeared. The console window can be made to reappear after clicking the popup.
 
 ![popup](Images/3.png)
 
