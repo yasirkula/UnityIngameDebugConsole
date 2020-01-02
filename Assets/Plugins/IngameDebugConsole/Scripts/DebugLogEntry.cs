@@ -18,16 +18,16 @@ namespace IngameDebugConsole
 		// Collapsed count
 		public int count;
 
-		private int hashValue = HASH_NOT_CALCULATED;
+		private int hashValue;
 
-		public DebugLogEntry( string logString, string stackTrace, Sprite sprite )
+		public void Initialize( string logString, string stackTrace, Sprite sprite )
 		{
 			this.logString = logString;
 			this.stackTrace = stackTrace;
-
 			logTypeSpriteRepresentation = sprite;
 
 			count = 1;
+			hashValue = HASH_NOT_CALCULATED;
 		}
 
 		// Check if two entries have the same origin

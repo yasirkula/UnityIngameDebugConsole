@@ -40,62 +40,58 @@ namespace IngameDebugConsole
 		public delegate bool ParseFunction( string input, out object output );
 
 		// All the commands
-		private static Dictionary<string, ConsoleMethodInfo> methods = new Dictionary<string, ConsoleMethodInfo>();
+		private static readonly Dictionary<string, ConsoleMethodInfo> methods = new Dictionary<string, ConsoleMethodInfo>();
 
 		// All the parse functions
-		private static Dictionary<Type, ParseFunction> parseFunctions;
+		private static readonly Dictionary<Type, ParseFunction> parseFunctions = new Dictionary<Type, ParseFunction>() {
+			{ typeof( string ), ParseString },
+			{ typeof( bool ), ParseBool },
+			{ typeof( int ), ParseInt },
+			{ typeof( uint ), ParseUInt },
+			{ typeof( long ), ParseLong },
+			{ typeof( ulong ), ParseULong },
+			{ typeof( byte ), ParseByte },
+			{ typeof( sbyte ), ParseSByte },
+			{ typeof( short ), ParseShort },
+			{ typeof( ushort ), ParseUShort },
+			{ typeof( char ), ParseChar },
+			{ typeof( float ), ParseFloat },
+			{ typeof( double ), ParseDouble },
+			{ typeof( decimal ), ParseDecimal },
+			{ typeof( Vector2 ), ParseVector2 },
+			{ typeof( Vector3 ), ParseVector3 },
+			{ typeof( Vector4 ), ParseVector4 },
+			{ typeof( GameObject ), ParseGameObject } };
 
 		// All the readable names of accepted types
-		private static Dictionary<Type, string> typeReadableNames;
+		private static readonly Dictionary<Type, string> typeReadableNames = new Dictionary<Type, string>() {
+			{ typeof( string ), "String" },
+			{ typeof( bool ), "Boolean" },
+			{ typeof( int ), "Integer" },
+			{ typeof( uint ), "Unsigned Integer" },
+			{ typeof( long ), "Long" },
+			{ typeof( ulong ), "Unsigned Long" },
+			{ typeof( byte ), "Byte" },
+			{ typeof( sbyte ), "Short Byte" },
+			{ typeof( short ), "Short" },
+			{ typeof( ushort ), "Unsigned Short" },
+			{ typeof( char ), "Char" },
+			{ typeof( float ), "Float" },
+			{ typeof( double ), "Double" },
+			{ typeof( decimal ), "Decimal" },
+			{ typeof( Vector2 ), "Vector2" },
+			{ typeof( Vector3 ), "Vector3" },
+			{ typeof( Vector4 ), "Vector4" },
+			{ typeof( GameObject ), "GameObject" } };
 
 		// Split arguments of an entered command
-		private static List<string> commandArguments = new List<string>( 8 );
+		private static readonly List<string> commandArguments = new List<string>( 8 );
 
 		// Command parameter delimeter groups
-		private static readonly string[] inputDelimiters = new string[] { "\"\"", "{}", "()", "[]" };
+		private static readonly string[] inputDelimiters = new string[] { "\"\"", "''", "{}", "()", "[]" };
 
 		static DebugLogConsole()
 		{
-			parseFunctions = new Dictionary<Type, ParseFunction>() {
-				{ typeof( string ), ParseString },
-				{ typeof( bool ), ParseBool },
-				{ typeof( int ), ParseInt },
-				{ typeof( uint ), ParseUInt },
-				{ typeof( long ), ParseLong },
-				{ typeof( ulong ), ParseULong },
-				{ typeof( byte ), ParseByte },
-				{ typeof( sbyte ), ParseSByte },
-				{ typeof( short ), ParseShort },
-				{ typeof( ushort ), ParseUShort },
-				{ typeof( char ), ParseChar },
-				{ typeof( float ), ParseFloat },
-				{ typeof( double ), ParseDouble },
-				{ typeof( decimal ), ParseDecimal },
-				{ typeof( Vector2 ), ParseVector2 },
-				{ typeof( Vector3 ), ParseVector3 },
-				{ typeof( Vector4 ), ParseVector4 },
-				{ typeof( GameObject ), ParseGameObject } };
-
-			typeReadableNames = new Dictionary<Type, string>() {
-				{ typeof( string ), "String" },
-				{ typeof( bool ), "Boolean" },
-				{ typeof( int ), "Integer" },
-				{ typeof( uint ), "Unsigned Integer" },
-				{ typeof( long ), "Long" },
-				{ typeof( ulong ), "Unsigned Long" },
-				{ typeof( byte ), "Byte" },
-				{ typeof( sbyte ), "Short Byte" },
-				{ typeof( short ), "Short" },
-				{ typeof( ushort ), "Unsigned Short" },
-				{ typeof( char ), "Char" },
-				{ typeof( float ), "Float" },
-				{ typeof( double ), "Double" },
-				{ typeof( decimal ), "Decimal" },
-				{ typeof( Vector2 ), "Vector2" },
-				{ typeof( Vector3 ), "Vector3" },
-				{ typeof( Vector4 ), "Vector4" },
-				{ typeof( GameObject ), "GameObject" } };
-
 #if UNITY_EDITOR || !NETFX_CORE
 			// Load commands in most common Unity assemblies
 			HashSet<Assembly> assemblies = new HashSet<Assembly> { Assembly.GetAssembly( typeof( DebugLogConsole ) ) };
@@ -122,8 +118,8 @@ namespace IngameDebugConsole
 			}
 #endif
 
-			AddCommandStatic( "help", "Prints all commands", "LogAllCommands", typeof( DebugLogConsole ) );
-			AddCommandStatic( "sysinfo", "Prints system information", "LogSystemInfo", typeof( DebugLogConsole ) );
+			AddCommand( "help", "Prints all commands", LogAllCommands );
+			AddCommand( "sysinfo", "Prints system information", LogSystemInfo );
 		}
 
 		// Logs the list of available commands
@@ -164,7 +160,9 @@ namespace IngameDebugConsole
 			stringBuilder.Append( "Temporary Cache Path: " ).Append( Application.temporaryCachePath ).Append( "\n" );
 			stringBuilder.Append( "Device ID: " ).Append( SystemInfo.deviceUniqueIdentifier ).Append( "\n" );
 			stringBuilder.Append( "Max Texture Size: " ).Append( SystemInfo.maxTextureSize ).Append( "\n" );
+#if UNITY_5_6_OR_NEWER
 			stringBuilder.Append( "Max Cubemap Size: " ).Append( SystemInfo.maxCubemapSize ).Append( "\n" );
+#endif
 			stringBuilder.Append( "Accelerometer: " ).Append( SystemInfo.supportsAccelerometer ? "supported\n" : "not supported\n" );
 			stringBuilder.Append( "Gyro: " ).Append( SystemInfo.supportsGyroscope ? "supported\n" : "not supported\n" );
 			stringBuilder.Append( "Location Service: " ).Append( SystemInfo.supportsLocationService ? "supported\n" : "not supported\n" );
@@ -177,7 +175,9 @@ namespace IngameDebugConsole
 			stringBuilder.Append( "Instancing: " ).Append( SystemInfo.supportsInstancing ? "supported\n" : "not supported\n" );
 			stringBuilder.Append( "Motion Vectors: " ).Append( SystemInfo.supportsMotionVectors ? "supported\n" : "not supported\n" );
 			stringBuilder.Append( "3D Textures: " ).Append( SystemInfo.supports3DTextures ? "supported\n" : "not supported\n" );
+#if UNITY_5_6_OR_NEWER
 			stringBuilder.Append( "3D Render Textures: " ).Append( SystemInfo.supports3DRenderTextures ? "supported\n" : "not supported\n" );
+#endif
 			stringBuilder.Append( "2D Array Textures: " ).Append( SystemInfo.supports2DArrayTextures ? "supported\n" : "not supported\n" );
 			stringBuilder.Append( "Cubemap Array Textures: " ).Append( SystemInfo.supportsCubemapArrayTextures ? "supported" : "not supported" );
 
@@ -232,6 +232,62 @@ namespace IngameDebugConsole
 			AddCommand( command, description, methodName, ownerType );
 		}
 
+		// Add a command that can be related to either a static or an instance method
+		public static void AddCommand( string command, string description, Action method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1>( string command, string description, Action<T1> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1>( string command, string description, Func<T1> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1, T2>( string command, string description, Action<T1, T2> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1, T2>( string command, string description, Func<T1, T2> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1, T2, T3>( string command, string description, Action<T1, T2, T3> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1, T2, T3>( string command, string description, Func<T1, T2, T3> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1, T2, T3, T4>( string command, string description, Action<T1, T2, T3, T4> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1, T2, T3, T4>( string command, string description, Func<T1, T2, T3, T4> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand<T1, T2, T3, T4, T5>( string command, string description, Func<T1, T2, T3, T4, T5> method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
+		public static void AddCommand( string command, string description, Delegate method )
+		{
+			AddCommand( command, description, method.Method, method.Target );
+		}
+
 		// Remove a command from the console
 		public static void RemoveCommand( string command )
 		{
@@ -254,6 +310,19 @@ namespace IngameDebugConsole
 		// Create a new command and set its properties
 		private static void AddCommand( string command, string description, string methodName, Type ownerType, object instance = null )
 		{
+			// Get the method from the class
+			MethodInfo method = ownerType.GetMethod( methodName, BindingFlags.Public | BindingFlags.NonPublic | ( instance != null ? BindingFlags.Instance : BindingFlags.Static ) );
+			if( method == null )
+			{
+				Debug.LogError( methodName + " does not exist in " + ownerType );
+				return;
+			}
+
+			AddCommand( command, description, method, instance );
+		}
+
+		private static void AddCommand( string command, string description, MethodInfo method, object instance = null )
+		{
 			if( string.IsNullOrEmpty( command ) )
 			{
 				Debug.LogError( "Command name can't be empty!" );
@@ -267,19 +336,6 @@ namespace IngameDebugConsole
 				return;
 			}
 
-			// Get the method from the class
-			MethodInfo method = ownerType.GetMethod( methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static );
-			if( method == null )
-			{
-				Debug.LogError( methodName + " does not exist in " + ownerType );
-				return;
-			}
-
-			AddCommand( command, description, method, instance );
-		}
-
-		private static void AddCommand( string command, string description, MethodInfo method, object instance = null )
-		{
 			// Fetch the parameters of the class
 			ParameterInfo[] parameters = method.GetParameters();
 			if( parameters == null )
@@ -292,7 +348,7 @@ namespace IngameDebugConsole
 			for( int k = 0; k < parameters.Length; k++ )
 			{
 				Type parameterType = parameters[k].ParameterType;
-				if( parseFunctions.ContainsKey( parameterType ) )
+				if( parseFunctions.ContainsKey( parameterType ) || typeof( Component ).IsAssignableFrom( parameterType ) )
 					parameterTypes[k] = parameterType;
 				else
 				{
@@ -401,21 +457,32 @@ namespace IngameDebugConsole
 					string argument = commandArguments[i + 1];
 
 					Type parameterType = methodInfo.parameterTypes[i];
-					ParseFunction parseFunction;
-					if( !parseFunctions.TryGetValue( parameterType, out parseFunction ) )
+					if( typeof( Component ).IsAssignableFrom( parameterType ) )
 					{
-						Debug.LogError( "Unsupported parameter type: " + parameterType.Name );
-						return;
-					}
+						UnityEngine.Object val = argument == "null" ? null : GameObject.Find( argument );
+						if( val )
+							val = ( (GameObject) val ).GetComponent( parameterType );
 
-					object val;
-					if( !parseFunction( argument, out val ) )
+						parameters[i] = val;
+					}
+					else
 					{
-						Debug.LogError( "Couldn't parse " + argument + " to " + parameterType.Name );
-						return;
-					}
+						ParseFunction parseFunction;
+						if( !parseFunctions.TryGetValue( parameterType, out parseFunction ) )
+						{
+							Debug.LogError( "Unsupported parameter type: " + parameterType.Name );
+							return;
+						}
 
-					parameters[i] = val;
+						object val;
+						if( !parseFunction( argument, out val ) )
+						{
+							Debug.LogError( "Couldn't parse " + argument + " to " + parameterType.Name );
+							return;
+						}
+
+						parameters[i] = val;
+					}
 				}
 
 				// Execute the method associated with the command
@@ -614,7 +681,7 @@ namespace IngameDebugConsole
 
 		private static bool ParseGameObject( string input, out object output )
 		{
-			output = GameObject.Find( input );
+			output = input == "null" ? null : GameObject.Find( input );
 			return true;
 		}
 

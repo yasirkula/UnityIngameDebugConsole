@@ -9,6 +9,7 @@ namespace IngameDebugConsole
 		private SerializedProperty minimumHeight;
 		private SerializedProperty enablePopup;
 		private SerializedProperty startInPopupMode;
+		private SerializedProperty startMinimized;
 		private SerializedProperty toggleWithKey;
 		private SerializedProperty toggleKey;
 		private SerializedProperty clearCommandAfterExecution;
@@ -22,6 +23,7 @@ namespace IngameDebugConsole
 			minimumHeight = serializedObject.FindProperty( "minimumHeight" );
 			enablePopup = serializedObject.FindProperty( "enablePopup" );
 			startInPopupMode = serializedObject.FindProperty( "startInPopupMode" );
+			startMinimized = serializedObject.FindProperty( "startMinimized" );
 			toggleWithKey = serializedObject.FindProperty( "toggleWithKey" );
 			toggleKey = serializedObject.FindProperty( "toggleKey" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
@@ -40,6 +42,8 @@ namespace IngameDebugConsole
 
 			if( enablePopup.boolValue )
 				DrawSubProperty( startInPopupMode );
+			else
+				DrawSubProperty( startMinimized );
 
 			EditorGUILayout.PropertyField( toggleWithKey );
 

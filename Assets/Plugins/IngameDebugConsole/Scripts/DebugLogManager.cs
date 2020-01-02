@@ -53,6 +53,10 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		private bool startMinimized = false;
+
+		[SerializeField]
+		[HideInInspector]
 		private bool toggleWithKey = false;
 
 		[SerializeField]
@@ -175,8 +179,11 @@ namespace IngameDebugConsole
 		private DebugLogIndexList indicesOfListEntriesToShow;
 
 		// Logs that should be registered in Update-loop
-		private List<QueuedDebugLogEntry> queuedLogs;
+		private DynamicCircularBuffer<QueuedDebugLogEntry> queuedLogEntries;
+		private object logEntriesLock;
 
+		// Pools for memory efficiency
+		private List<DebugLogEntry> pooledLogEntries;
 		private List<DebugLogItem> pooledLogItems;
 
 		// History of the previously entered commands
@@ -185,6 +192,10 @@ namespace IngameDebugConsole
 
 		// Required in ValidateScrollPosition() function
 		private PointerEventData nullPointerEventData;
+
+#if UNITY_EDITOR
+		private bool isQuittingApplication;
+#endif
 
 #if !UNITY_EDITOR && UNITY_ANDROID
 		private DebugLogLogcatListener logcatListener;
@@ -207,9 +218,12 @@ namespace IngameDebugConsole
 				return;
 			}
 
-			pooledLogItems = new List<DebugLogItem>();
-			queuedLogs = new List<QueuedDebugLogEntry>();
+			pooledLogEntries = new List<DebugLogEntry>( 16 );
+			pooledLogItems = new List<DebugLogItem>( 16 );
+			queuedLogEntries = new DynamicCircularBuffer<QueuedDebugLogEntry>( 16 );
 			commandHistory = new CircularBuffer<string>( commandHistorySize );
+
+			logEntriesLock = new object();
 
 			canvasTR = (RectTransform) transform;
 
@@ -245,8 +259,8 @@ namespace IngameDebugConsole
 		private void OnEnable()
 		{
 			// Intercept debug entries
-			Application.logMessageReceived -= ReceivedLog;
-			Application.logMessageReceived += ReceivedLog;
+			Application.logMessageReceivedThreaded -= ReceivedLog;
+			Application.logMessageReceivedThreaded += ReceivedLog;
 
 			// Listen for entered commands
 			commandInputField.onValidateInput -= OnValidateCommand;
@@ -262,7 +276,7 @@ namespace IngameDebugConsole
 #endif
 			}
 
-			DebugLogConsole.AddCommandInstance( "save_logs", "Saves logs to a file", "SaveLogsToFile", this );
+			DebugLogConsole.AddCommand( "save_logs", "Saves logs to a file", SaveLogsToFile );
 
 			//Debug.LogAssertion( "assert" );
 			//Debug.LogError( "error" );
@@ -277,7 +291,7 @@ namespace IngameDebugConsole
 				return;
 
 			// Stop receiving debug entries
-			Application.logMessageReceived -= ReceivedLog;
+			Application.logMessageReceivedThreaded -= ReceivedLog;
 
 #if !UNITY_EDITOR && UNITY_ANDROID
 			if( logcatListener != null )
@@ -290,17 +304,22 @@ namespace IngameDebugConsole
 			DebugLogConsole.RemoveCommand( "save_logs" );
 		}
 
-		// Launch in popup mode
 		private void Start()
 		{
-			if( enablePopup && startInPopupMode )
+			if( ( enablePopup && startInPopupMode ) || ( !enablePopup && startMinimized ) )
 				ShowPopup();
 			else
-			{
 				ShowLogWindow();
-				popupManager.gameObject.SetActive( enablePopup );
-			}
+
+			popupManager.gameObject.SetActive( enablePopup );
 		}
+
+#if UNITY_EDITOR
+		private void OnApplicationQuit()
+		{
+			isQuittingApplication = true;
+		}
+#endif
 
 		// Window is resized, update the list
 		private void OnRectTransformDimensionsChange()
@@ -308,19 +327,26 @@ namespace IngameDebugConsole
 			screenDimensionsChanged = true;
 		}
 
-		// If snapToBottom is enabled, force the scrollbar to the bottom
 		private void LateUpdate()
 		{
-			int queuedLogCount = queuedLogs.Count;
+#if UNITY_EDITOR
+			if( isQuittingApplication )
+				return;
+#endif
+
+			int queuedLogCount = queuedLogEntries.Count;
 			if( queuedLogCount > 0 )
 			{
 				for( int i = 0; i < queuedLogCount; i++ )
 				{
-					QueuedDebugLogEntry logEntry = queuedLogs[i];
-					ReceivedLog( logEntry.logString, logEntry.stackTrace, logEntry.logType );
-				}
+					QueuedDebugLogEntry logEntry;
+					lock( logEntriesLock )
+					{
+						logEntry = queuedLogEntries.RemoveFirst();
+					}
 
-				queuedLogs.Clear();
+					ProcessLog( logEntry );
+				}
 			}
 
 			if( screenDimensionsChanged )
@@ -334,6 +360,7 @@ namespace IngameDebugConsole
 				screenDimensionsChanged = false;
 			}
 
+			// If snapToBottom is enabled, force the scrollbar to the bottom
 			if( snapToBottom )
 			{
 				logItemsScrollRect.verticalNormalizedPosition = 0f;
@@ -468,14 +495,33 @@ namespace IngameDebugConsole
 		// A debug entry is received
 		private void ReceivedLog( string logString, string stackTrace, LogType logType )
 		{
-			if( CanvasUpdateRegistry.IsRebuildingGraphics() || CanvasUpdateRegistry.IsRebuildingLayout() )
-			{
-				// Trying to update the UI while the canvas is being rebuilt will throw warnings in the Unity console
-				queuedLogs.Add( new QueuedDebugLogEntry( logString, stackTrace, logType ) );
+#if UNITY_EDITOR
+			if( isQuittingApplication )
 				return;
-			}
+#endif
 
-			DebugLogEntry logEntry = new DebugLogEntry( logString, stackTrace, null );
+			QueuedDebugLogEntry queuedLogEntry = new QueuedDebugLogEntry( logString, stackTrace, logType );
+
+			lock( logEntriesLock )
+			{
+				queuedLogEntries.Add( queuedLogEntry );
+			}
+		}
+
+		// Present the log entry in the console
+		private void ProcessLog( QueuedDebugLogEntry queuedLogEntry )
+		{
+			LogType logType = queuedLogEntry.logType;
+			DebugLogEntry logEntry;
+			if( pooledLogEntries.Count > 0 )
+			{
+				logEntry = pooledLogEntries[pooledLogEntries.Count - 1];
+				pooledLogEntries.RemoveAt( pooledLogEntries.Count - 1 );
+			}
+			else
+				logEntry = new DebugLogEntry();
+
+			logEntry.Initialize( queuedLogEntry.logString, queuedLogEntry.stackTrace, null );
 
 			// Check if this entry is a duplicate (i.e. has been received before)
 			int logEntryIndex;
@@ -492,8 +538,10 @@ namespace IngameDebugConsole
 			}
 			else
 			{
-				// It is a duplicate,
+				// It is a duplicate, pool the duplicate log entry and
 				// increment the original debug item's collapsed count
+				pooledLogEntries.Add( logEntry );
+
 				logEntry = collapsedLogEntries[logEntryIndex];
 				logEntry.count++;
 			}

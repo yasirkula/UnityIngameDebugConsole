@@ -17,11 +17,7 @@
 		public void Add( int index )
 		{
 			if( size == indices.Length )
-			{
-				int[] indicesNew = new int[size * 2];
-				System.Array.Copy( indices, 0, indicesNew, 0, size );
-				indices = indicesNew;
-			}
+				System.Array.Resize( ref indices, size * 2 );
 
 			indices[size++] = index;
 		}
