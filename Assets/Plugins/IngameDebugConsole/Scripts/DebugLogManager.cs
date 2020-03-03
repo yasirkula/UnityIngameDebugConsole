@@ -80,6 +80,9 @@ namespace IngameDebugConsole
 		[HideInInspector]
 		private string logcatArguments;
 
+		[SerializeField]
+		private int maxLogLength = 10000;
+
 		[Header( "Visuals" )]
 		[SerializeField]
 		private DebugLogItem logItemPrefab;
@@ -499,6 +502,44 @@ namespace IngameDebugConsole
 			if( isQuittingApplication )
 				return;
 #endif
+
+			// Truncate the log if it is longer than maxLogLength
+			int logLength = logString.Length;
+			if( stackTrace == null )
+			{
+				if( logLength > maxLogLength )
+					logString = logString.Substring( 0, maxLogLength - 11 ) + "<truncated>";
+			}
+			else
+			{
+				logLength += stackTrace.Length;
+				if( logLength > maxLogLength )
+				{
+					// Decide which log component(s) to truncate
+					int halfMaxLogLength = maxLogLength / 2;
+					if( logString.Length >= halfMaxLogLength )
+					{
+						if( stackTrace.Length >= halfMaxLogLength )
+						{
+							// Truncate both logString and stackTrace
+							logString = logString.Substring( 0, halfMaxLogLength - 11 ) + "<truncated>";
+
+							// If stackTrace doesn't end with a blank line, its last line won't be visible in the console for some reason
+							stackTrace = stackTrace.Substring( 0, halfMaxLogLength - 12 ) + "<truncated>\n";
+						}
+						else
+						{
+							// Truncate logString
+							logString = logString.Substring( 0, maxLogLength - stackTrace.Length - 11 ) + "<truncated>";
+						}
+					}
+					else
+					{
+						// Truncate stackTrace
+						stackTrace = stackTrace.Substring( 0, maxLogLength - logString.Length - 12 ) + "<truncated>\n";
+					}
+				}
+			}
 
 			QueuedDebugLogEntry queuedLogEntry = new QueuedDebugLogEntry( logString, stackTrace, logType );
 
