@@ -2,7 +2,7 @@
 
 <img height="278" src="Images/1.png" alt="screenshot" /> <img height="278" src="Images/2.png" alt="screenshot2" />
 
-**Available on Asset Store:** https://www.assetstore.unity3d.com/en/#!/content/68068
+**Available on Asset Store:** https://assetstore.unity.com/packages/tools/gui/in-game-debug-console-68068
 
 **Forum Thread:** http://forum.unity3d.com/threads/in-game-debug-console-with-ugui-free.411323/
 
