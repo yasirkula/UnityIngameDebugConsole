@@ -17,3 +17,5 @@ You can simply place the IngameDebugConsole prefab to your scene. You may want t
 - Command History Size: console keeps track of the previously entered commands, this value determines how many will be remembered (you can scroll through the history via up and down arrow keys while the command input field is focused)
 - Receive Logcat Logs In Android: if enabled, on Android platform, logcat entries of the application will also be logged to the console with the prefix "LOGCAT:". This may come in handy especially if you want to access the native logs of your Android plugins (like Admob)
 - Logcat Arguments: on Android, if Logcat logs are enabled, native logs will be filtered using these arguments. If left blank, all native logs of the application will be logged to the console. If you want to, for example, see Admob's logs only, you can enter -s Ads here
+- Ignore Screen Cutout: if disabled, on Android and iOS devices with notch screens, the console window will be repositioned so that the cutout(s) don't obscure it
+- Max Log Length: if a log is longer than this limit, it will be truncated. This helps avoid reaching Unity's 65000 vertex limit for UI canvases

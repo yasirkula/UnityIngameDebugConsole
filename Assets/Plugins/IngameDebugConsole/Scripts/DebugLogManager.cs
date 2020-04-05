@@ -81,6 +81,9 @@ namespace IngameDebugConsole
 		private string logcatArguments;
 
 		[SerializeField]
+		private bool ignoreScreenCutout;
+
+		[SerializeField]
 		private int maxLogLength = 10000;
 
 		[Header( "Visuals" )]
@@ -309,6 +312,10 @@ namespace IngameDebugConsole
 
 		private void Start()
 		{
+#if UNITY_ANDROID || UNITY_IOS
+			CheckScreenCutout();
+#endif
+
 			if( ( enablePopup && startInPopupMode ) || ( !enablePopup && startMinimized ) )
 				ShowPopup();
 			else
@@ -359,6 +366,10 @@ namespace IngameDebugConsole
 					recycledListView.OnViewportDimensionsChanged();
 				else
 					popupManager.OnViewportDimensionsChanged();
+
+#if UNITY_ANDROID || UNITY_IOS
+				CheckScreenCutout();
+#endif
 
 				screenDimensionsChanged = false;
 			}
@@ -851,6 +862,32 @@ namespace IngameDebugConsole
 			File.WriteAllText( path, instance.GetAllLogs() );
 
 			Debug.Log( "Logs saved to: " + path );
+		}
+
+		private void CheckScreenCutout()
+		{
+			if( ignoreScreenCutout )
+				return;
+
+#if UNITY_2017_2_OR_NEWER && !UNITY_EDITOR && ( UNITY_ANDROID || UNITY_IOS )
+			// Check if there is a cutout at the top of the screen
+			int screenHeight = Screen.height;
+			float safeYMax = Screen.safeArea.yMax;
+			if( safeYMax < screenHeight - 1 ) // 1: a small threshold
+			{
+				// There is a cutout, shift the log window downwards
+				float cutoutPercentage = ( screenHeight - safeYMax ) / Screen.height;
+				float cutoutLocalSize = cutoutPercentage * ( (RectTransform) transform ).rect.height;
+
+				logWindowTR.anchoredPosition = new Vector2( 0f, -cutoutLocalSize );
+				logWindowTR.sizeDelta = new Vector2( 0f, -cutoutLocalSize );
+			}
+			else
+			{
+				logWindowTR.anchoredPosition = Vector2.zero;
+				logWindowTR.sizeDelta = Vector2.zero;
+			}
+#endif
 		}
 
 		// Pool an unused log item
