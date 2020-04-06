@@ -10,7 +10,7 @@ namespace IngameDebugConsole
 		private Queue<string> queuedLogs;
 		private AndroidJavaObject nativeObject;
 
-		public DebugLogLogcatListener() : base( "com.yasirkula.unity.LogcatLogReceiver" )
+		public DebugLogLogcatListener() : base( "com.yasirkula.unity.DebugConsoleLogcatLogReceiver" )
 		{
 			queuedLogs = new Queue<string>( 16 );
 		}
@@ -26,7 +26,7 @@ namespace IngameDebugConsole
 		public void Start( string arguments )
 		{
 			if( nativeObject == null )
-				nativeObject = new AndroidJavaObject( "com.yasirkula.unity.LogcatLogger" );
+				nativeObject = new AndroidJavaObject( "com.yasirkula.unity.DebugConsoleLogcatLogger" );
 
 			nativeObject.Call( "Start", this, arguments );
 		}

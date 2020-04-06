@@ -8,16 +8,16 @@ import java.io.InputStreamReader;
  * Created by yasirkula on 7.11.2017.
  */
 
-public class LogcatLogger
+public class DebugConsoleLogcatLogger
 {
 	private static class LogcatWorker implements Runnable
 	{
-		private LogcatLogReceiver logReceiver;
+		private DebugConsoleLogcatLogReceiver logReceiver;
 		private String command;
 
 		private volatile boolean running = true;
 
-		public LogcatWorker( LogcatLogReceiver logReceiver, String command )
+		public LogcatWorker( DebugConsoleLogcatLogReceiver logReceiver, String command )
 		{
 			this.logReceiver = logReceiver;
 			this.command = command;
@@ -30,7 +30,7 @@ public class LogcatLogger
 			try
 			{
 				Runtime.getRuntime().exec( "logcat -c" );
-				
+
 				Process process = Runtime.getRuntime().exec( command );
 				BufferedReader bufferedReader = new BufferedReader( new InputStreamReader( process.getInputStream() ) );
 
@@ -62,7 +62,7 @@ public class LogcatLogger
 
 	private LogcatWorker worker;
 
-	public void Start( LogcatLogReceiver logReceiver, String arguments )
+	public void Start( DebugConsoleLogcatLogReceiver logReceiver, String arguments )
 	{
 		Stop();
 
