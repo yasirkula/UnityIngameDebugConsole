@@ -73,13 +73,16 @@ namespace IngameDebugConsole
 		public void ShowCount()
 		{
 			logCountText.text = logEntry.count.ToString();
-			logCountParent.SetActive( true );
+
+			if( !logCountParent.activeSelf )
+				logCountParent.SetActive( true );
 		}
 
 		// Hide the collapsed count of the debug entry
 		public void HideCount()
 		{
-			logCountParent.SetActive( false );
+			if( logCountParent.activeSelf )
+				logCountParent.SetActive( false );
 		}
 
 		// This log item is clicked, show the debug entry's stack trace

@@ -26,5 +26,10 @@
 		{
 			size = 0;
 		}
+
+		public int IndexOf( int index )
+		{
+			return System.Array.IndexOf( indices, index );
+		}
 	}
 }

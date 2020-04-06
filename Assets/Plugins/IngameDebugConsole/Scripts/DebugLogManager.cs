@@ -63,6 +63,14 @@ namespace IngameDebugConsole
 		[HideInInspector]
 		private KeyCode toggleKey = KeyCode.BackQuote;
 
+		[SerializeField]
+		[HideInInspector]
+		private bool enableSearchbar = true;
+
+		[SerializeField]
+		[HideInInspector]
+		private float topSearchbarMinWidth = 360f;
+
 		// Should command input field be cleared after pressing Enter
 		[SerializeField]
 		[HideInInspector]
@@ -81,7 +89,7 @@ namespace IngameDebugConsole
 		private string logcatArguments;
 
 		[SerializeField]
-		private bool ignoreScreenCutout;
+		private bool avoidScreenCutout = true;
 
 		[SerializeField]
 		private int maxLogLength = 10000;
@@ -140,6 +148,13 @@ namespace IngameDebugConsole
 		private Text errorEntryCountText;
 
 		[SerializeField]
+		private RectTransform searchbar;
+		[SerializeField]
+		private RectTransform searchbarSlotTop;
+		[SerializeField]
+		private RectTransform searchbarSlotBottom;
+
+		[SerializeField]
 		private GameObject snapToBottomButton;
 
 		// Canvas group to modify visibility of the log window
@@ -151,6 +166,8 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		private ScrollRect logItemsScrollRect;
+		private RectTransform logItemsScrollRectTR;
+		private Vector2 logItemsScrollRectOriginalSize;
 
 		// Recycled list view to handle the log items efficiently
 		[SerializeField]
@@ -161,11 +178,15 @@ namespace IngameDebugConsole
 		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
 
 		private bool isLogWindowVisible = true;
-		private bool screenDimensionsChanged = false;
+		private bool screenDimensionsChanged = true;
 
 		// Filters to apply to the list of debug entries to show
 		private bool isCollapseOn = false;
 		private DebugLogFilter logFilter = DebugLogFilter.All;
+
+		// Search filter
+		private string searchTerm;
+		private bool isInSearchMode;
 
 		// If the last log item is completely visible (scrollbar is at the bottom),
 		// scrollbar will remain at the bottom when new debug entries are received
@@ -232,16 +253,18 @@ namespace IngameDebugConsole
 			logEntriesLock = new object();
 
 			canvasTR = (RectTransform) transform;
+			logItemsScrollRectTR = (RectTransform) logItemsScrollRect.transform;
+			logItemsScrollRectOriginalSize = logItemsScrollRectTR.sizeDelta;
 
 			// Associate sprites with log types
-			logSpriteRepresentations = new Dictionary<LogType, Sprite>
-				{
-					{ LogType.Log, infoLog },
-					{ LogType.Warning, warningLog },
-					{ LogType.Error, errorLog },
-					{ LogType.Exception, errorLog },
-					{ LogType.Assert, errorLog }
-				};
+			logSpriteRepresentations = new Dictionary<LogType, Sprite>()
+			{
+				{ LogType.Log, infoLog },
+				{ LogType.Warning, warningLog },
+				{ LogType.Error, errorLog },
+				{ LogType.Exception, errorLog },
+				{ LogType.Assert, errorLog }
+			};
 
 			// Initially, all log types are visible
 			filterInfoButton.color = filterButtonsSelectedColor;
@@ -258,6 +281,13 @@ namespace IngameDebugConsole
 
 			if( minimumHeight < 200f )
 				minimumHeight = 200f;
+
+			if( !enableSearchbar )
+			{
+				searchbar = null;
+				searchbarSlotTop.gameObject.SetActive( false );
+				searchbarSlotBottom.gameObject.SetActive( false );
+			}
 
 			nullPointerEventData = new PointerEventData( null );
 		}
@@ -312,10 +342,6 @@ namespace IngameDebugConsole
 
 		private void Start()
 		{
-#if UNITY_ANDROID || UNITY_IOS
-			CheckScreenCutout();
-#endif
-
 			if( ( enablePopup && startInPopupMode ) || ( !enablePopup && startMinimized ) )
 				ShowPopup();
 			else
@@ -370,6 +396,36 @@ namespace IngameDebugConsole
 #if UNITY_ANDROID || UNITY_IOS
 				CheckScreenCutout();
 #endif
+
+				if( searchbar )
+				{
+					float logWindowWidth = logWindowTR.rect.width;
+					if( logWindowWidth >= topSearchbarMinWidth )
+					{
+						if( searchbar.parent == searchbarSlotBottom )
+						{
+							searchbarSlotTop.gameObject.SetActive( true );
+							searchbar.SetParent( searchbarSlotTop, false );
+							searchbarSlotBottom.gameObject.SetActive( false );
+
+							logItemsScrollRectTR.anchoredPosition = Vector2.zero;
+							logItemsScrollRectTR.sizeDelta = logItemsScrollRectOriginalSize;
+						}
+					}
+					else
+					{
+						if( searchbar.parent == searchbarSlotTop )
+						{
+							searchbarSlotBottom.gameObject.SetActive( true );
+							searchbar.SetParent( searchbarSlotBottom, false );
+							searchbarSlotTop.gameObject.SetActive( false );
+
+							float searchbarHeight = searchbarSlotBottom.sizeDelta.y;
+							logItemsScrollRectTR.anchoredPosition = new Vector2( 0f, searchbarHeight * -0.5f );
+							logItemsScrollRectTR.sizeDelta = logItemsScrollRectOriginalSize - new Vector2( 0f, searchbarHeight );
+						}
+					}
+				}
 
 				screenDimensionsChanged = false;
 			}
@@ -573,7 +629,7 @@ namespace IngameDebugConsole
 			else
 				logEntry = new DebugLogEntry();
 
-			logEntry.Initialize( queuedLogEntry.logString, queuedLogEntry.stackTrace, null );
+			logEntry.Initialize( queuedLogEntry.logString, queuedLogEntry.stackTrace );
 
 			// Check if this entry is a duplicate (i.e. has been received before)
 			int logEntryIndex;
@@ -608,12 +664,17 @@ namespace IngameDebugConsole
 			if( isCollapseOn && isEntryInCollapsedEntryList )
 			{
 				if( isLogWindowVisible )
-					recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndex );
+				{
+					if( !isInSearchMode && logFilter == DebugLogFilter.All )
+						recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndex );
+					else
+						recycledListView.OnCollapsedLogEntryAtIndexUpdated( indicesOfListEntriesToShow.IndexOf( logEntryIndex ) );
+				}
 			}
-			else if( logFilter == DebugLogFilter.All ||
+			else if( ( !isInSearchMode || queuedLogEntry.MatchesSearchTerm( searchTerm ) ) && ( logFilter == DebugLogFilter.All ||
 			   ( logTypeSpriteRepresentation == infoLog && ( ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info ) ) ||
 			   ( logTypeSpriteRepresentation == warningLog && ( ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning ) ) ||
-			   ( logTypeSpriteRepresentation == errorLog && ( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) ) )
+			   ( logTypeSpriteRepresentation == errorLog && ( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) ) ) )
 			{
 				indicesOfListEntriesToShow.Add( logEntryIndex );
 
@@ -704,7 +765,7 @@ namespace IngameDebugConsole
 			FilterLogs();
 		}
 
-		// Filtering mode of info logs has been changed
+		// Filtering mode of info logs has changed
 		public void FilterLogButtonPressed()
 		{
 			logFilter = logFilter ^ DebugLogFilter.Info;
@@ -717,7 +778,7 @@ namespace IngameDebugConsole
 			FilterLogs();
 		}
 
-		// Filtering mode of warning logs has been changed
+		// Filtering mode of warning logs has changed
 		public void FilterWarningButtonPressed()
 		{
 			logFilter = logFilter ^ DebugLogFilter.Warning;
@@ -730,7 +791,7 @@ namespace IngameDebugConsole
 			FilterLogs();
 		}
 
-		// Filtering mode of error logs has been changed
+		// Filtering mode of error logs has changed
 		public void FilterErrorButtonPressed()
 		{
 			logFilter = logFilter ^ DebugLogFilter.Error;
@@ -741,6 +802,21 @@ namespace IngameDebugConsole
 				filterErrorButton.color = filterButtonsNormalColor;
 
 			FilterLogs();
+		}
+
+		// Search term has changed
+		public void SearchTermChanged( string searchTerm )
+		{
+			if( searchTerm != null )
+				searchTerm = searchTerm.Trim();
+
+			this.searchTerm = searchTerm;
+			bool isInSearchMode = !string.IsNullOrEmpty( searchTerm );
+			if( isInSearchMode || this.isInSearchMode )
+			{
+				this.isInSearchMode = isInSearchMode;
+				FilterLogs();
+			}
 		}
 
 		// Debug window is being resized,
@@ -766,62 +842,100 @@ namespace IngameDebugConsole
 		// Determine the filtered list of debug entries to show on screen
 		private void FilterLogs()
 		{
-			if( logFilter == DebugLogFilter.None )
-			{
-				// Show no entry
-				indicesOfListEntriesToShow.Clear();
-			}
-			else if( logFilter == DebugLogFilter.All )
-			{
-				if( isCollapseOn )
-				{
-					// All the unique debug entries will be listed just once.
-					// So, list of debug entries to show is the same as the
-					// order these unique debug entries are added to collapsedLogEntries
-					indicesOfListEntriesToShow.Clear();
-					for( int i = 0; i < collapsedLogEntries.Count; i++ )
-						indicesOfListEntriesToShow.Add( i );
-				}
-				else
-				{
-					indicesOfListEntriesToShow.Clear();
-					for( int i = 0; i < uncollapsedLogEntriesIndices.Count; i++ )
-						indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
-				}
-			}
-			else
-			{
-				// Show only the debug entries that match the current filter
-				bool isInfoEnabled = ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info;
-				bool isWarningEnabled = ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning;
-				bool isErrorEnabled = ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error;
+			indicesOfListEntriesToShow.Clear();
 
-				if( isCollapseOn )
+			if( logFilter != DebugLogFilter.None )
+			{
+				if( logFilter == DebugLogFilter.All )
 				{
-					indicesOfListEntriesToShow.Clear();
-					for( int i = 0; i < collapsedLogEntries.Count; i++ )
+					if( isCollapseOn )
 					{
-						DebugLogEntry logEntry = collapsedLogEntries[i];
-						if( logEntry.logTypeSpriteRepresentation == infoLog && isInfoEnabled )
-							indicesOfListEntriesToShow.Add( i );
-						else if( logEntry.logTypeSpriteRepresentation == warningLog && isWarningEnabled )
-							indicesOfListEntriesToShow.Add( i );
-						else if( logEntry.logTypeSpriteRepresentation == errorLog && isErrorEnabled )
-							indicesOfListEntriesToShow.Add( i );
+						if( !isInSearchMode )
+						{
+							// All the unique debug entries will be listed just once.
+							// So, list of debug entries to show is the same as the
+							// order these unique debug entries are added to collapsedLogEntries
+							for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
+								indicesOfListEntriesToShow.Add( i );
+						}
+						else
+						{
+							for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
+							{
+								if( collapsedLogEntries[i].MatchesSearchTerm( searchTerm ) )
+									indicesOfListEntriesToShow.Add( i );
+							}
+						}
+					}
+					else
+					{
+						if( !isInSearchMode )
+						{
+							for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
+								indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+						}
+						else
+						{
+							for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
+							{
+								if( collapsedLogEntries[uncollapsedLogEntriesIndices[i]].MatchesSearchTerm( searchTerm ) )
+									indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+							}
+						}
 					}
 				}
 				else
 				{
-					indicesOfListEntriesToShow.Clear();
-					for( int i = 0; i < uncollapsedLogEntriesIndices.Count; i++ )
+					// Show only the debug entries that match the current filter
+					bool isInfoEnabled = ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info;
+					bool isWarningEnabled = ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning;
+					bool isErrorEnabled = ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error;
+
+					if( isCollapseOn )
 					{
-						DebugLogEntry logEntry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
-						if( logEntry.logTypeSpriteRepresentation == infoLog && isInfoEnabled )
-							indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
-						else if( logEntry.logTypeSpriteRepresentation == warningLog && isWarningEnabled )
-							indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
-						else if( logEntry.logTypeSpriteRepresentation == errorLog && isErrorEnabled )
-							indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+						for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
+						{
+							DebugLogEntry logEntry = collapsedLogEntries[i];
+
+							if( isInSearchMode && !logEntry.MatchesSearchTerm( searchTerm ) )
+								continue;
+
+							if( logEntry.logTypeSpriteRepresentation == infoLog )
+							{
+								if( isInfoEnabled )
+									indicesOfListEntriesToShow.Add( i );
+							}
+							else if( logEntry.logTypeSpriteRepresentation == warningLog )
+							{
+								if( isWarningEnabled )
+									indicesOfListEntriesToShow.Add( i );
+							}
+							else if( isErrorEnabled )
+								indicesOfListEntriesToShow.Add( i );
+						}
+					}
+					else
+					{
+						for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
+						{
+							DebugLogEntry logEntry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
+
+							if( isInSearchMode && !logEntry.MatchesSearchTerm( searchTerm ) )
+								continue;
+
+							if( logEntry.logTypeSpriteRepresentation == infoLog )
+							{
+								if( isInfoEnabled )
+									indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+							}
+							else if( logEntry.logTypeSpriteRepresentation == warningLog )
+							{
+								if( isWarningEnabled )
+									indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+							}
+							else if( isErrorEnabled )
+								indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+						}
 					}
 				}
 			}
@@ -864,9 +978,10 @@ namespace IngameDebugConsole
 			Debug.Log( "Logs saved to: " + path );
 		}
 
+		// If a cutout is intersecting with debug window on notch screens, shift the window downwards
 		private void CheckScreenCutout()
 		{
-			if( ignoreScreenCutout )
+			if( !avoidScreenCutout )
 				return;
 
 #if UNITY_2017_2_OR_NEWER && !UNITY_EDITOR && ( UNITY_ANDROID || UNITY_IOS )
@@ -877,7 +992,7 @@ namespace IngameDebugConsole
 			{
 				// There is a cutout, shift the log window downwards
 				float cutoutPercentage = ( screenHeight - safeYMax ) / Screen.height;
-				float cutoutLocalSize = cutoutPercentage * ( (RectTransform) transform ).rect.height;
+				float cutoutLocalSize = cutoutPercentage * canvasTR.rect.height;
 
 				logWindowTR.anchoredPosition = new Vector2( 0f, -cutoutLocalSize );
 				logWindowTR.sizeDelta = new Vector2( 0f, -cutoutLocalSize );
