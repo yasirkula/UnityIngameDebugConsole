@@ -6,6 +6,8 @@
 
 **Forum Thread:** http://forum.unity3d.com/threads/in-game-debug-console-with-ugui-free.411323/
 
+**[Support the Developer ☕](https://yasirkula.itch.io/unity3d)**
+
 ## ABOUT
 
 This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging *logcat* messages to the console on Android platform.
