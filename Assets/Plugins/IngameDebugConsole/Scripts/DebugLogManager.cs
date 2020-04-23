@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -527,11 +528,23 @@ namespace IngameDebugConsole
 		{
 			if( addedChar == '\t' ) // Autocomplete attempt
 			{
+        text = text.TrimStart();
 				if( !string.IsNullOrEmpty( text ) )
 				{
-					string autoCompletedCommand = DebugLogConsole.GetAutoCompleteCommand( text );
-					if( !string.IsNullOrEmpty( autoCompletedCommand ) )
-						commandInputField.text = autoCompletedCommand;
+          DebugLogConsole.AutoCompleteResults results = DebugLogConsole.GetAutoComplete(text);
+          if (results.error == null)
+          {
+            if (results.replacement != null)
+            {
+              commandInputField.text = results.replacement;
+            }
+            if (results.options.Count > 1)
+            {
+              Debug.Log("Options: " + String.Join(", ", results.options));
+            }
+          } else {
+            Debug.LogWarning(results.error);
+          }
 				}
 
 				return '\0';

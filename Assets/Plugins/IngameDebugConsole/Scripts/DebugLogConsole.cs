@@ -38,6 +38,7 @@ namespace IngameDebugConsole
 	public static class DebugLogConsole
 	{
 		public delegate bool ParseFunction( string input, out object output );
+    public delegate bool SuggestFunction( string input, out List<string> suggestions );
 
 		// All the commands
 		private static readonly Dictionary<string, ConsoleMethodInfo> methods = new Dictionary<string, ConsoleMethodInfo>();
@@ -63,6 +64,10 @@ namespace IngameDebugConsole
 			{ typeof( Vector4 ), ParseVector4 },
 			{ typeof( GameObject ), ParseGameObject } };
 
+    // All the suggest functions
+    private static readonly Dictionary<Type, SuggestFunction> suggestFunctions = new Dictionary<Type, SuggestFunction>() {
+      { typeof( GameObject ), SuggestGameObject } };
+
 		// All the readable names of accepted types
 		private static readonly Dictionary<Type, string> typeReadableNames = new Dictionary<Type, string>() {
 			{ typeof( string ), "String" },
@@ -84,9 +89,6 @@ namespace IngameDebugConsole
 			{ typeof( Vector4 ), "Vector4" },
 			{ typeof( GameObject ), "GameObject" } };
 
-		// Split arguments of an entered command
-		private static readonly List<string> commandArguments = new List<string>( 8 );
-
 		// Command parameter delimeter groups
 		private static readonly string[] inputDelimiters = new string[] { "\"\"", "''", "{}", "()", "[]" };
 
@@ -101,6 +103,31 @@ namespace IngameDebugConsole
 			}
 			catch { }
 
+			foreach( var assembly in assemblies )
+			{
+				foreach( var type in assembly.GetExportedTypes() )
+				{
+					foreach( var method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
+					{
+						foreach( var attribute in method.GetCustomAttributes( typeof( ConsoleTypeParseAttribute ), false ) )
+						{
+							ConsoleTypeParseAttribute consoleParse = attribute as ConsoleTypeParseAttribute;
+							if( consoleParse != null ) {
+                ExternalParseType externalParseType = new ExternalParseType(method);
+                parseFunctions.Add(consoleParse.Type, externalParseType.Parse);
+              }
+						}
+						foreach( var attribute in method.GetCustomAttributes( typeof( ConsoleTypeSuggestAttribute ), false ) )
+						{
+							ConsoleTypeSuggestAttribute consoleSuggest = attribute as ConsoleTypeSuggestAttribute;
+							if( consoleSuggest != null ) {
+                ExternalSuggestType externalSuggestType = new ExternalSuggestType(method);
+                suggestFunctions.Add(consoleSuggest.Type, externalSuggestType.Suggest);
+              }
+						}
+					}
+				}
+			}
 			foreach( var assembly in assemblies )
 			{
 				foreach( var type in assembly.GetExportedTypes() )
@@ -295,17 +322,127 @@ namespace IngameDebugConsole
 				methods.Remove( command );
 		}
 
+    public class AutoCompleteResults
+    {
+      public string replacement = null;
+      public List<string> options = new List<string>();
+      public string error = null;
+    }
+
 		// Returns the first command that starts with the entered argument
-		public static string GetAutoCompleteCommand( string commandStart )
+		public static AutoCompleteResults GetAutoComplete( string commandStart )
 		{
+      if (commandStart.IndexOf(' ') != -1)
+      {
+        return GetAutoCompleteParameters(commandStart);
+      }
+      AutoCompleteResults results = new AutoCompleteResults();
 			foreach( var entry in methods )
 			{
 				if( entry.Key.StartsWith( commandStart ) )
-					return entry.Key;
+          results.options.Add(entry.Key);
 			}
+      if (results.options.Count == 0)
+      {
+        results.error = "Command not found: " + commandStart;
+        return results;
+      }
+      if (results.options.Count == 1)
+      {
+        results.replacement = results.options[0] + " ";
+      }
+      else
+      {
+        results.replacement = CommonPrefix(results.options);
+      }
+      return results;
+    }
 
-			return null;
-		}
+    public static AutoCompleteResults GetAutoCompleteParameters( string commandStart )
+    {
+      AutoCompleteResults results = new AutoCompleteResults();
+      ParsedCommand parsedCommand = ParseCommand(commandStart);
+      if (parsedCommand.error != null)
+      {
+        results.error = parsedCommand.error;
+        return results;
+      }
+      Debug.Log("Usage: " + parsedCommand.methodInfo.signature);
+      if (parsedCommand.arguments.Count > parsedCommand.methodInfo.parameterTypes.Length)
+      {
+        results.error = "Too many parameters";
+        return results;
+      }
+      int argIndex = Math.Max(0, parsedCommand.arguments.Count - 1) + 
+        (parsedCommand.endsWithSpace ? 1 : 0);
+      if (argIndex >= parsedCommand.methodInfo.parameterTypes.Length)
+      {
+        return results;
+      }
+      Type type = parsedCommand.methodInfo.parameterTypes[argIndex];
+      if (suggestFunctions.TryGetValue(type, out SuggestFunction suggestFunction))
+      {
+        string prefix = parsedCommand.arguments.Count > argIndex ? 
+          parsedCommand.arguments[argIndex] : "";
+        if (suggestFunction(prefix, out List<string> suggestions))
+        {
+          if (suggestions.Count == 0)
+          {
+            results.error = "Parameter not found: " + prefix;
+            return results;
+          }
+          suggestions.Sort();
+          results.options.Add(suggestions[0]);
+          for (int i = 1; i < suggestions.Count; i++)
+          {
+            if (suggestions[i] != suggestions[i - 1])
+            {
+              results.options.Add(suggestions[i]);
+            }
+          }
+          string suggestionPrefix = CommonPrefix(results.options);
+          int argStart = prefix == "" ? commandStart.Length - 1: 
+            commandStart.LastIndexOf(prefix) - 1;
+          int delim = IndexOfDelimiter(commandStart[argStart]);
+          if (delim != -1)
+          {
+            argStart--;
+          }
+          else if (suggestionPrefix.IndexOf(' ') != -1)
+          {
+            delim = IndexOfDelimiter('\"');
+          }
+          if (delim != -1)
+          {
+            suggestionPrefix = inputDelimiters[delim][0] + suggestionPrefix;
+          }
+          results.replacement = commandStart.Substring(0, argStart + 1) + suggestionPrefix;
+          if (results.options.Count == 1)
+          {
+            results.replacement += (delim != -1 ? inputDelimiters[delim][1] + " " : " ");
+          }
+        }
+      }
+      return results;
+    }
+
+    private static string CommonPrefix(List<string> strings)
+    {
+      string replacement = strings[0];
+      for (int i = 1; i < strings.Count; i++)
+      {
+        int l = 0;
+        while (l < replacement.Length && l < strings[i].Length && replacement[l] == strings[i][l])
+        {
+          l++;
+        }
+        if (l < replacement.Length)
+        {
+          replacement = replacement.Substring(0, l);
+        }
+      }
+      return replacement;
+    }
 
 		// Create a new command and set its properties
 		private static void AddCommand( string command, string description, string methodName, Type ownerType, object instance = null )
@@ -352,6 +489,7 @@ namespace IngameDebugConsole
 					parameterTypes[k] = parameterType;
 				else
 				{
+          Debug.LogError("Invalid method \"" + command + "\" can not parse: " + parameterType);
 					isMethodValid = false;
 					break;
 				}
@@ -407,96 +545,124 @@ namespace IngameDebugConsole
 			if( command.Length == 0 )
 				return;
 
-			// Parse the arguments
-			commandArguments.Clear();
+      ParsedCommand parsedCommand = ParseCommand(command);
+      if (parsedCommand.error != null)
+      {
+        Debug.LogWarning( parsedCommand.error );
+        return;
+      }
+
+      // Check if number of parameter match
+      if( parsedCommand.methodInfo.parameterTypes.Length != parsedCommand.arguments.Count )
+      {
+        Debug.LogWarning( "Parameter count mismatch: " + parsedCommand.methodInfo.parameterTypes.Length + " parameters are needed" );
+        return;
+      }
+
+      Debug.Log( "Executing command: " + parsedCommand.name );
+
+      // Parse the parameters into objects
+      object[] parameters = new object[parsedCommand.methodInfo.parameterTypes.Length];
+      for( int i = 0; i < parsedCommand.methodInfo.parameterTypes.Length; i++ )
+      {
+        string argument = parsedCommand.arguments[i];
+
+        Type parameterType = parsedCommand.methodInfo.parameterTypes[i];
+        if( typeof( Component ).IsAssignableFrom( parameterType ) )
+        {
+          UnityEngine.Object val = argument == "null" ? null : GameObject.Find( argument );
+          if( val )
+            val = ( (GameObject) val ).GetComponent( parameterType );
+
+          parameters[i] = val;
+        }
+        else
+        {
+          ParseFunction parseFunction;
+          if( !parseFunctions.TryGetValue( parameterType, out parseFunction ) )
+          {
+            Debug.LogError( "Unsupported parameter type: " + parameterType.Name );
+            return;
+          }
+
+          object val;
+          if( !parseFunction( argument, out val ) )
+          {
+            Debug.LogError( "Couldn't parse " + argument + " to " + parameterType.Name );
+            return;
+          }
+
+          parameters[i] = val;
+        }
+      }
+
+      // Execute the method associated with the command
+      object result = parsedCommand.methodInfo.method.Invoke( parsedCommand.methodInfo.instance, parameters );
+      if( parsedCommand.methodInfo.method.ReturnType != typeof( void ) )
+      {
+        // Print the returned value to the console
+        if( result == null || result.Equals( null ) )
+          Debug.Log( "Value returned: null" );
+        else
+          Debug.Log( "Value returned: " + result.ToString() );
+      }
+		}
+
+    private class ParsedCommand
+    {
+      public ConsoleMethodInfo methodInfo = null;
+      public string name = null;
+      public List<string> arguments = new List<string>();
+      public bool endsWithSpace = false;
+      public string error = null;
+    }
+
+    private static ParsedCommand ParseCommand(string command)
+    {
+      ParsedCommand parsedCommand = new ParsedCommand();
 
 			int endIndex = IndexOfChar( command, ' ', 0 );
-			commandArguments.Add( command.Substring( 0, endIndex ) );
+			parsedCommand.name = command.Substring( 0, endIndex );
+
+			// Check if command exists
+			if( !methods.TryGetValue( parsedCommand.name, out parsedCommand.methodInfo ) )
+      {
+				parsedCommand.error = "Command not found: " + parsedCommand.name;
+        return parsedCommand;
+      }
+			
+      if( !parsedCommand.methodInfo.IsValid() )
+      {
+				parsedCommand.error = "Method no longer valid (instance dead): " + parsedCommand.name;
+        return parsedCommand;
+      }
 
 			for( int i = endIndex + 1; i < command.Length; i++ )
 			{
 				if( command[i] == ' ' )
+        {
+          parsedCommand.endsWithSpace = true;
 					continue;
+        }
+        parsedCommand.endsWithSpace = false;
 
 				int delimiterIndex = IndexOfDelimiter( command[i] );
 				if( delimiterIndex >= 0 )
 				{
 					endIndex = IndexOfChar( command, inputDelimiters[delimiterIndex][1], i + 1 );
-					commandArguments.Add( command.Substring( i + 1, endIndex - i - 1 ) );
+					parsedCommand.arguments.Add( command.Substring( i + 1, endIndex - i - 1 ) );
 				}
 				else
 				{
 					endIndex = IndexOfChar( command, ' ', i + 1 );
-					commandArguments.Add( command.Substring( i, endIndex - i ) );
+					parsedCommand.arguments.Add( command.Substring( i, endIndex - i ) );
+          parsedCommand.endsWithSpace = endIndex < command.Length;
 				}
 
 				i = endIndex;
 			}
-
-			// Check if command exists
-			ConsoleMethodInfo methodInfo;
-			if( !methods.TryGetValue( commandArguments[0], out methodInfo ) )
-				Debug.LogWarning( "Can't find command: " + commandArguments[0] );
-			else if( !methodInfo.IsValid() )
-				Debug.LogWarning( "Method no longer valid (instance dead): " + commandArguments[0] );
-			else
-			{
-				// Check if number of parameter match
-				if( methodInfo.parameterTypes.Length != commandArguments.Count - 1 )
-				{
-					Debug.LogWarning( "Parameter count mismatch: " + methodInfo.parameterTypes.Length + " parameters are needed" );
-					return;
-				}
-
-				Debug.Log( "Executing command: " + commandArguments[0] );
-
-				// Parse the parameters into objects
-				object[] parameters = new object[methodInfo.parameterTypes.Length];
-				for( int i = 0; i < methodInfo.parameterTypes.Length; i++ )
-				{
-					string argument = commandArguments[i + 1];
-
-					Type parameterType = methodInfo.parameterTypes[i];
-					if( typeof( Component ).IsAssignableFrom( parameterType ) )
-					{
-						UnityEngine.Object val = argument == "null" ? null : GameObject.Find( argument );
-						if( val )
-							val = ( (GameObject) val ).GetComponent( parameterType );
-
-						parameters[i] = val;
-					}
-					else
-					{
-						ParseFunction parseFunction;
-						if( !parseFunctions.TryGetValue( parameterType, out parseFunction ) )
-						{
-							Debug.LogError( "Unsupported parameter type: " + parameterType.Name );
-							return;
-						}
-
-						object val;
-						if( !parseFunction( argument, out val ) )
-						{
-							Debug.LogError( "Couldn't parse " + argument + " to " + parameterType.Name );
-							return;
-						}
-
-						parameters[i] = val;
-					}
-				}
-
-				// Execute the method associated with the command
-				object result = methodInfo.method.Invoke( methodInfo.instance, parameters );
-				if( methodInfo.method.ReturnType != typeof( void ) )
-				{
-					// Print the returned value to the console
-					if( result == null || result.Equals( null ) )
-						Debug.Log( "Value returned: null" );
-					else
-						Debug.Log( "Value returned: " + result.ToString() );
-				}
-			}
-		}
+      return parsedCommand;
+    }
 
 		// Find the index of the delimiter group that 'c' belongs to
 		private static int IndexOfDelimiter( char c )
@@ -684,6 +850,54 @@ namespace IngameDebugConsole
 			output = input == "null" ? null : GameObject.Find( input );
 			return true;
 		}
+
+    private struct ExternalParseType {
+      public ExternalParseType( MethodInfo methodInfo )
+      {
+        this.methodInfo = methodInfo;
+      }
+
+      public bool Parse( string input, out object output )
+      {
+        object[] parameters = new object[] {input, null};
+        bool result = (bool)methodInfo.Invoke(null, parameters);
+        output = parameters[1];
+        return result;
+      }
+
+      private MethodInfo methodInfo;
+    }
+
+    private static bool SuggestGameObject( string input, out List<string> suggestions )
+    {
+      suggestions = new List<string>();
+      GameObject[] gameObjects = UnityEngine.Object.FindObjectsOfType<GameObject>();
+      foreach(GameObject go in gameObjects)
+      {
+        if (go.activeInHierarchy && go.name.StartsWith(input))
+        {
+          suggestions.Add(go.name);
+        }
+      }
+      return true;
+    }
+
+    private struct ExternalSuggestType {
+      public ExternalSuggestType( MethodInfo methodInfo )
+      {
+        this.methodInfo = methodInfo;
+      }
+
+      public bool Suggest( string input, out List<string> suggestions )
+      {
+        object[] parameters = new object[] {input, null};
+        bool result = (bool)methodInfo.Invoke(null, parameters);
+        suggestions = (List<string>)parameters[1];
+        return result;
+      }
+
+      private MethodInfo methodInfo;
+    }
 
 		// Create a vector of specified type (fill the blank slots with 0 or ignore unnecessary slots)
 		private static bool CreateVectorFromInput( string input, Type vectorType, out object output )
