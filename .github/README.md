@@ -18,9 +18,19 @@ User interface is created with **uGUI** and costs **1 SetPass call** (and 6 to 1
 
 Console window is optimized using a customized recycled list view that calls *Instantiate* function sparingly. 
 
+## INSTALLATION
+
+There are 4 ways to install this plugin:
+
+- import [IngameDebugConsole.unitypackage](https://github.com/yasirkula/UnityIngameDebugConsole/releases) via *Assets-Import Package*
+- clone/[download](https://github.com/yasirkula/UnityIngameDebugConsole/archive/master.zip) this repository and move the *Plugins* folder to your Unity project's *Assets* folder
+- import it from [Asset Store](https://assetstore.unity.com/packages/tools/gui/in-game-debug-console-68068)
+- *(via Package Manager)* add the following line to *Packages/manifest.json*:
+  - `"com.yasirkula.ingamedebugconsole": "https://github.com/yasirkula/UnityIngameDebugConsole.git",`
+
 ## HOW TO
 
-Simply import [IngameDebugConsole.unitypackage](https://github.com/yasirkula/UnityIngameDebugConsole/releases) to your project and place **IngameDebugConsole** prefab to your scene. You may want to tweak the following settings:
+Simply place **IngameDebugConsole** prefab to your scene. You may want to tweak the following settings:
 
 - **Singleton:** if enabled, console window will persist between scenes (recommended). If, however, you don't want the console on each scene, then deselect this option and manually drag & drop the DebugLogCanvas prefab to the scenes you want
 - **Enable Popup:** if disabled, no popup will be shown when the console window is hidden
