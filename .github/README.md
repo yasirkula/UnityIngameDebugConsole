@@ -20,13 +20,15 @@ Console window is optimized using a customized recycled list view that calls *In
 
 ## INSTALLATION
 
-There are 4 ways to install this plugin:
+There are 5 ways to install this plugin:
 
 - import [IngameDebugConsole.unitypackage](https://github.com/yasirkula/UnityIngameDebugConsole/releases) via *Assets-Import Package*
 - clone/[download](https://github.com/yasirkula/UnityIngameDebugConsole/archive/master.zip) this repository and move the *Plugins* folder to your Unity project's *Assets* folder
 - import it from [Asset Store](https://assetstore.unity.com/packages/tools/gui/in-game-debug-console-68068)
 - *(via Package Manager)* add the following line to *Packages/manifest.json*:
   - `"com.yasirkula.ingamedebugconsole": "https://github.com/yasirkula/UnityIngameDebugConsole.git",`
+- *(via [OpenUPM](https://openupm.com))* after installing [openupm-cli](https://github.com/openupm/openupm-cli), run the following command:
+  - `openupm add com.yasirkula.ingamedebugconsole`
 
 ## HOW TO
 
