@@ -1,6 +1,6 @@
 # In-game Debug Console for Unity 3D
 
-<img height="278" src="Images/1.png" alt="screenshot" /> <img height="278" src="Images/2.png" alt="screenshot2" />
+<img height="225" src="Images/1.png" alt="screenshot" /> <img height="225" src="Images/2.png" alt="screenshot2" />
 
 **Available on Asset Store:** https://assetstore.unity.com/packages/tools/gui/in-game-debug-console-68068
 
