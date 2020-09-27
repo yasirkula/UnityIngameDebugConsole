@@ -1,5 +1,6 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
 
 // Handles the log items in an optimized way such that existing log items are
 // recycled within the list instead of creating a new log item at each chance
@@ -26,6 +27,7 @@ namespace IngameDebugConsole
 #pragma warning restore 0649
 
 		private DebugLogManager manager;
+		private ScrollRect scrollView;
 
 		private float logItemHeight, _1OverLogItemHeight;
 		private float viewportHeight;
@@ -52,13 +54,15 @@ namespace IngameDebugConsole
 		public float ItemHeight { get { return logItemHeight; } }
 		public float SelectedItemHeight { get { return heightOfSelectedLogEntry; } }
 
-		void Awake()
+		private void Awake()
 		{
+			scrollView = viewportTransform.GetComponentInParent<ScrollRect>();
+			scrollView.onValueChanged.AddListener( ( pos ) => UpdateItemsInTheList( false ) );
+
 			viewportHeight = viewportTransform.rect.height;
 		}
 
-		public void Initialize( DebugLogManager manager, List<DebugLogEntry> collapsedLogEntries,
-			DebugLogIndexList indicesOfEntriesToShow, float logItemHeight )
+		public void Initialize( DebugLogManager manager, List<DebugLogEntry> collapsedLogEntries, DebugLogIndexList indicesOfEntriesToShow, float logItemHeight )
 		{
 			this.manager = manager;
 			this.collapsedLogEntries = collapsedLogEntries;
@@ -75,13 +79,43 @@ namespace IngameDebugConsole
 		// A log item is clicked, highlight it
 		public void OnLogItemClicked( DebugLogItem item )
 		{
-			if( indexOfSelectedLogEntry != item.Index )
+			OnLogItemClickedInternal( item.Index, item );
+		}
+
+		// Force expand the log item at specified index
+		public void SelectAndFocusOnLogItemAtIndex( int itemIndex )
+		{
+			if( indexOfSelectedLogEntry != itemIndex ) // Make sure that we aren't deselecting the target log item
+				OnLogItemClickedInternal( itemIndex );
+
+			float transformComponentCenterYAtTop = viewportHeight * 0.5f;
+			float transformComponentCenterYAtBottom = transformComponent.sizeDelta.y - viewportHeight * 0.5f;
+			float transformComponentTargetCenterY = itemIndex * logItemHeight + viewportHeight * 0.5f;
+			if( transformComponentCenterYAtTop == transformComponentCenterYAtBottom )
+				scrollView.verticalNormalizedPosition = 0.5f;
+			else
+				scrollView.verticalNormalizedPosition = Mathf.Clamp01( Mathf.InverseLerp( transformComponentCenterYAtBottom, transformComponentCenterYAtTop, transformComponentTargetCenterY ) );
+
+			manager.SetSnapToBottom( false );
+		}
+
+		private void OnLogItemClickedInternal( int itemIndex, DebugLogItem referenceItem = null )
+		{
+			if( indexOfSelectedLogEntry != itemIndex )
 			{
 				DeselectSelectedLogItem();
 
-				indexOfSelectedLogEntry = item.Index;
-				positionOfSelectedLogEntry = item.Index * logItemHeight;
-				heightOfSelectedLogEntry = item.CalculateExpandedHeight( item.ToString() );
+				if( !referenceItem )
+				{
+					if( currentTopIndex == -1 )
+						UpdateItemsInTheList( false ); // Try to generate some DebugLogItems, we need one DebugLogItem to calculate the text height
+
+					referenceItem = logItemsAtIndices[currentTopIndex];
+				}
+
+				indexOfSelectedLogEntry = itemIndex;
+				positionOfSelectedLogEntry = itemIndex * logItemHeight;
+				heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[itemIndex]].ToString() );
 				deltaHeightOfSelectedLogEntry = heightOfSelectedLogEntry - logItemHeight;
 
 				manager.SetSnapToBottom( false );

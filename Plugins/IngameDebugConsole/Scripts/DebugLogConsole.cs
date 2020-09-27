@@ -142,6 +142,10 @@ namespace IngameDebugConsole
 			}
 
 			Debug.Log( stringBuilder.Append( "\n" ).ToString() );
+
+			// After typing help, the log that lists all the commands should automatically be expanded for better UX
+			if( DebugLogManager.Instance )
+				DebugLogManager.Instance.ExpandLatestPendingLog();
 		}
 
 		// Logs system information
@@ -182,6 +186,10 @@ namespace IngameDebugConsole
 			stringBuilder.Append( "Cubemap Array Textures: " ).Append( SystemInfo.supportsCubemapArrayTextures ? "supported" : "not supported" );
 
 			Debug.Log( stringBuilder.Append( "\n" ).ToString() );
+
+			// After typing sysinfo, the log that lists system information should automatically be expanded for better UX
+			if( DebugLogManager.Instance )
+				DebugLogManager.Instance.ExpandLatestPendingLog();
 		}
 
 		private static StringBuilder AppendSysInfoIfPresent( this StringBuilder sb, string info, string postfix = null )

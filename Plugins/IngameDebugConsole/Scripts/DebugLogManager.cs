@@ -29,7 +29,7 @@ namespace IngameDebugConsole
 
 	public class DebugLogManager : MonoBehaviour
 	{
-		private static DebugLogManager instance = null;
+		public static DebugLogManager Instance { get; private set; }
 
 #pragma warning disable 0649
 		// Debug console will persist between scenes
@@ -84,9 +84,11 @@ namespace IngameDebugConsole
 		[HideInInspector]
 		private bool receiveLogcatLogsInAndroid = false;
 
+#pragma warning disable 0414
 		[SerializeField]
 		[HideInInspector]
 		private string logcatArguments;
+#pragma warning restore 0414
 
 		[SerializeField]
 		private bool avoidScreenCutout = true;
@@ -129,6 +131,12 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		private InputField commandInputField;
+
+		[SerializeField]
+		private Button hideButton;
+
+		[SerializeField]
+		private Button clearButton;
 
 		[SerializeField]
 		private Image collapseButton;
@@ -174,11 +182,19 @@ namespace IngameDebugConsole
 		private DebugLogRecycledListView recycledListView;
 #pragma warning restore 0649
 
+		private bool isLogWindowVisible = true;
+		public bool IsLogWindowVisible { get { return isLogWindowVisible; } }
+
+		public bool PopupEnabled
+		{
+			get { return popupManager.gameObject.activeSelf; }
+			set { popupManager.gameObject.SetActive( value ); }
+		}
+
+		private bool screenDimensionsChanged = true;
+
 		// Number of entries filtered by their types
 		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
-
-		private bool isLogWindowVisible = true;
-		private bool screenDimensionsChanged = true;
 
 		// Filters to apply to the list of debug entries to show
 		private bool isCollapseOn = false;
@@ -208,6 +224,7 @@ namespace IngameDebugConsole
 		// Logs that should be registered in Update-loop
 		private DynamicCircularBuffer<QueuedDebugLogEntry> queuedLogEntries;
 		private object logEntriesLock;
+		private int pendingLogToAutoExpand;
 
 		// Pools for memory efficiency
 		private List<DebugLogEntry> pooledLogEntries;
@@ -231,15 +248,15 @@ namespace IngameDebugConsole
 		private void Awake()
 		{
 			// Only one instance of debug console is allowed
-			if( instance == null )
+			if( !Instance )
 			{
-				instance = this;
+				Instance = this;
 
 				// If it is a singleton object, don't destroy it between scene changes
 				if( singleton )
 					DontDestroyOnLoad( gameObject );
 			}
-			else if( this != instance )
+			else if( Instance != this )
 			{
 				Destroy( gameObject );
 				return;
@@ -289,18 +306,28 @@ namespace IngameDebugConsole
 				searchbarSlotBottom.gameObject.SetActive( false );
 			}
 
+			// Register to UI events
+			commandInputField.onValidateInput += OnValidateCommand;
+			searchbar.GetComponent<InputField>().onValueChanged.AddListener( SearchTermChanged );
+			hideButton.onClick.AddListener( HideLogWindow );
+			clearButton.onClick.AddListener( ClearLogs );
+			collapseButton.GetComponent<Button>().onClick.AddListener( CollapseButtonPressed );
+			filterInfoButton.GetComponent<Button>().onClick.AddListener( FilterLogButtonPressed );
+			filterWarningButton.GetComponent<Button>().onClick.AddListener( FilterWarningButtonPressed );
+			filterErrorButton.GetComponent<Button>().onClick.AddListener( FilterErrorButtonPressed );
+			snapToBottomButton.GetComponent<Button>().onClick.AddListener( () => SetSnapToBottom( true ) );
+
 			nullPointerEventData = new PointerEventData( null );
 		}
 
 		private void OnEnable()
 		{
+			if( Instance != this )
+				return;
+
 			// Intercept debug entries
 			Application.logMessageReceivedThreaded -= ReceivedLog;
 			Application.logMessageReceivedThreaded += ReceivedLog;
-
-			// Listen for entered commands
-			commandInputField.onValidateInput -= OnValidateCommand;
-			commandInputField.onValidateInput += OnValidateCommand;
 
 			if( receiveLogcatLogsInAndroid )
 			{
@@ -323,7 +350,7 @@ namespace IngameDebugConsole
 
 		private void OnDisable()
 		{
-			if( instance != this )
+			if( Instance != this )
 				return;
 
 			// Stop receiving debug entries
@@ -334,20 +361,17 @@ namespace IngameDebugConsole
 				logcatListener.Stop();
 #endif
 
-			// Stop receiving commands
-			commandInputField.onValidateInput -= OnValidateCommand;
-
 			DebugLogConsole.RemoveCommand( "save_logs" );
 		}
 
 		private void Start()
 		{
 			if( ( enablePopup && startInPopupMode ) || ( !enablePopup && startMinimized ) )
-				ShowPopup();
+				HideLogWindow();
 			else
 				ShowLogWindow();
 
-			popupManager.gameObject.SetActive( enablePopup );
+			PopupEnabled = enablePopup;
 		}
 
 #if UNITY_EDITOR
@@ -450,7 +474,7 @@ namespace IngameDebugConsole
 				if( Input.GetKeyDown( toggleKey ) )
 				{
 					if( isLogWindowVisible )
-						ShowPopup();
+						HideLogWindow();
 					else
 						ShowLogWindow();
 				}
@@ -509,7 +533,7 @@ namespace IngameDebugConsole
 			isLogWindowVisible = true;
 		}
 
-		public void ShowPopup()
+		public void HideLogWindow()
 		{
 			// Hide the log window
 			logWindowCanvasGroup.interactable = false;
@@ -523,7 +547,7 @@ namespace IngameDebugConsole
 		}
 
 		// Command field input is changed, check if command is submitted
-		public char OnValidateCommand( string text, int charIndex, char addedChar )
+		private char OnValidateCommand( string text, int charIndex, char addedChar )
 		{
 			if( addedChar == '\t' ) // Autocomplete attempt
 			{
@@ -660,15 +684,18 @@ namespace IngameDebugConsole
 
 			// If this debug entry matches the current filters,
 			// add it to the list of debug entries to show
+			int logEntryIndexInEntriesToShow = -1;
 			Sprite logTypeSpriteRepresentation = logEntry.logTypeSpriteRepresentation;
 			if( isCollapseOn && isEntryInCollapsedEntryList )
 			{
 				if( isLogWindowVisible )
 				{
 					if( !isInSearchMode && logFilter == DebugLogFilter.All )
-						recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndex );
+						logEntryIndexInEntriesToShow = logEntryIndex;
 					else
-						recycledListView.OnCollapsedLogEntryAtIndexUpdated( indicesOfListEntriesToShow.IndexOf( logEntryIndex ) );
+						logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.IndexOf( logEntryIndex );
+
+					recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndexInEntriesToShow );
 				}
 			}
 			else if( ( !isInSearchMode || queuedLogEntry.MatchesSearchTerm( searchTerm ) ) && ( logFilter == DebugLogFilter.All ||
@@ -677,6 +704,7 @@ namespace IngameDebugConsole
 			   ( logTypeSpriteRepresentation == errorLog && ( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) ) ) )
 			{
 				indicesOfListEntriesToShow.Add( logEntryIndex );
+				logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.Count - 1;
 
 				if( isLogWindowVisible )
 					recycledListView.OnLogEntriesUpdated( false );
@@ -709,6 +737,10 @@ namespace IngameDebugConsole
 				if( !isLogWindowVisible )
 					popupManager.NewErrorLogArrived();
 			}
+
+			// Automatically expand this log if necessary
+			if( pendingLogToAutoExpand > 0 && --pendingLogToAutoExpand <= 0 && isLogWindowVisible && logEntryIndexInEntriesToShow >= 0 )
+				recycledListView.SelectAndFocusOnLogItemAtIndex( logEntryIndexInEntriesToShow );
 		}
 
 		// Value of snapToBottom is changed (user scrolled the list manually)
@@ -718,19 +750,19 @@ namespace IngameDebugConsole
 		}
 
 		// Make sure the scroll bar of the scroll rect is adjusted properly
-		public void ValidateScrollPosition()
+		internal void ValidateScrollPosition()
 		{
 			logItemsScrollRect.OnScroll( nullPointerEventData );
 		}
 
-		// Hide button is clicked
-		public void HideButtonPressed()
+		// Automatically expand the latest log in queuedLogEntries
+		internal void ExpandLatestPendingLog()
 		{
-			ShowPopup();
+			pendingLogToAutoExpand = queuedLogEntries.Count;
 		}
 
-		// Clear button is clicked
-		public void ClearButtonPressed()
+		// Clear all the logs
+		public void ClearLogs()
 		{
 			snapToBottom = true;
 
@@ -752,7 +784,7 @@ namespace IngameDebugConsole
 		}
 
 		// Collapse button is clicked
-		public void CollapseButtonPressed()
+		private void CollapseButtonPressed()
 		{
 			// Swap the value of collapse mode
 			isCollapseOn = !isCollapseOn;
@@ -766,7 +798,7 @@ namespace IngameDebugConsole
 		}
 
 		// Filtering mode of info logs has changed
-		public void FilterLogButtonPressed()
+		private void FilterLogButtonPressed()
 		{
 			logFilter = logFilter ^ DebugLogFilter.Info;
 
@@ -779,7 +811,7 @@ namespace IngameDebugConsole
 		}
 
 		// Filtering mode of warning logs has changed
-		public void FilterWarningButtonPressed()
+		private void FilterWarningButtonPressed()
 		{
 			logFilter = logFilter ^ DebugLogFilter.Warning;
 
@@ -792,7 +824,7 @@ namespace IngameDebugConsole
 		}
 
 		// Filtering mode of error logs has changed
-		public void FilterErrorButtonPressed()
+		private void FilterErrorButtonPressed()
 		{
 			logFilter = logFilter ^ DebugLogFilter.Error;
 
@@ -805,7 +837,7 @@ namespace IngameDebugConsole
 		}
 
 		// Search term has changed
-		public void SearchTermChanged( string searchTerm )
+		private void SearchTermChanged( string searchTerm )
 		{
 			if( searchTerm != null )
 				searchTerm = searchTerm.Trim();
@@ -822,10 +854,8 @@ namespace IngameDebugConsole
 		// Debug window is being resized,
 		// Set the sizeDelta property of the window accordingly while
 		// preventing window dimensions from going below the minimum dimensions
-		public void Resize( BaseEventData dat )
+		internal void Resize( PointerEventData eventData )
 		{
-			PointerEventData eventData = (PointerEventData) dat;
-
 			// Grab the resize button from top; 36f is the height of the resize button
 			float newHeight = ( eventData.position.y - logWindowTR.position.y ) / -canvasTR.localScale.y + 36f;
 			if( newHeight < minimumHeight )
@@ -973,7 +1003,7 @@ namespace IngameDebugConsole
 		private void SaveLogsToFile()
 		{
 			string path = Path.Combine( Application.persistentDataPath, System.DateTime.Now.ToString( "dd-MM-yyyy--HH-mm-ss" ) + ".txt" );
-			File.WriteAllText( path, instance.GetAllLogs() );
+			File.WriteAllText( path, GetAllLogs() );
 
 			Debug.Log( "Logs saved to: " + path );
 		}
@@ -1006,14 +1036,14 @@ namespace IngameDebugConsole
 		}
 
 		// Pool an unused log item
-		public void PoolLogItem( DebugLogItem logItem )
+		internal void PoolLogItem( DebugLogItem logItem )
 		{
 			logItem.gameObject.SetActive( false );
 			pooledLogItems.Add( logItem );
 		}
 
 		// Fetch a log item from the pool
-		public DebugLogItem PopLogItem()
+		internal DebugLogItem PopLogItem()
 		{
 			DebugLogItem newLogItem;
 
