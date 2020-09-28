@@ -57,7 +57,7 @@ You can enter commands using the input field at the bottom of the console. Initi
 
 A command is basically a function that can be called from the console via the command input field. This function can be **static** or an **instance function** (non static), in which case, a living instance is required to call the function. The return type of the function can be anything (including *void*). If the function returns an object, it will be printed to the console. The function can also take any number of parameters; the only restriction applies to the types of these parameters. Supported parameter types are:
 
-**Primitive types, string, Vector2, Vector3, Vector4, GameObject, any Component type**
+**Primitive types, enums, string, Vector2, Vector3, Vector4, Color, Color32, Vector2Int, Vector3Int, Quaternion, Rect, RectInt, RectOffset, Bounds, BoundsInt, GameObject, any Component type, arrays/Lists of these supported types**
 
 Note that *GameObject* and *Component* parameters are assigned value using *GameObject.Find*.
 
@@ -67,13 +67,12 @@ To call a registered command, simply write down the command and then provide the
 
 To see the syntax of a command, see the help log:
 
-`- cube: Creates a cube at specified position -> TestScript.CreateCubeAt(Vector3)`
+`- cube: Creates a cube at specified position -> TestScript.CreateCubeAt(Vector3 position)`
 
 Here, the command is *cube* and it takes a single *Vector3* parameter. This command calls the *CreateCubeAt* function in the *TestScript* script (see example code below for implementation details).
 
 Console uses a simple algorithm to parse the command input and has some restrictions:
 
-- Don't put an f character after a float parameter
 - Wrap strings with quotation marks ( " or ' )
 - Wrap vectors with brackets ( \[\] ) or parentheses ( () )
 
@@ -81,7 +80,7 @@ However, there is some flexibility in the syntax, as well:
 
 - You can provide an empty vector to represent Vector_.zero: \[\]
 - You can enter 1 instead of true, or 0 instead of false
-- You can enter 'null' for null GameObject and/or Component parameters
+- You can enter `null` for null GameObject and/or Component parameters
 
 ### Registering Custom Commands
 
@@ -190,4 +189,63 @@ The only difference with *AddCommandStatic* is that, you have to provide an actu
 
 ### Removing Commands
 
-Use `DebugLogConsole.RemoveCommand( string command )`.
+Use `DebugLogConsole.RemoveCommand( string command )` or one of the `DebugLogConsole.RemoveCommand( System.Action method )` variants.
+
+### Extending Supported Parameter Types
+
+Use `DebugLogConsole.AddCustomParameterType( Type type, ParseFunction parseFunction, string typeReadableName = null )`:
+
+```csharp
+using UnityEngine;
+using IngameDebugConsole;
+
+public class TestScript : MonoBehaviour
+{
+	public class Person
+	{
+		public string Name;
+		public int Age;
+	}
+
+	void Start()
+	{
+		// Person parameters can now be used in commands, e.g. ('John Doe' 18)
+		DebugLogConsole.AddCustomParameterType( typeof( Person ), ParsePerson );
+	}
+	
+	private static bool ParsePerson( string input, out object output )
+	{
+		// Split the input
+		// This will turn ('John Doe' 18) into 2 strings: "John Doe" (without quotes) and "18" (without quotes)
+		List<string> inputSplit = new List<string>( 2 );
+		DebugLogConsole.FetchArgumentsFromCommand( input, inputSplit );
+
+		// We need 2 parameters: Name and Age
+		if( inputSplit.Count != 2 )
+		{
+			output = null;
+			return false;
+		}
+
+		// Try parsing the age
+		object age;
+		if( !DebugLogConsole.ParseInt( inputSplit[1], out age ) )
+		{
+			output = null;
+			return false;
+		}
+
+		// Create the resulting object and assign it to output
+		output = new Person()
+		{
+			Name = inputSplit[0],
+			Age = (int) age
+		};
+
+		// Successfully parsed!
+		return true;
+	}
+}
+```
+
+To remove the custom parameter type, you can use `DebugLogConsole.RemoveCustomParameterType( Type type )`.

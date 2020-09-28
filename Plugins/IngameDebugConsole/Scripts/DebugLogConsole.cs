@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Text;
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
+using Object = UnityEngine.Object;
 
 // Manages the console commands, parses console input and handles execution of commands
 // Supported method parameter types: int, float, bool, string, Vector2, Vector3, Vector4
@@ -16,13 +18,15 @@ namespace IngameDebugConsole
 		public readonly Type[] parameterTypes;
 		public readonly object instance;
 
+		public readonly string command;
 		public readonly string signature;
 
-		public ConsoleMethodInfo( MethodInfo method, Type[] parameterTypes, object instance, string signature )
+		public ConsoleMethodInfo( MethodInfo method, Type[] parameterTypes, object instance, string command, string signature )
 		{
 			this.method = method;
 			this.parameterTypes = parameterTypes;
 			this.instance = instance;
+			this.command = command;
 			this.signature = signature;
 		}
 
@@ -40,10 +44,12 @@ namespace IngameDebugConsole
 		public delegate bool ParseFunction( string input, out object output );
 
 		// All the commands
-		private static readonly Dictionary<string, ConsoleMethodInfo> methods = new Dictionary<string, ConsoleMethodInfo>();
+		private static readonly List<ConsoleMethodInfo> methods = new List<ConsoleMethodInfo>();
+		private static readonly List<ConsoleMethodInfo> matchingMethods = new List<ConsoleMethodInfo>( 4 );
 
 		// All the parse functions
-		private static readonly Dictionary<Type, ParseFunction> parseFunctions = new Dictionary<Type, ParseFunction>() {
+		private static readonly Dictionary<Type, ParseFunction> parseFunctions = new Dictionary<Type, ParseFunction>()
+		{
 			{ typeof( string ), ParseString },
 			{ typeof( bool ), ParseBool },
 			{ typeof( int ), ParseInt },
@@ -61,10 +67,24 @@ namespace IngameDebugConsole
 			{ typeof( Vector2 ), ParseVector2 },
 			{ typeof( Vector3 ), ParseVector3 },
 			{ typeof( Vector4 ), ParseVector4 },
-			{ typeof( GameObject ), ParseGameObject } };
+			{ typeof( Quaternion ), ParseQuaternion },
+			{ typeof( Color ), ParseColor },
+			{ typeof( Color32 ), ParseColor32 },
+			{ typeof( Rect ), ParseRect },
+			{ typeof( RectOffset ), ParseRectOffset },
+			{ typeof( Bounds ), ParseBounds },
+			{ typeof( GameObject ), ParseGameObject },
+#if UNITY_2017_2_OR_NEWER
+			{ typeof( Vector2Int ), ParseVector2Int },
+			{ typeof( Vector3Int ), ParseVector3Int },
+			{ typeof( RectInt ), ParseRectInt },
+			{ typeof( BoundsInt ), ParseBoundsInt },
+#endif
+		};
 
 		// All the readable names of accepted types
-		private static readonly Dictionary<Type, string> typeReadableNames = new Dictionary<Type, string>() {
+		private static readonly Dictionary<Type, string> typeReadableNames = new Dictionary<Type, string>()
+		{
 			{ typeof( string ), "String" },
 			{ typeof( bool ), "Boolean" },
 			{ typeof( int ), "Integer" },
@@ -78,11 +98,8 @@ namespace IngameDebugConsole
 			{ typeof( char ), "Char" },
 			{ typeof( float ), "Float" },
 			{ typeof( double ), "Double" },
-			{ typeof( decimal ), "Decimal" },
-			{ typeof( Vector2 ), "Vector2" },
-			{ typeof( Vector3 ), "Vector3" },
-			{ typeof( Vector4 ), "Vector4" },
-			{ typeof( GameObject ), "GameObject" } };
+			{ typeof( decimal ), "Decimal" }
+		};
 
 		// Split arguments of an entered command
 		private static readonly List<string> commandArguments = new List<string>( 8 );
@@ -126,19 +143,19 @@ namespace IngameDebugConsole
 		public static void LogAllCommands()
 		{
 			int length = 25;
-			foreach( var entry in methods )
+			for( int i = 0; i < methods.Count; i++ )
 			{
-				if( entry.Value.IsValid() )
-					length += 3 + entry.Value.signature.Length;
+				if( methods[i].IsValid() )
+					length += 3 + methods[i].signature.Length;
 			}
 
 			StringBuilder stringBuilder = new StringBuilder( length );
 			stringBuilder.Append( "Available commands:" );
 
-			foreach( var entry in methods )
+			for( int i = 0; i < methods.Count; i++ )
 			{
-				if( entry.Value.IsValid() )
-					stringBuilder.Append( "\n- " ).Append( entry.Value.signature );
+				if( methods[i].IsValid() )
+					stringBuilder.Append( "\n- " ).Append( methods[i].signature );
 			}
 
 			Debug.Log( stringBuilder.Append( "\n" ).ToString() );
@@ -222,6 +239,33 @@ namespace IngameDebugConsole
 			return sb;
 		}
 
+		// Add a custom Type to the list of recognized command parameter Types
+		public static void AddCustomParameterType( Type type, ParseFunction parseFunction, string typeReadableName = null )
+		{
+			if( type == null )
+			{
+				Debug.LogError( "Parameter type can't be null!" );
+				return;
+			}
+			else if( parseFunction == null )
+			{
+				Debug.LogError( "Parameter parseFunction can't be null!" );
+				return;
+			}
+
+			parseFunctions[type] = parseFunction;
+
+			if( !string.IsNullOrEmpty( typeReadableName ) )
+				typeReadableNames[type] = typeReadableName;
+		}
+
+		// Remove a custom Type from the list of recognized command parameter Types
+		public static void RemoveCustomParameterType( Type type )
+		{
+			parseFunctions.Remove( type );
+			typeReadableNames.Remove( type );
+		}
+
 		// Add a command related with an instance method (i.e. non static method)
 		public static void AddCommandInstance( string command, string description, string methodName, object instance )
 		{
@@ -241,79 +285,17 @@ namespace IngameDebugConsole
 		}
 
 		// Add a command that can be related to either a static or an instance method
-		public static void AddCommand( string command, string description, Action method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1>( string command, string description, Action<T1> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1>( string command, string description, Func<T1> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1, T2>( string command, string description, Action<T1, T2> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1, T2>( string command, string description, Func<T1, T2> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1, T2, T3>( string command, string description, Action<T1, T2, T3> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1, T2, T3>( string command, string description, Func<T1, T2, T3> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1, T2, T3, T4>( string command, string description, Action<T1, T2, T3, T4> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1, T2, T3, T4>( string command, string description, Func<T1, T2, T3, T4> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand<T1, T2, T3, T4, T5>( string command, string description, Func<T1, T2, T3, T4, T5> method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		public static void AddCommand( string command, string description, Delegate method )
-		{
-			AddCommand( command, description, method.Method, method.Target );
-		}
-
-		// Remove a command from the console
-		public static void RemoveCommand( string command )
-		{
-			if( !string.IsNullOrEmpty( command ) )
-				methods.Remove( command );
-		}
-
-		// Returns the first command that starts with the entered argument
-		public static string GetAutoCompleteCommand( string commandStart )
-		{
-			foreach( var entry in methods )
-			{
-				if( entry.Key.StartsWith( commandStart ) )
-					return entry.Key;
-			}
-
-			return null;
-		}
+		public static void AddCommand( string command, string description, Action method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1>( string command, string description, Action<T1> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1>( string command, string description, Func<T1> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1, T2>( string command, string description, Action<T1, T2> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1, T2>( string command, string description, Func<T1, T2> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1, T2, T3>( string command, string description, Action<T1, T2, T3> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1, T2, T3>( string command, string description, Func<T1, T2, T3> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1, T2, T3, T4>( string command, string description, Action<T1, T2, T3, T4> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1, T2, T3, T4>( string command, string description, Func<T1, T2, T3, T4> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand<T1, T2, T3, T4, T5>( string command, string description, Func<T1, T2, T3, T4, T5> method ) { AddCommand( command, description, method.Method, method.Target ); }
+		public static void AddCommand( string command, string description, Delegate method ) { AddCommand( command, description, method.Method, method.Target ); }
 
 		// Create a new command and set its properties
 		private static void AddCommand( string command, string description, string methodName, Type ownerType, object instance = null )
@@ -349,59 +331,166 @@ namespace IngameDebugConsole
 			if( parameters == null )
 				parameters = new ParameterInfo[0];
 
-			bool isMethodValid = true;
-
 			// Store the parameter types in an array
 			Type[] parameterTypes = new Type[parameters.Length];
-			for( int k = 0; k < parameters.Length; k++ )
+			for( int i = 0; i < parameters.Length; i++ )
 			{
-				Type parameterType = parameters[k].ParameterType;
-				if( parseFunctions.ContainsKey( parameterType ) || typeof( Component ).IsAssignableFrom( parameterType ) )
-					parameterTypes[k] = parameterType;
+				if( parameters[i].ParameterType.IsByRef )
+				{
+					Debug.LogError( "Command can't have 'out' or 'ref' parameters" );
+					return;
+				}
+
+				Type parameterType = parameters[i].ParameterType;
+				if( parseFunctions.ContainsKey( parameterType ) || typeof( Component ).IsAssignableFrom( parameterType ) || parameterType.IsEnum || IsSupportedArrayType( parameterType ) )
+					parameterTypes[i] = parameterType;
 				else
 				{
-					isMethodValid = false;
-					break;
+					Debug.LogError( string.Concat( "Parameter ", parameters[i].Name, "'s Type ", parameterType, " isn't supported" ) );
+					return;
 				}
 			}
 
-			// If method is valid, associate it with the entered command
-			if( isMethodValid )
+			int commandIndex = FindCommandIndex( command );
+			if( commandIndex < 0 )
+				commandIndex = ~commandIndex;
+			else
 			{
-				StringBuilder methodSignature = new StringBuilder( 256 );
-				methodSignature.Append( command ).Append( ": " );
+				int commandFirstIndex = commandIndex;
+				int commandLastIndex = commandIndex;
 
-				if( !string.IsNullOrEmpty( description ) )
-					methodSignature.Append( description ).Append( " -> " );
+				while( commandFirstIndex > 0 && methods[commandFirstIndex - 1].command == command )
+					commandFirstIndex--;
+				while( commandLastIndex < methods.Count - 1 && methods[commandLastIndex + 1].command == command )
+					commandLastIndex++;
 
-				methodSignature.Append( method.DeclaringType.ToString() ).Append( "." ).Append( method.Name ).Append( "(" );
-				for( int i = 0; i < parameterTypes.Length; i++ )
+				commandIndex = commandFirstIndex;
+				for( int i = commandFirstIndex; i <= commandLastIndex; i++ )
 				{
-					Type type = parameterTypes[i];
-					string typeName;
-					if( !typeReadableNames.TryGetValue( type, out typeName ) )
-						typeName = type.Name;
+					int parameterCountDiff = methods[i].parameterTypes.Length - parameterTypes.Length;
+					if( parameterCountDiff <= 0 )
+					{
+						// We are sorting the commands in 2 steps:
+						// 1: Sorting by their 'command' names which is handled by FindCommandIndex
+						// 2: Sorting by their parameter counts which is handled here (parameterCountDiff <= 0)
+						commandIndex = i + 1;
 
-					methodSignature.Append( typeName );
+						// Check if this command has been registered before and if it is, overwrite that command
+						if( parameterCountDiff == 0 )
+						{
+							int j = 0;
+							while( j < parameterTypes.Length && parameterTypes[j] == methods[i].parameterTypes[j] )
+								j++;
 
-					if( i < parameterTypes.Length - 1 )
-						methodSignature.Append( ", " );
+							if( j >= parameterTypes.Length )
+							{
+								commandIndex = i;
+								commandLastIndex--;
+								methods.RemoveAt( i-- );
+
+								continue;
+							}
+						}
+					}
 				}
-
-				methodSignature.Append( ")" );
-
-				Type returnType = method.ReturnType;
-				if( returnType != typeof( void ) )
-				{
-					string returnTypeName;
-					if( !typeReadableNames.TryGetValue( returnType, out returnTypeName ) )
-						returnTypeName = returnType.Name;
-
-					methodSignature.Append( " : " ).Append( returnTypeName );
-				}
-
-				methods[command] = new ConsoleMethodInfo( method, parameterTypes, instance, methodSignature.ToString() );
 			}
+
+			// Check if this command has been registered before and if it is, overwrite that command
+			for( int i = methods.Count - 1; i >= 0; i-- )
+			{
+				if( !methods[i].IsValid() )
+				{
+					methods.RemoveAt( i );
+					continue;
+				}
+
+				if( methods[i].command == command && methods[i].parameterTypes.Length == parameterTypes.Length )
+				{
+					int j = 0;
+					while( j < parameterTypes.Length && parameterTypes[j] == methods[i].parameterTypes[j] )
+						j++;
+
+					if( j >= parameterTypes.Length )
+					{
+						methods.RemoveAt( i );
+						break;
+					}
+				}
+			}
+
+			// Create the command
+			StringBuilder methodSignature = new StringBuilder( 256 );
+			methodSignature.Append( command ).Append( ": " );
+
+			if( !string.IsNullOrEmpty( description ) )
+				methodSignature.Append( description ).Append( " -> " );
+
+			methodSignature.Append( method.DeclaringType.ToString() ).Append( "." ).Append( method.Name ).Append( "(" );
+			for( int i = 0; i < parameterTypes.Length; i++ )
+			{
+				methodSignature.Append( GetTypeReadableName( parameterTypes[i] ) ).Append( " " ).Append( parameters[i].Name );
+
+				if( i < parameterTypes.Length - 1 )
+					methodSignature.Append( ", " );
+			}
+
+			methodSignature.Append( ")" );
+
+			Type returnType = method.ReturnType;
+			if( returnType != typeof( void ) )
+				methodSignature.Append( " : " ).Append( GetTypeReadableName( returnType ) );
+
+			methods.Insert( commandIndex, new ConsoleMethodInfo( method, parameterTypes, instance, command, methodSignature.ToString() ) );
+		}
+
+		// Remove all commands with the matching command name from the console
+		public static void RemoveCommand( string command )
+		{
+			if( !string.IsNullOrEmpty( command ) )
+			{
+				for( int i = methods.Count - 1; i >= 0; i-- )
+				{
+					if( methods[i].command == command )
+						methods.RemoveAt( i );
+				}
+			}
+		}
+
+		// Remove all commands with the matching method from the console
+		public static void RemoveCommand( Action method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1>( Action<T1> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1>( Func<T1> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1, T2>( Action<T1, T2> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1, T2>( Func<T1, T2> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1, T2, T3>( Action<T1, T2, T3> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1, T2, T3>( Func<T1, T2, T3> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1, T2, T3, T4>( Action<T1, T2, T3, T4> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1, T2, T3, T4>( Func<T1, T2, T3, T4> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand<T1, T2, T3, T4, T5>( Func<T1, T2, T3, T4, T5> method ) { RemoveCommand( method.Method ); }
+		public static void RemoveCommand( Delegate method ) { RemoveCommand( method.Method ); }
+
+		public static void RemoveCommand( MethodInfo method )
+		{
+			if( method != null )
+			{
+				for( int i = methods.Count - 1; i >= 0; i-- )
+				{
+					if( methods[i].method == method )
+						methods.RemoveAt( i );
+				}
+			}
+		}
+
+		// Returns the first command that starts with the entered argument
+		public static string GetAutoCompleteCommand( string commandStart )
+		{
+			for( int i = 0; i < methods.Count; i++ )
+			{
+				if( methods[i].command.StartsWith( commandStart ) )
+					return methods[i].command;
+			}
+
+			return null;
 		}
 
 		// Parse the command and try to execute it
@@ -415,87 +504,99 @@ namespace IngameDebugConsole
 			if( command.Length == 0 )
 				return;
 
-			// Parse the arguments
+			// Split the command's arguments
 			commandArguments.Clear();
+			FetchArgumentsFromCommand( command, commandArguments );
 
-			int endIndex = IndexOfChar( command, ' ', 0 );
-			commandArguments.Add( command.Substring( 0, endIndex ) );
-
-			for( int i = endIndex + 1; i < command.Length; i++ )
+			// Find all matching commands
+			matchingMethods.Clear();
+			bool parameterCountMismatch = false;
+			int commandIndex = FindCommandIndex( commandArguments[0] );
+			if( commandIndex >= 0 )
 			{
-				if( command[i] == ' ' )
-					continue;
+				string _command = commandArguments[0];
 
-				int delimiterIndex = IndexOfDelimiter( command[i] );
-				if( delimiterIndex >= 0 )
+				int commandLastIndex = commandIndex;
+				while( commandIndex > 0 && methods[commandIndex - 1].command == _command )
+					commandIndex--;
+				while( commandLastIndex < methods.Count - 1 && methods[commandLastIndex + 1].command == _command )
+					commandLastIndex++;
+
+				while( commandIndex <= commandLastIndex )
 				{
-					endIndex = IndexOfChar( command, inputDelimiters[delimiterIndex][1], i + 1 );
-					commandArguments.Add( command.Substring( i + 1, endIndex - i - 1 ) );
-				}
-				else
-				{
-					endIndex = IndexOfChar( command, ' ', i + 1 );
-					commandArguments.Add( command.Substring( i, endIndex - i ) );
-				}
-
-				i = endIndex;
-			}
-
-			// Check if command exists
-			ConsoleMethodInfo methodInfo;
-			if( !methods.TryGetValue( commandArguments[0], out methodInfo ) )
-				Debug.LogWarning( "Can't find command: " + commandArguments[0] );
-			else if( !methodInfo.IsValid() )
-				Debug.LogWarning( "Method no longer valid (instance dead): " + commandArguments[0] );
-			else
-			{
-				// Check if number of parameter match
-				if( methodInfo.parameterTypes.Length != commandArguments.Count - 1 )
-				{
-					Debug.LogWarning( "Parameter count mismatch: " + methodInfo.parameterTypes.Length + " parameters are needed" );
-					return;
-				}
-
-				Debug.Log( "Executing command: " + commandArguments[0] );
-
-				// Parse the parameters into objects
-				object[] parameters = new object[methodInfo.parameterTypes.Length];
-				for( int i = 0; i < methodInfo.parameterTypes.Length; i++ )
-				{
-					string argument = commandArguments[i + 1];
-
-					Type parameterType = methodInfo.parameterTypes[i];
-					if( typeof( Component ).IsAssignableFrom( parameterType ) )
+					if( !methods[commandIndex].IsValid() )
 					{
-						UnityEngine.Object val = argument == "null" ? null : GameObject.Find( argument );
-						if( val )
-							val = ( (GameObject) val ).GetComponent( parameterType );
-
-						parameters[i] = val;
+						methods.RemoveAt( commandIndex );
+						commandLastIndex--;
 					}
 					else
 					{
-						ParseFunction parseFunction;
-						if( !parseFunctions.TryGetValue( parameterType, out parseFunction ) )
-						{
-							Debug.LogError( "Unsupported parameter type: " + parameterType.Name );
-							return;
-						}
+						// Check if number of parameters match
+						if( methods[commandIndex].parameterTypes.Length == commandArguments.Count - 1 )
+							matchingMethods.Add( methods[commandIndex] );
+						else
+							parameterCountMismatch = true;
+
+						commandIndex++;
+					}
+				}
+			}
+
+			if( matchingMethods.Count == 0 )
+			{
+				if( parameterCountMismatch )
+					Debug.LogWarning( string.Concat( "ERROR: ", commandArguments[0], " doesn't take ", commandArguments.Count - 1, " parameters" ) );
+				else
+					Debug.LogWarning( "ERROR: can't find command: " + commandArguments[0] );
+
+				return;
+			}
+
+			ConsoleMethodInfo methodToExecute = null;
+			object[] parameters = new object[commandArguments.Count - 1];
+			string errorMessage = null;
+			for( int i = 0; i < matchingMethods.Count && methodToExecute == null; i++ )
+			{
+				ConsoleMethodInfo methodInfo = matchingMethods[i];
+
+				// Parse the parameters into objects
+				bool success = true;
+				for( int j = 0; j < methodInfo.parameterTypes.Length && success; j++ )
+				{
+					try
+					{
+						string argument = commandArguments[j + 1];
+						Type parameterType = methodInfo.parameterTypes[j];
 
 						object val;
-						if( !parseFunction( argument, out val ) )
+						if( ParseArgument( argument, parameterType, out val ) )
+							parameters[j] = val;
+						else
 						{
-							Debug.LogError( "Couldn't parse " + argument + " to " + parameterType.Name );
-							return;
+							success = false;
+							errorMessage = string.Concat( "ERROR: couldn't parse ", argument, " to ", parameterType.Name );
 						}
-
-						parameters[i] = val;
+					}
+					catch( Exception e )
+					{
+						success = false;
+						errorMessage = "ERROR: " + e.ToString();
 					}
 				}
 
+				if( success )
+					methodToExecute = methodInfo;
+			}
+
+			if( methodToExecute == null )
+				Debug.LogWarning( !string.IsNullOrEmpty( errorMessage ) ? errorMessage : "ERROR: something went wrong" );
+			else
+			{
+				Debug.Log( "Executing command: " + commandArguments[0] );
+
 				// Execute the method associated with the command
-				object result = methodInfo.method.Invoke( methodInfo.instance, parameters );
-				if( methodInfo.method.ReturnType != typeof( void ) )
+				object result = methodToExecute.method.Invoke( methodToExecute.instance, parameters );
+				if( methodToExecute.method.ReturnType != typeof( void ) )
 				{
 					// Print the returned value to the console
 					if( result == null || result.Equals( null ) )
@@ -506,8 +607,31 @@ namespace IngameDebugConsole
 			}
 		}
 
+		public static void FetchArgumentsFromCommand( string command, List<string> commandArguments )
+		{
+			for( int i = 0; i < command.Length; i++ )
+			{
+				if( char.IsWhiteSpace( command[i] ) )
+					continue;
+
+				int delimiterIndex = IndexOfDelimiterGroup( command[i] );
+				if( delimiterIndex >= 0 )
+				{
+					int endIndex = IndexOfDelimiterGroupEnd( command, delimiterIndex, i + 1 );
+					commandArguments.Add( command.Substring( i + 1, endIndex - i - 1 ) );
+					i = ( endIndex < command.Length - 1 && command[endIndex + 1] == ',' ) ? endIndex + 1 : endIndex;
+				}
+				else
+				{
+					int endIndex = IndexOfChar( command, ' ', i + 1 );
+					commandArguments.Add( command.Substring( i, endIndex - i ) );
+					i = endIndex;
+				}
+			}
+		}
+
 		// Find the index of the delimiter group that 'c' belongs to
-		private static int IndexOfDelimiter( char c )
+		private static int IndexOfDelimiterGroup( char c )
 		{
 			for( int i = 0; i < inputDelimiters.Length; i++ )
 			{
@@ -516,6 +640,26 @@ namespace IngameDebugConsole
 			}
 
 			return -1;
+		}
+
+		private static int IndexOfDelimiterGroupEnd( string command, int delimiterIndex, int startIndex )
+		{
+			char startChar = inputDelimiters[delimiterIndex][0];
+			char endChar = inputDelimiters[delimiterIndex][1];
+
+			// Check delimiter's depth for array support (e.g. [[1 2] [3 4]] for Vector2 array)
+			int depth = 1;
+
+			for( int i = startIndex; i < command.Length; i++ )
+			{
+				char c = command[i];
+				if( c == endChar && --depth <= 0 )
+					return i;
+				else if( c == startChar )
+					depth++;
+			}
+
+			return command.Length;
 		}
 
 		// Find the index of char in the string, or return the length of string instead of -1
@@ -528,13 +672,91 @@ namespace IngameDebugConsole
 			return result;
 		}
 
-		private static bool ParseString( string input, out object output )
+		// Find command's index in the list of registered commands using binary search
+		private static int FindCommandIndex( string command )
+		{
+			int min = 0;
+			int max = methods.Count - 1;
+			while( min <= max )
+			{
+				int mid = ( min + max ) / 2;
+				int comparison = command.CompareTo( methods[mid].command );
+				if( comparison == 0 )
+					return mid;
+				else if( comparison < 0 )
+					max = mid - 1;
+				else
+					min = mid + 1;
+			}
+
+			return ~min;
+		}
+
+		public static bool IsSupportedArrayType( Type type )
+		{
+			if( type.IsArray )
+			{
+				if( type.GetArrayRank() != 1 )
+					return false;
+
+				type = type.GetElementType();
+			}
+			else if( type.IsGenericType )
+			{
+				if( type.GetGenericTypeDefinition() != typeof( List<> ) )
+					return false;
+
+				type = type.GetGenericArguments()[0];
+			}
+			else
+				return false;
+
+			return parseFunctions.ContainsKey( type ) || typeof( Component ).IsAssignableFrom( type ) || type.IsEnum;
+		}
+
+		public static string GetTypeReadableName( Type type )
+		{
+			string result;
+			if( typeReadableNames.TryGetValue( type, out result ) )
+				return result;
+
+			if( IsSupportedArrayType( type ) )
+			{
+				Type elementType = type.IsArray ? type.GetElementType() : type.GetGenericArguments()[0];
+				if( typeReadableNames.TryGetValue( elementType, out result ) )
+					return result + "[]";
+				else
+					return elementType.Name + "[]";
+			}
+
+			return type.Name;
+		}
+
+		public static bool ParseArgument( string input, Type argumentType, out object output )
+		{
+			ParseFunction parseFunction;
+			if( parseFunctions.TryGetValue( argumentType, out parseFunction ) )
+				return parseFunction( input, out output );
+			else if( typeof( Component ).IsAssignableFrom( argumentType ) )
+				return ParseComponent( input, argumentType, out output );
+			else if( argumentType.IsEnum )
+				return ParseEnum( input, argumentType, out output );
+			else if( IsSupportedArrayType( argumentType ) )
+				return ParseArray( input, argumentType, out output );
+			else
+			{
+				output = null;
+				return false;
+			}
+		}
+
+		public static bool ParseString( string input, out object output )
 		{
 			output = input;
 			return input.Length > 0;
 		}
 
-		private static bool ParseBool( string input, out object output )
+		public static bool ParseBool( string input, out object output )
 		{
 			if( input == "1" || input.ToLowerInvariant() == "true" )
 			{
@@ -552,154 +774,296 @@ namespace IngameDebugConsole
 			return false;
 		}
 
-		private static bool ParseInt( string input, out object output )
+		public static bool ParseInt( string input, out object output )
 		{
-			bool result;
 			int value;
-			result = int.TryParse( input, out value );
+			bool result = int.TryParse( input, out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseUInt( string input, out object output )
+		public static bool ParseUInt( string input, out object output )
 		{
-			bool result;
 			uint value;
-			result = uint.TryParse( input, out value );
+			bool result = uint.TryParse( input, out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseLong( string input, out object output )
+		public static bool ParseLong( string input, out object output )
 		{
-			bool result;
 			long value;
-			result = long.TryParse( input, out value );
+			bool result = long.TryParse( !input.EndsWith( "L", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseULong( string input, out object output )
+		public static bool ParseULong( string input, out object output )
 		{
-			bool result;
 			ulong value;
-			result = ulong.TryParse( input, out value );
+			bool result = ulong.TryParse( !input.EndsWith( "L", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseByte( string input, out object output )
+		public static bool ParseByte( string input, out object output )
 		{
-			bool result;
 			byte value;
-			result = byte.TryParse( input, out value );
+			bool result = byte.TryParse( input, out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseSByte( string input, out object output )
+		public static bool ParseSByte( string input, out object output )
 		{
-			bool result;
 			sbyte value;
-			result = sbyte.TryParse( input, out value );
+			bool result = sbyte.TryParse( input, out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseShort( string input, out object output )
+		public static bool ParseShort( string input, out object output )
 		{
-			bool result;
 			short value;
-			result = short.TryParse( input, out value );
+			bool result = short.TryParse( input, out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseUShort( string input, out object output )
+		public static bool ParseUShort( string input, out object output )
 		{
-			bool result;
 			ushort value;
-			result = ushort.TryParse( input, out value );
+			bool result = ushort.TryParse( input, out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseChar( string input, out object output )
+		public static bool ParseChar( string input, out object output )
 		{
-			bool result;
 			char value;
-			result = char.TryParse( input, out value );
+			bool result = char.TryParse( input, out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseFloat( string input, out object output )
+		public static bool ParseFloat( string input, out object output )
 		{
-			bool result;
 			float value;
-			result = float.TryParse( input, out value );
+			bool result = float.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseDouble( string input, out object output )
+		public static bool ParseDouble( string input, out object output )
 		{
-			bool result;
 			double value;
-			result = double.TryParse( input, out value );
+			bool result = double.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseDecimal( string input, out object output )
+		public static bool ParseDecimal( string input, out object output )
 		{
-			bool result;
 			decimal value;
-			result = decimal.TryParse( input, out value );
+			bool result = decimal.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
 
 			output = value;
 			return result;
 		}
 
-		private static bool ParseVector2( string input, out object output )
+		public static bool ParseVector2( string input, out object output )
 		{
-			return CreateVectorFromInput( input, typeof( Vector2 ), out output );
+			return ParseVector( input, typeof( Vector2 ), out output );
 		}
 
-		private static bool ParseVector3( string input, out object output )
+		public static bool ParseVector3( string input, out object output )
 		{
-			return CreateVectorFromInput( input, typeof( Vector3 ), out output );
+			return ParseVector( input, typeof( Vector3 ), out output );
 		}
 
-		private static bool ParseVector4( string input, out object output )
+		public static bool ParseVector4( string input, out object output )
 		{
-			return CreateVectorFromInput( input, typeof( Vector4 ), out output );
+			return ParseVector( input, typeof( Vector4 ), out output );
 		}
 
-		private static bool ParseGameObject( string input, out object output )
+		public static bool ParseQuaternion( string input, out object output )
+		{
+			return ParseVector( input, typeof( Quaternion ), out output );
+		}
+
+		public static bool ParseColor( string input, out object output )
+		{
+			return ParseVector( input, typeof( Color ), out output );
+		}
+
+		public static bool ParseColor32( string input, out object output )
+		{
+			return ParseVector( input, typeof( Color32 ), out output );
+		}
+
+		public static bool ParseRect( string input, out object output )
+		{
+			return ParseVector( input, typeof( Rect ), out output );
+		}
+
+		public static bool ParseRectOffset( string input, out object output )
+		{
+			return ParseVector( input, typeof( RectOffset ), out output );
+		}
+
+		public static bool ParseBounds( string input, out object output )
+		{
+			return ParseVector( input, typeof( Bounds ), out output );
+		}
+
+#if UNITY_2017_2_OR_NEWER
+		public static bool ParseVector2Int( string input, out object output )
+		{
+			return ParseVector( input, typeof( Vector2Int ), out output );
+		}
+
+		public static bool ParseVector3Int( string input, out object output )
+		{
+			return ParseVector( input, typeof( Vector3Int ), out output );
+		}
+
+		public static bool ParseRectInt( string input, out object output )
+		{
+			return ParseVector( input, typeof( RectInt ), out output );
+		}
+
+		public static bool ParseBoundsInt( string input, out object output )
+		{
+			return ParseVector( input, typeof( BoundsInt ), out output );
+		}
+#endif
+
+		public static bool ParseGameObject( string input, out object output )
 		{
 			output = input == "null" ? null : GameObject.Find( input );
 			return true;
 		}
 
+		public static bool ParseComponent( string input, Type componentType, out object output )
+		{
+			GameObject gameObject = input == "null" ? null : GameObject.Find( input );
+			output = gameObject ? gameObject.GetComponent( componentType ) : null;
+			return true;
+		}
+
+		public static bool ParseEnum( string input, Type enumType, out object output )
+		{
+			const int NONE = 0, OR = 1, AND = 2;
+
+			int outputInt = 0;
+			int operation = 0; // 0: nothing, 1: OR with outputInt, 2: AND with outputInt
+			for( int i = 0; i < input.Length; i++ )
+			{
+				string enumStr;
+				int orIndex = input.IndexOf( '|', i );
+				int andIndex = input.IndexOf( '&', i );
+				if( orIndex < 0 )
+					enumStr = input.Substring( i, ( andIndex < 0 ? input.Length : andIndex ) - i ).Trim();
+				else
+					enumStr = input.Substring( i, ( andIndex < 0 ? orIndex : Mathf.Min( andIndex, orIndex ) ) - i ).Trim();
+
+				int value;
+				if( !int.TryParse( enumStr, out value ) )
+				{
+					if( Enum.IsDefined( enumType, enumStr ) )
+						value = Convert.ToInt32( Enum.Parse( enumType, enumStr ) );
+					else
+					{
+						output = null;
+						return false;
+					}
+				}
+
+				if( operation == NONE )
+					outputInt = value;
+				else if( operation == OR )
+					outputInt |= value;
+				else
+					outputInt &= value;
+
+				if( orIndex >= 0 )
+				{
+					if( andIndex > orIndex )
+					{
+						operation = AND;
+						i = andIndex;
+					}
+					else
+					{
+						operation = OR;
+						i = orIndex;
+					}
+				}
+				else if( andIndex >= 0 )
+				{
+					operation = AND;
+					i = andIndex;
+				}
+				else
+					i = input.Length;
+			}
+
+			output = Enum.ToObject( enumType, outputInt );
+			return true;
+		}
+
+		public static bool ParseArray( string input, Type arrayType, out object output )
+		{
+			List<string> valuesToParse = new List<string>( 2 );
+			FetchArgumentsFromCommand( input, valuesToParse );
+
+			IList result = (IList) Activator.CreateInstance( arrayType, new object[1] { valuesToParse.Count } );
+			output = result;
+
+			if( arrayType.IsArray )
+			{
+				Type elementType = arrayType.GetElementType();
+				for( int i = 0; i < valuesToParse.Count; i++ )
+				{
+					object obj;
+					if( !ParseArgument( valuesToParse[i], elementType, out obj ) )
+						return false;
+
+					result[i] = obj;
+				}
+			}
+			else
+			{
+				Type elementType = arrayType.GetGenericArguments()[0];
+				for( int i = 0; i < valuesToParse.Count; i++ )
+				{
+					object obj;
+					if( !ParseArgument( valuesToParse[i], elementType, out obj ) )
+						return false;
+
+					result.Add( obj );
+				}
+			}
+
+			return true;
+		}
+
 		// Create a vector of specified type (fill the blank slots with 0 or ignore unnecessary slots)
-		private static bool CreateVectorFromInput( string input, Type vectorType, out object output )
+		private static bool ParseVector( string input, Type vectorType, out object output )
 		{
 			List<string> tokens = new List<string>( input.Replace( ',', ' ' ).Trim().Split( ' ' ) );
-
-			int i;
-			for( i = tokens.Count - 1; i >= 0; i-- )
+			for( int i = tokens.Count - 1; i >= 0; i-- )
 			{
 				tokens[i] = tokens[i].Trim();
 				if( tokens[i].Length == 0 )
@@ -707,59 +1071,177 @@ namespace IngameDebugConsole
 			}
 
 			float[] tokenValues = new float[tokens.Count];
-			for( i = 0; i < tokens.Count; i++ )
+			for( int i = 0; i < tokens.Count; i++ )
 			{
-				float val;
-				if( !float.TryParse( tokens[i], out val ) )
+				object val;
+				if( !ParseFloat( tokens[i], out val ) )
 				{
 					if( vectorType == typeof( Vector3 ) )
-						output = new Vector3();
+						output = Vector3.zero;
 					else if( vectorType == typeof( Vector2 ) )
-						output = new Vector2();
+						output = Vector2.zero;
 					else
-						output = new Vector4();
+						output = Vector4.zero;
 
 					return false;
 				}
 
-				tokenValues[i] = val;
+				tokenValues[i] = (float) val;
 			}
 
 			if( vectorType == typeof( Vector3 ) )
 			{
-				Vector3 result = new Vector3();
+				Vector3 result = Vector3.zero;
 
-				for( i = 0; i < tokenValues.Length && i < 3; i++ )
+				for( int i = 0; i < tokenValues.Length && i < 3; i++ )
 					result[i] = tokenValues[i];
-
-				for( ; i < 3; i++ )
-					result[i] = 0;
 
 				output = result;
 			}
 			else if( vectorType == typeof( Vector2 ) )
 			{
-				Vector2 result = new Vector2();
+				Vector2 result = Vector2.zero;
 
-				for( i = 0; i < tokenValues.Length && i < 2; i++ )
+				for( int i = 0; i < tokenValues.Length && i < 2; i++ )
 					result[i] = tokenValues[i];
-
-				for( ; i < 2; i++ )
-					result[i] = 0;
 
 				output = result;
 			}
-			else
+			else if( vectorType == typeof( Vector4 ) )
 			{
-				Vector4 result = new Vector4();
+				Vector4 result = Vector4.zero;
 
-				for( i = 0; i < tokenValues.Length && i < 4; i++ )
+				for( int i = 0; i < tokenValues.Length && i < 4; i++ )
 					result[i] = tokenValues[i];
 
-				for( ; i < 4; i++ )
-					result[i] = 0;
+				output = result;
+			}
+			else if( vectorType == typeof( Quaternion ) )
+			{
+				Quaternion result = Quaternion.identity;
+
+				for( int i = 0; i < tokenValues.Length && i < 4; i++ )
+					result[i] = tokenValues[i];
 
 				output = result;
+			}
+			else if( vectorType == typeof( Color ) )
+			{
+				Color result = Color.black;
+
+				for( int i = 0; i < tokenValues.Length && i < 4; i++ )
+					result[i] = tokenValues[i];
+
+				output = result;
+			}
+			else if( vectorType == typeof( Color32 ) )
+			{
+				Color32 result = new Color32( 0, 0, 0, 255 );
+
+				if( tokenValues.Length > 0 )
+					result.r = (byte) Mathf.RoundToInt( tokenValues[0] );
+				if( tokenValues.Length > 1 )
+					result.g = (byte) Mathf.RoundToInt( tokenValues[1] );
+				if( tokenValues.Length > 2 )
+					result.b = (byte) Mathf.RoundToInt( tokenValues[2] );
+				if( tokenValues.Length > 3 )
+					result.a = (byte) Mathf.RoundToInt( tokenValues[3] );
+
+				output = result;
+			}
+			else if( vectorType == typeof( Rect ) )
+			{
+				Rect result = Rect.zero;
+
+				if( tokenValues.Length > 0 )
+					result.x = tokenValues[0];
+				if( tokenValues.Length > 1 )
+					result.y = tokenValues[1];
+				if( tokenValues.Length > 2 )
+					result.width = tokenValues[2];
+				if( tokenValues.Length > 3 )
+					result.height = tokenValues[3];
+
+				output = result;
+			}
+			else if( vectorType == typeof( RectOffset ) )
+			{
+				RectOffset result = new RectOffset();
+
+				if( tokenValues.Length > 0 )
+					result.left = Mathf.RoundToInt( tokenValues[0] );
+				if( tokenValues.Length > 1 )
+					result.right = Mathf.RoundToInt( tokenValues[1] );
+				if( tokenValues.Length > 2 )
+					result.top = Mathf.RoundToInt( tokenValues[2] );
+				if( tokenValues.Length > 3 )
+					result.bottom = Mathf.RoundToInt( tokenValues[3] );
+
+				output = result;
+			}
+			else if( vectorType == typeof( Bounds ) )
+			{
+				Vector3 center = Vector3.zero;
+				for( int i = 0; i < tokenValues.Length && i < 3; i++ )
+					center[i] = tokenValues[i];
+
+				Vector3 size = Vector3.zero;
+				for( int i = 3; i < tokenValues.Length && i < 6; i++ )
+					size[i - 3] = tokenValues[i];
+
+				output = new Bounds( center, size );
+			}
+#if UNITY_2017_2_OR_NEWER
+			else if( vectorType == typeof( Vector3Int ) )
+			{
+				Vector3Int result = Vector3Int.zero;
+
+				for( int i = 0; i < tokenValues.Length && i < 3; i++ )
+					result[i] = Mathf.RoundToInt( tokenValues[i] );
+
+				output = result;
+			}
+			else if( vectorType == typeof( Vector2Int ) )
+			{
+				Vector2Int result = Vector2Int.zero;
+
+				for( int i = 0; i < tokenValues.Length && i < 2; i++ )
+					result[i] = Mathf.RoundToInt( tokenValues[i] );
+
+				output = result;
+			}
+			else if( vectorType == typeof( RectInt ) )
+			{
+				RectInt result = new RectInt();
+
+				if( tokenValues.Length > 0 )
+					result.x = Mathf.RoundToInt( tokenValues[0] );
+				if( tokenValues.Length > 1 )
+					result.y = Mathf.RoundToInt( tokenValues[1] );
+				if( tokenValues.Length > 2 )
+					result.width = Mathf.RoundToInt( tokenValues[2] );
+				if( tokenValues.Length > 3 )
+					result.height = Mathf.RoundToInt( tokenValues[3] );
+
+				output = result;
+			}
+			else if( vectorType == typeof( BoundsInt ) )
+			{
+				Vector3Int center = Vector3Int.zero;
+				for( int i = 0; i < tokenValues.Length && i < 3; i++ )
+					center[i] = Mathf.RoundToInt( tokenValues[i] );
+
+				Vector3Int size = Vector3Int.zero;
+				for( int i = 3; i < tokenValues.Length && i < 6; i++ )
+					size[i - 3] = Mathf.RoundToInt( tokenValues[i] );
+
+				output = new BoundsInt( center, size );
+			}
+#endif
+			else
+			{
+				output = null;
+				return false;
 			}
 
 			return true;
