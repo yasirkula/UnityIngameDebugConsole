@@ -16,6 +16,7 @@ namespace IngameDebugConsole
 		private SerializedProperty topSearchbarMinWidth;
 		private SerializedProperty clearCommandAfterExecution;
 		private SerializedProperty commandHistorySize;
+		private SerializedProperty showCommandSuggestions;
 		private SerializedProperty receiveLogcatLogsInAndroid;
 		private SerializedProperty logcatArguments;
 
@@ -32,6 +33,7 @@ namespace IngameDebugConsole
 			topSearchbarMinWidth = serializedObject.FindProperty( "topSearchbarMinWidth" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
 			commandHistorySize = serializedObject.FindProperty( "commandHistorySize" );
+			showCommandSuggestions = serializedObject.FindProperty( "showCommandSuggestions" );
 			receiveLogcatLogsInAndroid = serializedObject.FindProperty( "receiveLogcatLogsInAndroid" );
 			logcatArguments = serializedObject.FindProperty( "logcatArguments" );
 		}
@@ -61,6 +63,7 @@ namespace IngameDebugConsole
 
 			EditorGUILayout.PropertyField( clearCommandAfterExecution );
 			EditorGUILayout.PropertyField( commandHistorySize );
+			EditorGUILayout.PropertyField( showCommandSuggestions );
 			EditorGUILayout.PropertyField( receiveLogcatLogsInAndroid );
 
 			if( receiveLogcatLogsInAndroid.boolValue )

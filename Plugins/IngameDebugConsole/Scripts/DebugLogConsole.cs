@@ -20,14 +20,16 @@ namespace IngameDebugConsole
 
 		public readonly string command;
 		public readonly string signature;
+		public readonly string[] parameters;
 
-		public ConsoleMethodInfo( MethodInfo method, Type[] parameterTypes, object instance, string command, string signature )
+		public ConsoleMethodInfo( MethodInfo method, Type[] parameterTypes, object instance, string command, string signature, string[] parameters )
 		{
 			this.method = method;
 			this.parameterTypes = parameterTypes;
 			this.instance = instance;
 			this.command = command;
 			this.signature = signature;
+			this.parameters = parameters;
 		}
 
 		public bool IsValid()
@@ -420,6 +422,8 @@ namespace IngameDebugConsole
 
 			// Create the command
 			StringBuilder methodSignature = new StringBuilder( 256 );
+			string[] parameterSignatures = new string[parameterTypes.Length];
+
 			methodSignature.Append( command ).Append( ": " );
 
 			if( !string.IsNullOrEmpty( description ) )
@@ -428,10 +432,14 @@ namespace IngameDebugConsole
 			methodSignature.Append( method.DeclaringType.ToString() ).Append( "." ).Append( method.Name ).Append( "(" );
 			for( int i = 0; i < parameterTypes.Length; i++ )
 			{
+				int parameterSignatureStartIndex = methodSignature.Length;
+
 				methodSignature.Append( GetTypeReadableName( parameterTypes[i] ) ).Append( " " ).Append( parameters[i].Name );
 
 				if( i < parameterTypes.Length - 1 )
 					methodSignature.Append( ", " );
+
+				parameterSignatures[i] = methodSignature.ToString( parameterSignatureStartIndex, methodSignature.Length - parameterSignatureStartIndex );
 			}
 
 			methodSignature.Append( ")" );
@@ -440,7 +448,7 @@ namespace IngameDebugConsole
 			if( returnType != typeof( void ) )
 				methodSignature.Append( " : " ).Append( GetTypeReadableName( returnType ) );
 
-			methods.Insert( commandIndex, new ConsoleMethodInfo( method, parameterTypes, instance, command, methodSignature.ToString() ) );
+			methods.Insert( commandIndex, new ConsoleMethodInfo( method, parameterTypes, instance, command, methodSignature.ToString(), parameterSignatures ) );
 		}
 
 		// Remove all commands with the matching command name from the console
@@ -484,13 +492,21 @@ namespace IngameDebugConsole
 		// Returns the first command that starts with the entered argument
 		public static string GetAutoCompleteCommand( string commandStart )
 		{
-			for( int i = 0; i < methods.Count; i++ )
+			int commandIndex = FindCommandIndex( commandStart );
+			if( commandIndex < 0 )
+				commandIndex = ~commandIndex;
+
+			string result = null;
+			for( int i = commandIndex; i >= 0 && methods[i].command.StartsWith( commandStart ); i-- )
+				result = methods[i].command;
+
+			if( result == null )
 			{
-				if( methods[i].command.StartsWith( commandStart ) )
-					return methods[i].command;
+				for( int i = commandIndex + 1; i < methods.Count && methods[i].command.StartsWith( commandStart ); i++ )
+					result = methods[i].command;
 			}
 
-			return null;
+			return result;
 		}
 
 		// Parse the command and try to execute it
@@ -545,7 +561,7 @@ namespace IngameDebugConsole
 			if( matchingMethods.Count == 0 )
 			{
 				if( parameterCountMismatch )
-					Debug.LogWarning( string.Concat( "ERROR: ", commandArguments[0], " doesn't take ", commandArguments.Count - 1, " parameters" ) );
+					Debug.LogWarning( string.Concat( "ERROR: ", commandArguments[0], " doesn't take ", commandArguments.Count - 1, " parameter(s)" ) );
 				else
 					Debug.LogWarning( "ERROR: can't find command: " + commandArguments[0] );
 
@@ -574,7 +590,7 @@ namespace IngameDebugConsole
 						else
 						{
 							success = false;
-							errorMessage = string.Concat( "ERROR: couldn't parse ", argument, " to ", parameterType.Name );
+							errorMessage = string.Concat( "ERROR: couldn't parse ", argument, " to ", GetTypeReadableName( parameterType ) );
 						}
 					}
 					catch( Exception e )
@@ -624,8 +640,104 @@ namespace IngameDebugConsole
 				else
 				{
 					int endIndex = IndexOfChar( command, ' ', i + 1 );
-					commandArguments.Add( command.Substring( i, endIndex - i ) );
+					commandArguments.Add( command.Substring( i, command[endIndex - 1] == ',' ? endIndex - 1 - i : endIndex - i ) );
 					i = endIndex;
+				}
+			}
+		}
+
+		// Finds all commands that have a matching signature with command
+		// - caretIndexIncrements: indices inside "string command" that separate two arguments in the command. This is used to
+		//   figure out which argument the caret is standing on
+		// - commandName: command's name (first argument)
+		internal static void GetCommandSuggestions( string command, List<ConsoleMethodInfo> matchingCommands, List<int> caretIndexIncrements, ref string commandName, out int numberOfParameters )
+		{
+			bool commandNameCalculated = false;
+			bool commandNameFullyTyped = false;
+			numberOfParameters = -1;
+			for( int i = 0; i < command.Length; i++ )
+			{
+				if( char.IsWhiteSpace( command[i] ) )
+					continue;
+
+				int delimiterIndex = IndexOfDelimiterGroup( command[i] );
+				if( delimiterIndex >= 0 )
+				{
+					int endIndex = IndexOfDelimiterGroupEnd( command, delimiterIndex, i + 1 );
+					if( !commandNameCalculated )
+					{
+						commandNameCalculated = true;
+						commandNameFullyTyped = command.Length > endIndex;
+
+						int commandNameLength = endIndex - i - 1;
+						if( commandName == null || commandNameLength == 0 || commandName.Length != commandNameLength || command.IndexOf( commandName, i + 1, commandNameLength ) != i + 1 )
+							commandName = command.Substring( i + 1, commandNameLength );
+					}
+
+					i = ( endIndex < command.Length - 1 && command[endIndex + 1] == ',' ) ? endIndex + 1 : endIndex;
+					caretIndexIncrements.Add( i + 1 );
+				}
+				else
+				{
+					int endIndex = IndexOfChar( command, ' ', i + 1 );
+					if( !commandNameCalculated )
+					{
+						commandNameCalculated = true;
+						commandNameFullyTyped = command.Length > endIndex;
+
+						int commandNameLength = command[endIndex - 1] == ',' ? endIndex - 1 - i : endIndex - i;
+						if( commandName == null || commandNameLength == 0 || commandName.Length != commandNameLength || command.IndexOf( commandName, i, commandNameLength ) != i )
+							commandName = command.Substring( i, commandNameLength );
+					}
+
+					i = endIndex;
+					caretIndexIncrements.Add( i );
+				}
+
+				numberOfParameters++;
+			}
+
+			if( !commandNameCalculated )
+				commandName = string.Empty;
+
+			if( !string.IsNullOrEmpty( commandName ) )
+			{
+				int commandIndex = FindCommandIndex( commandName );
+				if( commandIndex < 0 )
+					commandIndex = ~commandIndex;
+
+				int commandLastIndex = commandIndex;
+				if( !commandNameFullyTyped )
+				{
+					// Match all commands that start with commandName
+					if( commandIndex < methods.Count && methods[commandIndex].command.StartsWith( commandName ) )
+					{
+						while( commandIndex > 0 && methods[commandIndex - 1].command.StartsWith( commandName ) )
+							commandIndex--;
+						while( commandLastIndex < methods.Count - 1 && methods[commandLastIndex + 1].command.StartsWith( commandName ) )
+							commandLastIndex++;
+					}
+					else
+						commandLastIndex = -1;
+				}
+				else
+				{
+					// Match only the commands that are equal to commandName
+					if( commandIndex < methods.Count && methods[commandIndex].command == commandName )
+					{
+						while( commandIndex > 0 && methods[commandIndex - 1].command == commandName )
+							commandIndex--;
+						while( commandLastIndex < methods.Count - 1 && methods[commandLastIndex + 1].command == commandName )
+							commandLastIndex++;
+					}
+					else
+						commandLastIndex = -1;
+				}
+
+				for( ; commandIndex <= commandLastIndex; commandIndex++ )
+				{
+					if( methods[commandIndex].parameterTypes.Length >= numberOfParameters )
+						matchingCommands.Add( methods[commandIndex] );
 				}
 			}
 		}
@@ -753,7 +865,7 @@ namespace IngameDebugConsole
 		public static bool ParseString( string input, out object output )
 		{
 			output = input;
-			return input.Length > 0;
+			return true;
 		}
 
 		public static bool ParseBool( string input, out object output )
