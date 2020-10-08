@@ -581,6 +581,10 @@ namespace IngameDebugConsole
 			logWindowCanvasGroup.blocksRaycasts = true;
 			logWindowCanvasGroup.alpha = 1f;
 
+			//Reset the text in the input field and reenable input capture
+			commandInputField.text = "";
+			commandInputField.enabled = true;
+
 			popupManager.Hide();
 
 			// Update the recycled list view 
@@ -605,6 +609,9 @@ namespace IngameDebugConsole
 			logWindowCanvasGroup.interactable = false;
 			logWindowCanvasGroup.blocksRaycasts = false;
 			logWindowCanvasGroup.alpha = 0f;
+
+			//Disable input field to prevent capturing of input when hidden
+			commandInputField.enabled = false;
 
 			popupManager.Show();
 
