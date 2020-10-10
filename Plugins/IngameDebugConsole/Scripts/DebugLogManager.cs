@@ -441,6 +441,24 @@ namespace IngameDebugConsole
 			screenDimensionsChanged = true;
 		}
 
+		private void Update()
+		{
+			// Toggling the console with toggleKey is handled in Update instead of LateUpdate because
+			// when we hide the console, we don't want the commandInputField to capture the toggleKey.
+			// InputField captures input in LateUpdate so deactivating it in Update ensures that
+			// no further input is captured
+			if( toggleWithKey )
+			{
+				if( Input.GetKeyDown( toggleKey ) )
+				{
+					if( isLogWindowVisible )
+						HideLogWindow();
+					else
+						ShowLogWindow();
+				}
+			}
+		}
+
 		private void LateUpdate()
 		{
 #if UNITY_EDITOR
@@ -526,17 +544,6 @@ namespace IngameDebugConsole
 					snapToBottomButton.SetActive( !snapToBottomButton.activeSelf );
 			}
 
-			if( toggleWithKey )
-			{
-				if( Input.GetKeyDown( toggleKey ) )
-				{
-					if( isLogWindowVisible )
-						HideLogWindow();
-					else
-						ShowLogWindow();
-				}
-			}
-
 			if( isLogWindowVisible && commandInputField.isFocused )
 			{
 				if( Input.GetKeyDown( KeyCode.UpArrow ) )
@@ -590,10 +597,7 @@ namespace IngameDebugConsole
 #if UNITY_EDITOR || UNITY_STANDALONE
 			// Focus on the command input field on standalone platforms when the console is opened
 			if( autoFocusOnCommandInputField )
-			{
-				commandInputField.ActivateInputField();
-				StartCoroutine( UnFocusCommandInputFieldCoroutine() );
-			}
+				StartCoroutine( ActivateCommandInputFieldCoroutine() );
 #endif
 
 			isLogWindowVisible = true;
@@ -605,6 +609,9 @@ namespace IngameDebugConsole
 			logWindowCanvasGroup.interactable = false;
 			logWindowCanvasGroup.blocksRaycasts = false;
 			logWindowCanvasGroup.alpha = 0f;
+
+			if( commandInputField.isFocused )
+				commandInputField.DeactivateInputField();
 
 			popupManager.Show();
 
@@ -1210,8 +1217,12 @@ namespace IngameDebugConsole
 		}
 
 #if UNITY_EDITOR || UNITY_STANDALONE
-		private IEnumerator UnFocusCommandInputFieldCoroutine()
+		private IEnumerator ActivateCommandInputFieldCoroutine()
 		{
+			// Waiting 1 frame before activating commandInputField ensures that the toggleKey isn't captured by it
+			yield return null;
+			commandInputField.ActivateInputField();
+
 			yield return null;
 			commandInputField.MoveTextEnd( false );
 		}
