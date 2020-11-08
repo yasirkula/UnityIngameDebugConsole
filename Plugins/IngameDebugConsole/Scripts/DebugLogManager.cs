@@ -454,7 +454,7 @@ namespace IngameDebugConsole
 			// no further input is captured
 			if( toggleWithKey )
 			{
-				if( Input.GetKeyDown( toggleKey ) )
+				if( InputHelper.GetKeyDown( toggleKey ) )
 				{
 					if( isLogWindowVisible )
 						HideLogWindow();
@@ -551,7 +551,7 @@ namespace IngameDebugConsole
 
 			if( isLogWindowVisible && commandInputField.isFocused )
 			{
-				if( Input.GetKeyDown( KeyCode.UpArrow ) )
+				if( InputHelper.GetKeyDown( KeyCode.UpArrow ) )
 				{
 					if( commandHistoryIndex == -1 )
 						commandHistoryIndex = commandHistory.Count - 1;
@@ -564,7 +564,7 @@ namespace IngameDebugConsole
 						commandInputField.caretPosition = commandInputField.text.Length;
 					}
 				}
-				else if( Input.GetKeyDown( KeyCode.DownArrow ) )
+				else if( InputHelper.GetKeyDown( KeyCode.DownArrow ) )
 				{
 					if( commandHistoryIndex == -1 )
 						commandHistoryIndex = commandHistory.Count - 1;
