@@ -88,7 +88,7 @@ namespace IngameDebugConsole
             => KeyTranslationMap.ContainsKey(key) && Keyboard.current[KeyTranslationMap[key]].wasPressedThisFrame;
     }
 }
-#elif ENABLE_LEGACY_INPUT_MANAGER
+#else
 namespace IngameDebugConsole
 {
     public static class InputHelper
