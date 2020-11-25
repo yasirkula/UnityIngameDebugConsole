@@ -353,7 +353,9 @@ namespace IngameDebugConsole
 			if( minimumHeight < 200f )
 				minimumHeight = 200f;
 
-			if( !enableSearchbar )
+			if( enableSearchbar )
+				searchbar.GetComponent<InputField>().onValueChanged.AddListener( SearchTermChanged );
+			else
 			{
 				searchbar = null;
 				searchbarSlotTop.gameObject.SetActive( false );
@@ -367,7 +369,6 @@ namespace IngameDebugConsole
 			commandInputField.onValidateInput += OnValidateCommand;
 			commandInputField.onValueChanged.AddListener( RefreshCommandSuggestions );
 			commandInputField.onEndEdit.AddListener( OnEndEditCommand );
-			searchbar.GetComponent<InputField>().onValueChanged.AddListener( SearchTermChanged );
 			hideButton.onClick.AddListener( HideLogWindow );
 			clearButton.onClick.AddListener( ClearLogs );
 			collapseButton.GetComponent<Button>().onClick.AddListener( CollapseButtonPressed );
