@@ -30,6 +30,12 @@ There are 5 ways to install this plugin:
 - *(via [OpenUPM](https://openupm.com))* after installing [openupm-cli](https://github.com/openupm/openupm-cli), run the following command:
   - `openupm add com.yasirkula.ingamedebugconsole`
 
+## FAQ
+
+- **"Receive Logcat Logs In Android" isn't working, it says "java.lang.ClassNotFoundException: com.yasirkula.unity.DebugConsoleLogcatLogger" in Logcat**
+
+If your project uses ProGuard, try adding the following line to ProGuard filters: `-keep class com.yasirkula.unity.* { *; }`
+
 ## HOW TO
 
 Simply place **IngameDebugConsole** prefab to your scene. Hovering the cursor over its properties in the Inspector will reveal explanatory tooltips.
