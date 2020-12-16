@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.yasirkula.unity">
 	<uses-sdk android:targetSdkVersion="4" />
-    <uses-permission android:name="android.permission.READ_LOGS" android:maxSdkVersion="15" />
+    <uses-permission android:name="android.permission.READ_LOGS" android:maxSdkVersion="18" />
 </manifest>
