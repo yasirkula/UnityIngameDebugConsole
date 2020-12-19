@@ -555,9 +555,15 @@ namespace IngameDebugConsole
 				if( Input.GetKeyDown( KeyCode.UpArrow ) )
 				{
 					if( commandHistoryIndex == -1 )
+					{
 						commandHistoryIndex = commandHistory.Count - 1;
+						if(commandInputField.text != "")
+							commandHistory.Add(commandInputField.text);
+					}
 					else if( --commandHistoryIndex < 0 )
+					{
 						commandHistoryIndex = 0;
+					}
 
 					if( commandHistoryIndex >= 0 && commandHistoryIndex < commandHistory.Count )
 					{
@@ -568,9 +574,14 @@ namespace IngameDebugConsole
 				else if( Input.GetKeyDown( KeyCode.DownArrow ) )
 				{
 					if( commandHistoryIndex == -1 )
+					{
 						commandHistoryIndex = commandHistory.Count - 1;
+						commandHistory.Add(commandInputField.text);
+					}
 					else if( ++commandHistoryIndex >= commandHistory.Count )
+					{
 						commandHistoryIndex = commandHistory.Count - 1;
+					}
 
 					if( commandHistoryIndex >= 0 && commandHistoryIndex < commandHistory.Count )
 						commandInputField.text = commandHistory[commandHistoryIndex];
