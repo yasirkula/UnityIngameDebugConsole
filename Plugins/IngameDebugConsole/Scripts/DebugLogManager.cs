@@ -576,7 +576,8 @@ namespace IngameDebugConsole
 					if( commandHistoryIndex == -1 )
 					{
 						commandHistoryIndex = commandHistory.Count - 1;
-						commandHistory.Add(commandInputField.text);
+						if(commandInputField.text != "")
+							commandHistory.Add(commandInputField.text);
 					}
 					else if( ++commandHistoryIndex >= commandHistory.Count )
 					{
