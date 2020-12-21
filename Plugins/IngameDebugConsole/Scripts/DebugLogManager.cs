@@ -280,6 +280,7 @@ namespace IngameDebugConsole
 		// History of the previously entered commands
 		private CircularBuffer<string> commandHistory;
 		private int commandHistoryIndex = -1;
+		private string unfinishedCommand;
 
 		// Required in ValidateScrollPosition() function
 		private PointerEventData nullPointerEventData;
@@ -550,30 +551,30 @@ namespace IngameDebugConsole
 					snapToBottomButton.SetActive( !snapToBottomButton.activeSelf );
 			}
 
-			if( isLogWindowVisible && commandInputField.isFocused )
+			if( isLogWindowVisible && commandInputField.isFocused && commandHistory.Count > 0 )
 			{
 				if( Input.GetKeyDown( KeyCode.UpArrow ) )
 				{
 					if( commandHistoryIndex == -1 )
+					{
 						commandHistoryIndex = commandHistory.Count - 1;
+						unfinishedCommand = commandInputField.text;
+					}
 					else if( --commandHistoryIndex < 0 )
 						commandHistoryIndex = 0;
 
-					if( commandHistoryIndex >= 0 && commandHistoryIndex < commandHistory.Count )
-					{
-						commandInputField.text = commandHistory[commandHistoryIndex];
-						commandInputField.caretPosition = commandInputField.text.Length;
-					}
+					commandInputField.text = commandHistory[commandHistoryIndex];
+					commandInputField.caretPosition = commandInputField.text.Length;
 				}
-				else if( Input.GetKeyDown( KeyCode.DownArrow ) )
+				else if( Input.GetKeyDown( KeyCode.DownArrow ) && commandHistoryIndex != -1 )
 				{
-					if( commandHistoryIndex == -1 )
-						commandHistoryIndex = commandHistory.Count - 1;
-					else if( ++commandHistoryIndex >= commandHistory.Count )
-						commandHistoryIndex = commandHistory.Count - 1;
-
-					if( commandHistoryIndex >= 0 && commandHistoryIndex < commandHistory.Count )
+					if( ++commandHistoryIndex < commandHistory.Count )
 						commandInputField.text = commandHistory[commandHistoryIndex];
+					else
+					{
+						commandHistoryIndex = -1;
+						commandInputField.text = unfinishedCommand ?? string.Empty;
+					}
 				}
 			}
 
@@ -624,7 +625,6 @@ namespace IngameDebugConsole
 
 			popupManager.Show();
 
-			commandHistoryIndex = -1;
 			isLogWindowVisible = false;
 
 			if( OnLogWindowHidden != null )
@@ -657,6 +657,7 @@ namespace IngameDebugConsole
 						commandHistory.Add( text );
 
 					commandHistoryIndex = -1;
+					unfinishedCommand = null;
 
 					// Execute the command
 					DebugLogConsole.ExecuteCommand( text );
