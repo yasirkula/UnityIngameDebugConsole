@@ -81,7 +81,7 @@ If all the parameters of a function are of supported types, you can register the
 
 - **ConsoleMethod Attribute** *(not supported on UWP platform)*
 
-Simply add **IngameDebugConsole.ConsoleMethod** attribute to your functions. These functions must be *public static* and must reside in a *public* class. These constraints do not apply to the other two methods.
+Simply add **IngameDebugConsole.ConsoleMethod** attribute to your functions. These functions must be *public static* and must reside in a *public* class. These constraints do not apply to the other 3 methods.
 
 ```csharp
 using UnityEngine;
