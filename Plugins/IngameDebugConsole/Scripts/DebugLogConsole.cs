@@ -125,16 +125,16 @@ namespace IngameDebugConsole
 				"Mono.",
 				"mscorlib",
 				"netstandard",
-				"Assembly-CSharp-Editor",
 				"TextMeshPro",
 				"Microsoft.GeneratedCode",
 				"I18N",
 				"Boo.",
 				"UnityScript.",
-				"Assembly-UnityScript-Editor",
 				"ICSharpCode.",
 				"ExCSS.Unity",
 #if UNITY_EDITOR
+				"Assembly-CSharp-Editor",
+				"Assembly-UnityScript-Editor",
 				"nunit.",
 				"SyntaxTree.",
 				"AssetStoreTools",
@@ -143,6 +143,11 @@ namespace IngameDebugConsole
 
 			foreach( Assembly assembly in AppDomain.CurrentDomain.GetAssemblies() )
 			{
+#if NET_4_6 || NET_STANDARD_2_0
+				if( assembly.IsDynamic )
+					continue;
+#endif
+
 				string assemblyName = assembly.GetName().Name;
 				bool ignoreAssembly = false;
 				for( int i = 0; i < ignoredAssemblies.Length; i++ )
@@ -157,17 +162,26 @@ namespace IngameDebugConsole
 				if( ignoreAssembly )
 					continue;
 
-				foreach( Type type in assembly.GetExportedTypes() )
+				try
 				{
-					foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
+					foreach( Type type in assembly.GetExportedTypes() )
 					{
-						foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
+						foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
 						{
-							ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
-							if( consoleMethod != null )
-								AddCommand( consoleMethod.Command, consoleMethod.Description, method );
+							foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
+							{
+								ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
+								if( consoleMethod != null )
+									AddCommand( consoleMethod.Command, consoleMethod.Description, method );
+							}
 						}
 					}
+				}
+				catch( NotSupportedException ) { }
+				catch( System.IO.FileNotFoundException ) { }
+				catch( Exception e )
+				{
+					Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assemblyName + "\n" + e.ToString() );
 				}
 			}
 #endif
