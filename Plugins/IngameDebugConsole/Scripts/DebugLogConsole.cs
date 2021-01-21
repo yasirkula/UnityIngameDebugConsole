@@ -452,6 +452,8 @@ namespace IngameDebugConsole
 				if( !methods[i].IsValid() )
 				{
 					methods.RemoveAt( i );
+					if( i < commandIndex )
+						commandIndex --;
 					continue;
 				}
 
