@@ -446,31 +446,6 @@ namespace IngameDebugConsole
 				}
 			}
 
-			// Check if this command has been registered before and if it is, overwrite that command
-			for( int i = methods.Count - 1; i >= 0; i-- )
-			{
-				if( !methods[i].IsValid() )
-				{
-					methods.RemoveAt( i );
-					if( i < commandIndex )
-						commandIndex --;
-					continue;
-				}
-
-				if( caseInsensitiveComparer.Compare( methods[i].command, command, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) == 0 && methods[i].parameterTypes.Length == parameterTypes.Length )
-				{
-					int j = 0;
-					while( j < parameterTypes.Length && parameterTypes[j] == methods[i].parameterTypes[j] )
-						j++;
-
-					if( j >= parameterTypes.Length )
-					{
-						methods.RemoveAt( i );
-						break;
-					}
-				}
-			}
-
 			// Create the command
 			StringBuilder methodSignature = new StringBuilder( 256 );
 			string[] parameterSignatures = new string[parameterTypes.Length];
