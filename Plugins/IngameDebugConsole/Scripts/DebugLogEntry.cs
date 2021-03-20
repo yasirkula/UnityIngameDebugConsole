@@ -60,8 +60,8 @@ namespace IngameDebugConsole
 				unchecked
 				{
 					hashValue = 17;
-					hashValue = hashValue * 23 + logString == null ? 0 : logString.GetHashCode();
-					hashValue = hashValue * 23 + stackTrace == null ? 0 : stackTrace.GetHashCode();
+					hashValue = hashValue * 23 + ( logString == null ? 0 : logString.GetHashCode() );
+					hashValue = hashValue * 23 + ( stackTrace == null ? 0 : stackTrace.GetHashCode() );
 				}
 			}
 

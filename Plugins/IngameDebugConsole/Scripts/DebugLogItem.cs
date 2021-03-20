@@ -60,6 +60,10 @@ namespace IngameDebugConsole
 		public Image Image { get { return imageComponent; } }
 
 		[SerializeField]
+		private CanvasGroup canvasGroupComponent;
+		public CanvasGroup CanvasGroup { get { return canvasGroupComponent; } }
+
+		[SerializeField]
 		private Text logText;
 		[SerializeField]
 		private Image logTypeImage;

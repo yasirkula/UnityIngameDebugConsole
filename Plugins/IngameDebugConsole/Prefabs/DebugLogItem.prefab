@@ -63,6 +63,7 @@ GameObject:
   - component: {fileID: 11459012}
   - component: {fileID: 11408050}
   - component: {fileID: 11456372}
+  - component: {fileID: 225819852034701160}
   m_Layer: 5
   m_Name: DebugLogItem
   m_TagString: Untagged
@@ -127,6 +128,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   transformComponent: {fileID: 22479264}
   imageComponent: {fileID: 11459012}
+  canvasGroupComponent: {fileID: 225819852034701160}
   logText: {fileID: 11465282}
   logTypeImage: {fileID: 11404142}
   logCountParent: {fileID: 104862}
@@ -625,3 +627,14 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &225819852034701160
+CanvasGroup:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 166880}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0

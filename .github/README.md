@@ -77,7 +77,7 @@ However, there is some flexibility in the syntax, as well:
 
 ### Registering Custom Commands
 
-If all the parameters of a function are of supported types, you can register the function to the console in four different ways:
+If all the parameters of a function are of supported types, you can register the function to the console in four different ways (all of these methods take optional string parameter(s) at the end to specify custom display names for the registered function's parameter(s)):
 
 - **ConsoleMethod Attribute** *(not supported on UWP platform)*
 

@@ -71,30 +71,32 @@ namespace IngameDebugConsole
 			OnEndDrag( null );
 		}
 
-		public void NewInfoLogArrived()
+		public void NewLogsArrived( int newInfo, int newWarning, int newError )
 		{
-			newInfoCount++;
-			newInfoCountText.text = newInfoCount.ToString();
+			if( newInfo > 0 )
+			{
+				newInfoCount += newInfo;
+				newInfoCountText.text = newInfoCount.ToString();
+			}
 
-			if( newWarningCount == 0 && newErrorCount == 0 )
-				backgroundImage.color = alertColorInfo;
-		}
+			if( newWarning > 0 )
+			{
+				newWarningCount += newWarning;
+				newWarningCountText.text = newWarningCount.ToString();
+			}
 
-		public void NewWarningLogArrived()
-		{
-			newWarningCount++;
-			newWarningCountText.text = newWarningCount.ToString();
+			if( newError > 0 )
+			{
+				newErrorCount += newError;
+				newErrorCountText.text = newErrorCount.ToString();
+			}
 
-			if( newErrorCount == 0 )
+			if( newErrorCount > 0 )
+				backgroundImage.color = alertColorError;
+			else if( newWarningCount > 0 )
 				backgroundImage.color = alertColorWarning;
-		}
-
-		public void NewErrorLogArrived()
-		{
-			newErrorCount++;
-			newErrorCountText.text = newErrorCount.ToString();
-
-			backgroundImage.color = alertColorError;
+			else
+				backgroundImage.color = alertColorInfo;
 		}
 
 		private void Reset()

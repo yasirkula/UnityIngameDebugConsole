@@ -231,6 +231,9 @@ namespace IngameDebugConsole
 		// Number of entries filtered by their types
 		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
 
+		// Number of new entries received this frame
+		private int newInfoEntryCount = 0, newWarningEntryCount = 0, newErrorEntryCount = 0;
+
 		// Filters to apply to the list of debug entries to show
 		private bool isCollapseOn = false;
 		private DebugLogFilter logFilter = DebugLogFilter.All;
@@ -255,6 +258,12 @@ namespace IngameDebugConsole
 
 		// Filtered list of debug entries to show
 		private DebugLogIndexList indicesOfListEntriesToShow;
+
+		// The log entry that must be focused this frame
+		private int indexOfLogEntryToSelectAndFocus = -1;
+
+		// Whether or not logs list view should be updated this frame
+		private bool shouldUpdateRecycledListView = false;
 
 		// Logs that should be registered in Update-loop
 		private DynamicCircularBuffer<QueuedDebugLogEntry> queuedLogEntries;
@@ -488,6 +497,52 @@ namespace IngameDebugConsole
 				}
 			}
 
+			// Update entry count texts in a single batch
+			if( newInfoEntryCount > 0 || newWarningEntryCount > 0 || newErrorEntryCount > 0 )
+			{
+				if( newInfoEntryCount > 0 )
+				{
+					infoEntryCount += newInfoEntryCount;
+					infoEntryCountText.text = infoEntryCount.ToString();
+				}
+
+				if( newWarningEntryCount > 0 )
+				{
+					warningEntryCount += newWarningEntryCount;
+					warningEntryCountText.text = warningEntryCount.ToString();
+				}
+
+				if( newErrorEntryCount > 0 )
+				{
+					errorEntryCount += newErrorEntryCount;
+					errorEntryCountText.text = errorEntryCount.ToString();
+				}
+
+				// If debug popup is visible, notify it of the new debug entries
+				if( !isLogWindowVisible )
+					popupManager.NewLogsArrived( newInfoEntryCount, newWarningEntryCount, newErrorEntryCount );
+
+				newInfoEntryCount = 0;
+				newWarningEntryCount = 0;
+				newErrorEntryCount = 0;
+			}
+
+			// Update visible logs if necessary
+			if( isLogWindowVisible && shouldUpdateRecycledListView )
+			{
+				recycledListView.OnLogEntriesUpdated( false );
+				shouldUpdateRecycledListView = false;
+			}
+
+			// Automatically expand the target log (if any)
+			if( indexOfLogEntryToSelectAndFocus >= 0 )
+			{
+				if( indexOfLogEntryToSelectAndFocus < indicesOfListEntriesToShow.Count )
+					recycledListView.SelectAndFocusOnLogItemAtIndex( indexOfLogEntryToSelectAndFocus );
+
+				indexOfLogEntryToSelectAndFocus = -1;
+			}
+
 			if( showCommandSuggestions && commandInputField.isFocused && commandInputField.caretPosition != commandInputFieldPrevCaretPos )
 				RefreshCommandSuggestions( commandInputField.text );
 
@@ -649,7 +704,7 @@ namespace IngameDebugConsole
 			{
 				// Clear the command field
 				if( clearCommandAfterExecution )
-					commandInputField.text = "";
+					commandInputField.text = string.Empty;
 
 				if( text.Length > 0 )
 				{
@@ -673,7 +728,7 @@ namespace IngameDebugConsole
 		}
 
 		// A debug entry is received
-		private void ReceivedLog( string logString, string stackTrace, LogType logType )
+		public void ReceivedLog( string logString, string stackTrace, LogType logType )
 		{
 #if UNITY_EDITOR
 			if( isQuittingApplication )
@@ -793,40 +848,19 @@ namespace IngameDebugConsole
 				logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.Count - 1;
 
 				if( isLogWindowVisible )
-					recycledListView.OnLogEntriesUpdated( false );
+					shouldUpdateRecycledListView = true;
 			}
 
 			if( logType == LogType.Log )
-			{
-				infoEntryCount++;
-				infoEntryCountText.text = infoEntryCount.ToString();
-
-				// If debug popup is visible, notify it of the new debug entry
-				if( !isLogWindowVisible )
-					popupManager.NewInfoLogArrived();
-			}
+				newInfoEntryCount++;
 			else if( logType == LogType.Warning )
-			{
-				warningEntryCount++;
-				warningEntryCountText.text = warningEntryCount.ToString();
-
-				// If debug popup is visible, notify it of the new debug entry
-				if( !isLogWindowVisible )
-					popupManager.NewWarningLogArrived();
-			}
+				newWarningEntryCount++;
 			else
-			{
-				errorEntryCount++;
-				errorEntryCountText.text = errorEntryCount.ToString();
-
-				// If debug popup is visible, notify it of the new debug entry
-				if( !isLogWindowVisible )
-					popupManager.NewErrorLogArrived();
-			}
+				newErrorEntryCount++;
 
 			// Automatically expand this log if necessary
 			if( pendingLogToAutoExpand > 0 && --pendingLogToAutoExpand <= 0 && isLogWindowVisible && logEntryIndexInEntriesToShow >= 0 )
-				recycledListView.SelectAndFocusOnLogItemAtIndex( logEntryIndexInEntriesToShow );
+				indexOfLogEntryToSelectAndFocus = logEntryIndexInEntriesToShow;
 		}
 
 		// Value of snapToBottom is changed (user scrolled the list manually)
@@ -842,9 +876,16 @@ namespace IngameDebugConsole
 		}
 
 		// Automatically expand the latest log in queuedLogEntries
-		internal void ExpandLatestPendingLog()
+		public void ExpandLatestPendingLog()
 		{
 			pendingLogToAutoExpand = queuedLogEntries.Count;
+		}
+
+		// Omits the latest log's stack trace
+		public void StripStackTraceFromLatestPendingLog()
+		{
+			QueuedDebugLogEntry log = queuedLogEntries[queuedLogEntries.Count - 1];
+			queuedLogEntries[queuedLogEntries.Count - 1] = new QueuedDebugLogEntry( log.logString, string.Empty, log.logType );
 		}
 
 		// Clear all the logs
@@ -1244,7 +1285,9 @@ namespace IngameDebugConsole
 		// Pool an unused log item
 		internal void PoolLogItem( DebugLogItem logItem )
 		{
-			logItem.gameObject.SetActive( false );
+			logItem.CanvasGroup.alpha = 0f;
+			logItem.CanvasGroup.blocksRaycasts = false;
+
 			pooledLogItems.Add( logItem );
 		}
 
@@ -1259,7 +1302,9 @@ namespace IngameDebugConsole
 			{
 				newLogItem = pooledLogItems[pooledLogItems.Count - 1];
 				pooledLogItems.RemoveAt( pooledLogItems.Count - 1 );
-				newLogItem.gameObject.SetActive( true );
+
+				newLogItem.CanvasGroup.alpha = 1f;
+				newLogItem.CanvasGroup.blocksRaycasts = true;
 			}
 			else
 			{
