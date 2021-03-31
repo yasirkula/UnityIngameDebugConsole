@@ -45,12 +45,12 @@ namespace IngameDebugConsole
 		[Tooltip( "Minimum height of the console window" )]
 		private float minimumHeight = 200f;
 
-        [SerializeField]
-        [HideInInspector]
-        [Tooltip("Minimum width of the console window")]
-        private float minimumWidth = (Screen.width / 8);
-
-        [SerializeField]
+		[SerializeField]
+		[HideInInspector]
+		[Tooltip("Minimum width of the console window")]
+		private float minimumWidth = (Screen.width / 8);
+		
+		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "If disabled, no popup will be shown when the console window is hidden" )]
 		private bool enablePopup = true;
@@ -1091,38 +1091,38 @@ namespace IngameDebugConsole
 				commandSuggestionsContainer.gameObject.SetActive( false );
 		}
 
-        // Debug window is being resized,
-        // Set the sizeDelta property of the window accordingly while
-        // preventing window dimensions from going below the minimum dimensions
-        internal void Resize(PointerEventData eventData)
-        {
-            // Calculate width Resize
-            float newWidth = eventData.position.x / canvasTR.localScale.x;
-            float maximumWidth = (Screen.width - minimumWidth) / canvasTR.localScale.x;
-            if (newWidth > maximumWidth)
-                newWidth = maximumWidth;
-            if (newWidth < 0)
-                newWidth = 0;
-
-            // Calculate height Resize
-            // Grab the resize button from top; 36f is the height of the resize button
-            float newHeight = (eventData.position.y - logWindowTR.position.y) / -canvasTR.localScale.y + 36f;
-            if (newHeight < minimumHeight)
-                newHeight = minimumHeight;
-
-            Vector2 anchorMin = logWindowTR.anchorMin;
-            anchorMin.y = Mathf.Max(0f, 1f - newHeight / canvasTR.sizeDelta.y);
-            // Prevent horizontal resize when Resizing on vertical 
-            if (newWidth < maximumWidth)
-                anchorMin.x = Mathf.Min(0f + newWidth / canvasTR.sizeDelta.x, 1f);
-            logWindowTR.anchorMin = anchorMin;
-
-            // Update the recycled list view
-            recycledListView.OnViewportDimensionsChanged();
-        }
-
-        // Determine the filtered list of debug entries to show on screen
-        private void FilterLogs()
+		// Debug window is being resized,
+		// Set the sizeDelta property of the window accordingly while
+		// preventing window dimensions from going below the minimum dimensions
+		internal void Resize(PointerEventData eventData)
+		{
+			// Calculate width Resize
+			float newWidth = eventData.position.x / canvasTR.localScale.x;
+			float maximumWidth = (Screen.width - minimumWidth) / canvasTR.localScale.x;
+			if (newWidth > maximumWidth)
+				newWidth = maximumWidth;
+			if (newWidth < 0)
+				newWidth = 0;
+		
+			// Calculate height Resize
+			// Grab the resize button from top; 36f is the height of the resize button
+			float newHeight = (eventData.position.y - logWindowTR.position.y) / -canvasTR.localScale.y + 36f;
+			if (newHeight < minimumHeight)
+				newHeight = minimumHeight;
+		
+			Vector2 anchorMin = logWindowTR.anchorMin;
+			anchorMin.y = Mathf.Max(0f, 1f - newHeight / canvasTR.sizeDelta.y);
+			// Prevent horizontal resize when Resizing on vertical 
+			if (newWidth < maximumWidth)
+				anchorMin.x = Mathf.Min(0f + newWidth / canvasTR.sizeDelta.x, 1f);
+			logWindowTR.anchorMin = anchorMin;
+		
+			// Update the recycled list view
+			recycledListView.OnViewportDimensionsChanged();
+		}
+		
+		// Determine the filtered list of debug entries to show on screen
+		private void FilterLogs()
 		{
 			indicesOfListEntriesToShow.Clear();
 
