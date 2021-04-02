@@ -48,7 +48,7 @@ namespace IngameDebugConsole
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip("Minimum height of the console window")]
-		private bool enableHorizontalResizing = 200f;
+		private bool enableHorizontalResizing = true;
 
 		[SerializeField]
 		[HideInInspector]

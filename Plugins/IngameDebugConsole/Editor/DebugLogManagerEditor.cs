@@ -50,7 +50,7 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( minimumHeight );
 			EditorGUILayout.PropertyField( enableHorizontalResizing );
 
-			if ( enableHorizontalResizing )
+			if ( enableHorizontalResizing.boolValue )
 				DrawSubProperty( minimumWidth );
 
 			EditorGUILayout.PropertyField( enablePopup );
