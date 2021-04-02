@@ -7,6 +7,8 @@ namespace IngameDebugConsole
 	{
 		private SerializedProperty singleton;
 		private SerializedProperty minimumHeight;
+		private SerializedProperty enableHorizontalResizing;
+		private SerializedProperty minimumWidth;
 		private SerializedProperty enablePopup;
 		private SerializedProperty startInPopupMode;
 		private SerializedProperty startMinimized;
@@ -24,6 +26,8 @@ namespace IngameDebugConsole
 		{
 			singleton = serializedObject.FindProperty( "singleton" );
 			minimumHeight = serializedObject.FindProperty( "minimumHeight" );
+			enableHorizontalResizing = serializedObject.FindProperty( "enableHorizontalResizing" );
+			minimumWidth = serializedObject.FindProperty( "minimumWidth" );
 			enablePopup = serializedObject.FindProperty( "enablePopup" );
 			startInPopupMode = serializedObject.FindProperty( "startInPopupMode" );
 			startMinimized = serializedObject.FindProperty( "startMinimized" );
@@ -44,6 +48,11 @@ namespace IngameDebugConsole
 
 			EditorGUILayout.PropertyField( singleton );
 			EditorGUILayout.PropertyField( minimumHeight );
+			EditorGUILayout.PropertyField( enableHorizontalResizing );
+
+			if ( enableHorizontalResizing )
+				DrawSubProperty( minimumWidth );
+
 			EditorGUILayout.PropertyField( enablePopup );
 
 			if( enablePopup.boolValue )

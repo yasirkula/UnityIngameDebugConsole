@@ -47,6 +47,16 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		[Tooltip("Minimum height of the console window")]
+		private bool enableHorizontalResizing = 200f;
+
+		[SerializeField]
+		[HideInInspector]
+		[Tooltip("Minimum height of the console window")]
+		private float minimumWidth = 240f;
+
+		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "If disabled, no popup will be shown when the console window is hidden" )]
 		private bool enablePopup = true;
 
@@ -1091,6 +1101,16 @@ namespace IngameDebugConsole
 		// preventing window dimensions from going below the minimum dimensions
 		internal void Resize( PointerEventData eventData )
 		{
+			if ( enableHorizontalResizing )
+			{
+				float newWidth = eventData.position.x / canvasTR.localScale.x;
+				if ( newWidth < minimumWidth )
+					newWidth = minimumWidth;
+				Vector2 anchorMax = logWindowTR.anchorMax;
+				anchorMax.x = Mathf.Min( newWidth / canvasTR.sizeDelta.x, 1f );
+				logWindowTR.anchorMax = anchorMax;
+			}
+
 			// Grab the resize button from top; 36f is the height of the resize button
 			float newHeight = ( eventData.position.y - logWindowTR.position.y ) / -canvasTR.localScale.y + 36f;
 			if( newHeight < minimumHeight )
