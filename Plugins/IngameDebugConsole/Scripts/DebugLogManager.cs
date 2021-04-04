@@ -145,6 +145,12 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private Sprite errorLog;
 
+		// Visuals for resize window
+		[SerializeField]
+		private Sprite resizeIcon;
+		[SerializeField]
+		private Sprite verticalResizeIcon;
+
 		private Dictionary<LogType, Sprite> logSpriteRepresentations;
 
 		[SerializeField]
@@ -206,6 +212,9 @@ namespace IngameDebugConsole
 		private RectTransform searchbarSlotTop;
 		[SerializeField]
 		private RectTransform searchbarSlotBottom;
+
+		[SerializeField]
+		private Image resizeIconImage;
 
 		[SerializeField]
 		private GameObject snapToBottomButton;
@@ -313,6 +322,14 @@ namespace IngameDebugConsole
 
 #if !UNITY_EDITOR && UNITY_ANDROID
 		private DebugLogLogcatListener logcatListener;
+#endif
+
+#if UNITY_EDITOR
+		private void OnValidate()
+		{
+			if( UnityEditor.EditorApplication.isPlaying )
+				resizeIconImage.sprite = enableHorizontalResizing ? resizeIcon : verticalResizeIcon;
+		}
 #endif
 
 		private void Awake()
