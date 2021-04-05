@@ -47,12 +47,12 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
-		[Tooltip("Minimum height of the console window")]
-		private bool enableHorizontalResizing = true;
+		[Tooltip( "If enabled, console window can be resized horizontally, as well" )]
+		private bool enableHorizontalResizing = false;
 
 		[SerializeField]
 		[HideInInspector]
-		[Tooltip("Minimum height of the console window")]
+		[Tooltip( "Minimum width of the console window" )]
 		private float minimumWidth = 240f;
 
 		[SerializeField]
@@ -145,11 +145,11 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private Sprite errorLog;
 
-		// Visuals for resize window
+		// Visuals for resize button
 		[SerializeField]
-		private Sprite resizeIcon;
+		private Sprite resizeIconAllDirections;
 		[SerializeField]
-		private Sprite verticalResizeIcon;
+		private Sprite resizeIconVerticalOnly;
 
 		private Dictionary<LogType, Sprite> logSpriteRepresentations;
 
@@ -214,7 +214,7 @@ namespace IngameDebugConsole
 		private RectTransform searchbarSlotBottom;
 
 		[SerializeField]
-		private Image resizeIconImage;
+		private Image resizeButton;
 
 		[SerializeField]
 		private GameObject snapToBottomButton;
@@ -324,14 +324,6 @@ namespace IngameDebugConsole
 		private DebugLogLogcatListener logcatListener;
 #endif
 
-#if UNITY_EDITOR
-		private void OnValidate()
-		{
-			if( UnityEditor.EditorApplication.isPlaying )
-				resizeIconImage.sprite = enableHorizontalResizing ? resizeIcon : verticalResizeIcon;
-		}
-#endif
-
 		private void Awake()
 		{
 			// Only one instance of debug console is allowed
@@ -378,6 +370,8 @@ namespace IngameDebugConsole
 			filterInfoButton.color = filterButtonsSelectedColor;
 			filterWarningButton.color = filterButtonsSelectedColor;
 			filterErrorButton.color = filterButtonsSelectedColor;
+
+			resizeButton.sprite = enableHorizontalResizing ? resizeIconAllDirections : resizeIconVerticalOnly;
 
 			collapsedLogEntries = new List<DebugLogEntry>( 128 );
 			collapsedLogEntriesMap = new Dictionary<DebugLogEntry, int>( 128 );
@@ -472,6 +466,12 @@ namespace IngameDebugConsole
 		}
 
 #if UNITY_EDITOR
+		private void OnValidate()
+		{
+			if( UnityEditor.EditorApplication.isPlaying )
+				resizeButton.sprite = enableHorizontalResizing ? resizeIconAllDirections : resizeIconVerticalOnly;
+		}
+
 		private void OnApplicationQuit()
 		{
 			isQuittingApplication = true;
@@ -1118,18 +1118,25 @@ namespace IngameDebugConsole
 		// preventing window dimensions from going below the minimum dimensions
 		internal void Resize( PointerEventData eventData )
 		{
-			if ( enableHorizontalResizing )
+			Vector3 logWindowPosition = logWindowTR.position;
+			Vector3 canvasScale = canvasTR.lossyScale;
+
+			if( enableHorizontalResizing )
 			{
-				float newWidth = eventData.position.x / canvasTR.localScale.x;
-				if ( newWidth < minimumWidth )
+				// Grab the resize button from left; 64f is the width of the resize button
+				// Subtracting logWindowTR.sizeDelta to compensate any changes to anchoredPosition (e.g. on notch screens)
+				float newWidth = ( eventData.position.x - logWindowPosition.x ) / canvasScale.x - logWindowTR.sizeDelta.x + 64f;
+				if( newWidth < minimumWidth )
 					newWidth = minimumWidth;
+
 				Vector2 anchorMax = logWindowTR.anchorMax;
 				anchorMax.x = Mathf.Min( newWidth / canvasTR.sizeDelta.x, 1f );
 				logWindowTR.anchorMax = anchorMax;
 			}
 
 			// Grab the resize button from top; 36f is the height of the resize button
-			float newHeight = ( eventData.position.y - logWindowTR.position.y ) / -canvasTR.localScale.y + 36f;
+			// Subtracting logWindowTR.sizeDelta to compensate any changes to anchoredPosition (e.g. on notch screens)
+			float newHeight = ( eventData.position.y - logWindowPosition.y ) / -canvasScale.y - logWindowTR.sizeDelta.y + 36f;
 			if( newHeight < minimumHeight )
 				newHeight = minimumHeight;
 

@@ -48,33 +48,30 @@ namespace IngameDebugConsole
 
 			EditorGUILayout.PropertyField( singleton );
 			EditorGUILayout.PropertyField( minimumHeight );
-			EditorGUILayout.PropertyField( enableHorizontalResizing );
 
-			if ( enableHorizontalResizing.boolValue )
+			EditorGUILayout.PropertyField( enableHorizontalResizing );
+			if( enableHorizontalResizing.boolValue )
 				DrawSubProperty( minimumWidth );
 
 			EditorGUILayout.PropertyField( enablePopup );
-
 			if( enablePopup.boolValue )
 				DrawSubProperty( startInPopupMode );
 			else
 				DrawSubProperty( startMinimized );
 
 			EditorGUILayout.PropertyField( toggleWithKey );
-
 			if( toggleWithKey.boolValue )
 				DrawSubProperty( toggleKey );
 
 			EditorGUILayout.PropertyField( enableSearchbar );
-
 			if( enableSearchbar.boolValue )
 				DrawSubProperty( topSearchbarMinWidth );
 
 			EditorGUILayout.PropertyField( clearCommandAfterExecution );
 			EditorGUILayout.PropertyField( commandHistorySize );
 			EditorGUILayout.PropertyField( showCommandSuggestions );
-			EditorGUILayout.PropertyField( receiveLogcatLogsInAndroid );
 
+			EditorGUILayout.PropertyField( receiveLogcatLogsInAndroid );
 			if( receiveLogcatLogsInAndroid.boolValue )
 				DrawSubProperty( logcatArguments );
 
