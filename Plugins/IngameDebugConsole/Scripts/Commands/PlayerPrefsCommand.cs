@@ -32,7 +32,7 @@ namespace IngameDebugConsole.Commands
 		[ConsoleMethod("pp.del", "Delete a PlayerPrefs field", "key")]
 		public static void PlayerPrefsDelete(string key) => PlayerPrefs.DeleteKey(key);
 
-		[ConsoleMethod("pp.clear", "Delete all PlayerPrefs fields", "key")]
-		public static void PlayerPrefsClear(string key) => PlayerPrefs.DeleteAll();
+		[ConsoleMethod("pp.clear", "Delete all PlayerPrefs fields")]
+		public static void PlayerPrefsClear() => PlayerPrefs.DeleteAll();
 	}
 }
