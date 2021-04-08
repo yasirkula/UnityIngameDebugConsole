@@ -10,7 +10,7 @@ namespace IngameDebugConsole.Commands
 			"type" )]
 		public static string PlayerPrefsGet( string key, string type )
 		{
-			if ( !PlayerPrefs.HasKey(key) ) return "Key Not Found";
+			if ( !PlayerPrefs.HasKey( key ) ) return "Key Not Found";
 			if ( type.ToLower() == "string" ) return PlayerPrefs.GetString( key );
 			if ( type.ToLower() == "float" ) return PlayerPrefs.GetFloat( key ).ToString();
 			if ( type.ToLower() == "int" ) return PlayerPrefs.GetInt( key ).ToString();
@@ -25,8 +25,8 @@ namespace IngameDebugConsole.Commands
 		public static void PlayerPrefsSet( string key, string type, string value )
 		{
 			if ( type.ToLower() == "string" ) PlayerPrefs.SetString( key, value );
-			if ( type.ToLower() == "float" ) PlayerPrefs.SetFloat( key, float.Parse(value) );
-			if ( type.ToLower() == "int" ) PlayerPrefs.SetInt( key, int.Parse(value) );
+			if ( type.ToLower() == "float" ) PlayerPrefs.SetFloat( key, float.Parse( value ) );
+			if ( type.ToLower() == "int" ) PlayerPrefs.SetInt( key, int.Parse( value ) );
 		}
 
 		[ConsoleMethod( "pp.del", "Delete a PlayerPrefs field", "key" )]

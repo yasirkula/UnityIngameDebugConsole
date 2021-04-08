@@ -14,7 +14,7 @@ namespace IngameDebugConsole.Commands
 				Debug.Log( $"Scene {sceneName} already loaded" );
 				return;
 			}
-			var parsedMode = ( LoadSceneMode )Enum.Parse( typeof(LoadSceneMode), mode, true );
+			var parsedMode = ( LoadSceneMode )Enum.Parse( typeof( LoadSceneMode ), mode, true );
 			SceneManager.LoadSceneAsync( sceneName, parsedMode );
 		}
 
