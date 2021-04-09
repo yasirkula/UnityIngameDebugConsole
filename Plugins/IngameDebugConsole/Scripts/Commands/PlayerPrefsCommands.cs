@@ -44,7 +44,7 @@ namespace IngameDebugConsole.Commands
 		}
 
 		[ConsoleMethod( "prefs.delete", "Deletes a PlayerPrefs field" )]
-		public static void PlayerPrefsDelete(string key)
+		public static void PlayerPrefsDelete( string key )
 		{
 			PlayerPrefs.DeleteKey( key );
 		}
