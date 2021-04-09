@@ -4,10 +4,7 @@ namespace IngameDebugConsole.Commands
 {
 	public class PlayerPrefsCommands
 	{
-		[ConsoleMethod( "pp.get",
-			"Get the value of a PlayerPrefs field",
-			"key",
-			"type" )]
+		[ConsoleMethod( "pp.get", "Get the value of a PlayerPrefs field" )]
 		public static string PlayerPrefsGet( string key, string type )
 		{
 			if ( !PlayerPrefs.HasKey( key ) ) return "Key Not Found";
@@ -17,11 +14,7 @@ namespace IngameDebugConsole.Commands
 			return "Invalid types";
 		}
 
-		[ConsoleMethod( "pp.set",
-			"Set the value of a PlayerPrefs field",
-			"key",
-			"type",
-			"value" )]
+		[ConsoleMethod( "pp.set", "Set the value of a PlayerPrefs field" )]
 		public static void PlayerPrefsSet( string key, string type, string value )
 		{
 			if ( type.ToLower() == "string" ) PlayerPrefs.SetString( key, value );
@@ -29,10 +22,16 @@ namespace IngameDebugConsole.Commands
 			if ( type.ToLower() == "int" ) PlayerPrefs.SetInt( key, int.Parse( value ) );
 		}
 
-		[ConsoleMethod( "pp.del", "Delete a PlayerPrefs field", "key" )]
-		public static void PlayerPrefsDelete(string key) => PlayerPrefs.DeleteKey( key );
+		[ConsoleMethod( "pp.del", "Delete a PlayerPrefs field" )]
+		public static void PlayerPrefsDelete(string key)
+		{
+			PlayerPrefs.DeleteKey( key );
+		}
 
 		[ConsoleMethod( "pp.clear", "Delete all PlayerPrefs fields" )]
-		public static void PlayerPrefsClear() => PlayerPrefs.DeleteAll();
+		public static void PlayerPrefsClear()
+		{
+			PlayerPrefs.DeleteAll();
+		}
 	}
 }
