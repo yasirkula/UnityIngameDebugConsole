@@ -6,31 +6,38 @@ namespace IngameDebugConsole.Commands
 {
 	public class SceneCommands
 	{
-		[ConsoleMethod( "scene.load", "Load a scene" )]
-		public static void LoadScene( string sceneName, LoadSceneMode mode, bool isAsync )
+		[ConsoleMethod( "scene.load", "Loads a scene" )]
+		public static void LoadScene( string sceneName, LoadSceneMode mode )
 		{
 			if ( SceneManager.GetSceneByName( sceneName ).IsValid() )
 			{
 				Debug.Log( "Scene " + sceneName + " already loaded" );
 				return;
 			}
-			if ( isAsync ) SceneManager.LoadSceneAsync( sceneName, mode );
-			else SceneManager.LoadScene( sceneName, mode );
+			SceneManager.LoadScene( sceneName, mode );
 		}
 
-		[ConsoleMethod( "scene.unload", "Unload a scene" )]
-		public static void UnloadScene( string sceneName, bool isAsync )
+		[ConsoleMethod( "scene.loadasync", "Loads a scene asynchronously" )]
+		public static void LoadSceneAsync( string sceneName, LoadSceneMode mode )
 		{
-			if ( isAsync ) SceneManager.UnloadSceneAsync( sceneName );
-			else SceneManager.UnloadScene( sceneName );
+			if ( SceneManager.GetSceneByName( sceneName ).IsValid() )
+			{
+				Debug.Log( "Scene " + sceneName + " already loaded" );
+				return;
+			}
+			SceneManager.LoadSceneAsync( sceneName, mode );
 		}
 
-		[ConsoleMethod( "scene.restart", "Restart the active scene" )]
-		public static void RestartScene( bool isAsync )
+		[ConsoleMethod( "scene.unload", "Unloads a scene" )]
+		public static void UnloadScene( string sceneName )
 		{
-			LoadScene( SceneManager.GetActiveScene().name,
-				LoadSceneMode.Single,
-				isAsync );
+			SceneManager.UnloadSceneAsync( sceneName );
+		}
+
+		[ConsoleMethod( "scene.restart", "Restarts the active scene" )]
+		public static void RestartScene()
+		{
+			SceneManager.LoadScene( SceneManager.GetActiveScene().name, LoadSceneMode.Single );
 		}
 	}
 }

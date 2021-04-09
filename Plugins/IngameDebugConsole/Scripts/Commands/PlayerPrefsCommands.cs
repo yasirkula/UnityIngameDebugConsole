@@ -4,31 +4,52 @@ namespace IngameDebugConsole.Commands
 {
 	public class PlayerPrefsCommands
 	{
-		[ConsoleMethod( "pp.get", "Get the value of a PlayerPrefs field" )]
-		public static string PlayerPrefsGet( string key, string type )
+		[ConsoleMethod( "prefs.int", "Returns the value of an Integer PlayerPrefs field" )]
+		public static string PlayerPrefsGetInt( string key )
 		{
 			if ( !PlayerPrefs.HasKey( key ) ) return "Key Not Found";
-			if ( type.ToLower() == "string" ) return PlayerPrefs.GetString( key );
-			if ( type.ToLower() == "float" ) return PlayerPrefs.GetFloat( key ).ToString();
-			if ( type.ToLower() == "int" ) return PlayerPrefs.GetInt( key ).ToString();
-			return "Invalid types";
+			return PlayerPrefs.GetInt( key ).ToString();
 		}
 
-		[ConsoleMethod( "pp.set", "Set the value of a PlayerPrefs field" )]
-		public static void PlayerPrefsSet( string key, string type, string value )
+		[ConsoleMethod( "prefs.int", "Sets the value of an Integer PlayerPrefs field" )]
+		public static void PlayerPrefsSetInt( string key, int value )
 		{
-			if ( type.ToLower() == "string" ) PlayerPrefs.SetString( key, value );
-			if ( type.ToLower() == "float" ) PlayerPrefs.SetFloat( key, float.Parse( value ) );
-			if ( type.ToLower() == "int" ) PlayerPrefs.SetInt( key, int.Parse( value ) );
+			PlayerPrefs.SetInt( key, value );
 		}
 
-		[ConsoleMethod( "pp.del", "Delete a PlayerPrefs field" )]
+		[ConsoleMethod( "prefs.float", "Returns the value of a Float PlayerPrefs field" )]
+		public static string PlayerPrefsGetFloat( string key )
+		{
+			if ( !PlayerPrefs.HasKey( key ) ) return "Key Not Found";
+			return PlayerPrefs.GetFloat( key ).ToString();
+		}
+
+		[ConsoleMethod( "prefs.float", "Sets the value of a Float PlayerPrefs field" )]
+		public static void PlayerPrefsSetFloat( string key, float value )
+		{
+			PlayerPrefs.SetFloat( key, value );
+		}
+
+		[ConsoleMethod( "prefs.string", "Returns the value of a String PlayerPrefs field" )]
+		public static string PlayerPrefsGetString( string key )
+		{
+			if ( !PlayerPrefs.HasKey( key ) ) return "Key Not Found";
+			return PlayerPrefs.GetString( key );
+		}
+
+		[ConsoleMethod( "prefs.string", "Sets the value of a String PlayerPrefs field" )]
+		public static void PlayerPrefsSetString( string key, string value )
+		{
+			PlayerPrefs.SetString( key, value );
+		}
+
+		[ConsoleMethod( "prefs.delete", "Deletes a PlayerPrefs field" )]
 		public static void PlayerPrefsDelete(string key)
 		{
 			PlayerPrefs.DeleteKey( key );
 		}
 
-		[ConsoleMethod( "pp.clear", "Delete all PlayerPrefs fields" )]
+		[ConsoleMethod( "prefs.clear", "Deletes all PlayerPrefs fields" )]
 		public static void PlayerPrefsClear()
 		{
 			PlayerPrefs.DeleteAll();
