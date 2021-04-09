@@ -7,16 +7,15 @@ namespace IngameDebugConsole.Commands
 	public class SceneCommands
 	{
 		[ConsoleMethod( "scene.load", "Load a scene" )]
-		public static void LoadScene( string sceneName, string mode, bool isAsync )
+		public static void LoadScene( string sceneName, LoadSceneMode mode, bool isAsync )
 		{
 			if ( SceneManager.GetSceneByName( sceneName ).IsValid() )
 			{
 				Debug.Log( "Scene " + sceneName + " already loaded" );
 				return;
 			}
-			var parsedMode = ( LoadSceneMode )Enum.Parse( typeof( LoadSceneMode ), mode, true );
-			if ( isAsync ) SceneManager.LoadSceneAsync( sceneName, parsedMode );
-			else SceneManager.LoadScene( sceneName, parsedMode );
+			if ( isAsync ) SceneManager.LoadSceneAsync( sceneName, mode );
+			else SceneManager.LoadScene( sceneName, mode );
 		}
 
 		[ConsoleMethod( "scene.unload", "Unload a scene" )]
@@ -30,7 +29,7 @@ namespace IngameDebugConsole.Commands
 		public static void RestartScene( bool isAsync )
 		{
 			LoadScene( SceneManager.GetActiveScene().name,
-				LoadSceneMode.Single.ToString(),
+				LoadSceneMode.Single,
 				isAsync );
 		}
 	}
