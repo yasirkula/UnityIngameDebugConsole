@@ -1,31 +1,47 @@
 ﻿using UnityEngine;
 using UnityEngine.SceneManagement;
-using System;
 
 namespace IngameDebugConsole.Commands
 {
+	[UnityEngine.Scripting.Preserve]
 	public class SceneCommands
 	{
 		[ConsoleMethod( "scene.load", "Loads a scene" )]
+		public static void LoadScene( string sceneName )
+		{
+			LoadSceneInternal( sceneName, false, LoadSceneMode.Single );
+		}
+
+		[ConsoleMethod( "scene.load", "Loads a scene" )]
 		public static void LoadScene( string sceneName, LoadSceneMode mode )
 		{
-			if ( SceneManager.GetSceneByName( sceneName ).IsValid() )
-			{
-				Debug.Log( "Scene " + sceneName + " already loaded" );
-				return;
-			}
-			SceneManager.LoadScene( sceneName, mode );
+			LoadSceneInternal( sceneName, false, mode );
+		}
+
+		[ConsoleMethod( "scene.loadasync", "Loads a scene asynchronously" )]
+		public static void LoadSceneAsync( string sceneName )
+		{
+			LoadSceneInternal( sceneName, true, LoadSceneMode.Single );
 		}
 
 		[ConsoleMethod( "scene.loadasync", "Loads a scene asynchronously" )]
 		public static void LoadSceneAsync( string sceneName, LoadSceneMode mode )
 		{
-			if ( SceneManager.GetSceneByName( sceneName ).IsValid() )
+			LoadSceneInternal( sceneName, true, mode );
+		}
+
+		private static void LoadSceneInternal( string sceneName, bool isAsync, LoadSceneMode mode )
+		{
+			if( SceneManager.GetSceneByName( sceneName ).IsValid() )
 			{
-				Debug.Log( "Scene " + sceneName + " already loaded" );
+				Debug.Log( "Scene " + sceneName + " is already loaded" );
 				return;
 			}
-			SceneManager.LoadSceneAsync( sceneName, mode );
+
+			if( isAsync )
+				SceneManager.LoadSceneAsync( sceneName, mode );
+			else
+				SceneManager.LoadScene( sceneName, mode );
 		}
 
 		[ConsoleMethod( "scene.unload", "Unloads a scene" )]

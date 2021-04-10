@@ -5,6 +5,9 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+#if UNITY_EDITOR && UNITY_2021_1_OR_NEWER
+using Screen = UnityEngine.Device.Screen; // To support Device Simulator on Unity 2021.1+
+#endif
 
 // Receives debug entries and custom events (e.g. Clear, Collapse, Filter by Type)
 // and notifies the recycled list view of changes to the list of debug entries
@@ -430,7 +433,8 @@ namespace IngameDebugConsole
 #endif
 			}
 
-			DebugLogConsole.AddCommand( "save_logs", "Saves logs to a file", SaveLogsToFile );
+			DebugLogConsole.AddCommand( "logs.save", "Saves logs to persistentDataPath", SaveLogsToFile );
+			DebugLogConsole.AddCommand<string>( "logs.save", "Saves logs to the specified file", SaveLogsToFile );
 
 			//Debug.LogAssertion( "assert" );
 			//Debug.LogError( "error" );
@@ -452,7 +456,7 @@ namespace IngameDebugConsole
 				logcatListener.Stop();
 #endif
 
-			DebugLogConsole.RemoveCommand( "save_logs" );
+			DebugLogConsole.RemoveCommand( "logs.save" );
 		}
 
 		private void Start()
@@ -581,7 +585,7 @@ namespace IngameDebugConsole
 				else
 					popupManager.OnViewportDimensionsChanged();
 
-#if UNITY_ANDROID || UNITY_IOS
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
 				CheckScreenCutout();
 #endif
 
@@ -1281,10 +1285,13 @@ namespace IngameDebugConsole
 
 		private void SaveLogsToFile()
 		{
-			string path = Path.Combine( Application.persistentDataPath, System.DateTime.Now.ToString( "dd-MM-yyyy--HH-mm-ss" ) + ".txt" );
-			File.WriteAllText( path, GetAllLogs() );
+			SaveLogsToFile( Path.Combine( Application.persistentDataPath, System.DateTime.Now.ToString( "dd-MM-yyyy--HH-mm-ss" ) + ".txt" ) );
+		}
 
-			Debug.Log( "Logs saved to: " + path );
+		private void SaveLogsToFile( string filePath )
+		{
+			File.WriteAllText( filePath, GetAllLogs() );
+			Debug.Log( "Logs saved to: " + filePath );
 		}
 
 		// If a cutout is intersecting with debug window on notch screens, shift the window downwards
@@ -1293,7 +1300,7 @@ namespace IngameDebugConsole
 			if( !avoidScreenCutout )
 				return;
 
-#if UNITY_2017_2_OR_NEWER && !UNITY_EDITOR && ( UNITY_ANDROID || UNITY_IOS )
+#if UNITY_2017_2_OR_NEWER && ( UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS )
 			// Check if there is a cutout at the top of the screen
 			int screenHeight = Screen.height;
 			float safeYMax = Screen.safeArea.yMax;

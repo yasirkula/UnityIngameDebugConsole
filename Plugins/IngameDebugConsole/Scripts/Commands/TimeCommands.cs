@@ -2,6 +2,7 @@
 
 namespace IngameDebugConsole.Commands
 {
+	[UnityEngine.Scripting.Preserve]
 	public class TimeCommands
 	{
 		[ConsoleMethod( "time.scale", "Sets the Time.timeScale value" )]
@@ -11,7 +12,7 @@ namespace IngameDebugConsole.Commands
 		}
 
 		[ConsoleMethod( "time.scale", "Returns the current Time.timeScale value" )]
-		public static float GetCurrentScale()
+		public static float GetTimeScale()
 		{
 			return Time.timeScale;
 		}

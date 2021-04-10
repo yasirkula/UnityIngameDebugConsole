@@ -2,6 +2,7 @@
 
 namespace IngameDebugConsole.Commands
 {
+	[UnityEngine.Scripting.Preserve]
 	public class PlayerPrefsCommands
 	{
 		[ConsoleMethod( "prefs.int", "Returns the value of an Integer PlayerPrefs field" )]

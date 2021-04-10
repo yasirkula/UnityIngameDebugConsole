@@ -1,4 +1,9 @@
-﻿using UnityEngine;
+﻿#if UNITY_EDITOR || UNITY_STANDALONE
+// Unity's Text component doesn't render <b> tag correctly on mobile devices
+#define USE_BOLD_COMMAND_SIGNATURES
+#endif
+
+using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,6 +11,9 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 using Object = UnityEngine.Object;
+#if UNITY_EDITOR && UNITY_2021_1_OR_NEWER
+using SystemInfo = UnityEngine.Device.SystemInfo; // To support Device Simulator on Unity 2021.1+
+#endif
 
 // Manages the console commands, parses console input and handles execution of commands
 // Supported method parameter types: int, float, bool, string, Vector2, Vector3, Vector4
@@ -115,6 +123,10 @@ namespace IngameDebugConsole
 
 		static DebugLogConsole()
 		{
+			AddCommand( "help", "Prints all commands", LogAllCommands );
+			AddCommand<string>( "help", "Prints all matching commands", LogAllCommandsWithName );
+			AddCommand( "sysinfo", "Prints system information", LogSystemInfo );
+
 #if UNITY_EDITOR || !NETFX_CORE
 			// Find all [ConsoleMethod] functions
 			// Don't search built-in assemblies for console methods since they can't have any
@@ -140,15 +152,22 @@ namespace IngameDebugConsole
 				"AssetStoreTools",
 #endif
 			};
+#endif
 
+#if UNITY_EDITOR || !NETFX_CORE
 			foreach( Assembly assembly in AppDomain.CurrentDomain.GetAssemblies() )
+#else
+			foreach( Assembly assembly in new Assembly[] { typeof( DebugLogConsole ).Assembly } ) // On UWP, at least search this plugin's Assembly for console methods
+#endif
 			{
-#if NET_4_6 || NET_STANDARD_2_0
+#if( NET_4_6 || NET_STANDARD_2_0 ) && ( UNITY_EDITOR || !NETFX_CORE )
 				if( assembly.IsDynamic )
 					continue;
 #endif
 
 				string assemblyName = assembly.GetName().Name;
+
+#if UNITY_EDITOR || !NETFX_CORE
 				bool ignoreAssembly = false;
 				for( int i = 0; i < ignoredAssemblies.Length; i++ )
 				{
@@ -161,6 +180,7 @@ namespace IngameDebugConsole
 
 				if( ignoreAssembly )
 					continue;
+#endif
 
 				try
 				{
@@ -184,10 +204,6 @@ namespace IngameDebugConsole
 					Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assemblyName + "\n" + e.ToString() );
 				}
 			}
-#endif
-
-			AddCommand( "help", "Prints all commands", LogAllCommands );
-			AddCommand( "sysinfo", "Prints system information", LogSystemInfo );
 		}
 
 		// Logs the list of available commands
@@ -197,7 +213,7 @@ namespace IngameDebugConsole
 			for( int i = 0; i < methods.Count; i++ )
 			{
 				if( methods[i].IsValid() )
-					length += 3 + methods[i].signature.Length;
+					length += methods[i].signature.Length + 7;
 			}
 
 			StringBuilder stringBuilder = new StringBuilder( length );
@@ -206,7 +222,7 @@ namespace IngameDebugConsole
 			for( int i = 0; i < methods.Count; i++ )
 			{
 				if( methods[i].IsValid() )
-					stringBuilder.Append( "\n- " ).Append( methods[i].signature );
+					stringBuilder.Append( "\n    - " ).Append( methods[i].signature );
 			}
 
 			Debug.Log( stringBuilder.ToString() );
@@ -216,6 +232,41 @@ namespace IngameDebugConsole
 			{
 				DebugLogManager.Instance.ExpandLatestPendingLog();
 				DebugLogManager.Instance.StripStackTraceFromLatestPendingLog();
+			}
+		}
+
+		// Logs the list of available commands that are either equal to commandName or contain commandName as substring
+		public static void LogAllCommandsWithName( string commandName )
+		{
+			matchingMethods.Clear();
+
+			// First, try to find commands that exactly match the commandName. If there are no such commands, try to find
+			// commands that contain commandName as substring
+			FindCommands( commandName, false, matchingMethods );
+			if( matchingMethods.Count == 0 )
+				FindCommands( commandName, true, matchingMethods );
+
+			if( matchingMethods.Count == 0 )
+				Debug.LogWarning( string.Concat( "ERROR: can't find command '", commandName, "'" ) );
+			else
+			{
+				int commandsLength = 25;
+				for( int i = 0; i < matchingMethods.Count; i++ )
+					commandsLength += matchingMethods[i].signature.Length + 7;
+
+				StringBuilder stringBuilder = new StringBuilder( commandsLength );
+				stringBuilder.Append( "Matching commands:" );
+
+				for( int i = 0; i < matchingMethods.Count; i++ )
+					stringBuilder.Append( "\n    - " ).Append( matchingMethods[i].signature );
+
+				Debug.Log( stringBuilder.ToString() );
+
+				if( DebugLogManager.Instance )
+				{
+					DebugLogManager.Instance.ExpandLatestPendingLog();
+					DebugLogManager.Instance.StripStackTraceFromLatestPendingLog();
+				}
 			}
 		}
 
@@ -467,29 +518,34 @@ namespace IngameDebugConsole
 			StringBuilder methodSignature = new StringBuilder( 256 );
 			string[] parameterSignatures = new string[parameterTypes.Length];
 
-			methodSignature.Append( command ).Append( ": " );
+#if USE_BOLD_COMMAND_SIGNATURES
+			methodSignature.Append( "<b>" );
+#endif
+			methodSignature.Append( command );
 
-			if( !string.IsNullOrEmpty( description ) )
-				methodSignature.Append( description ).Append( " -> " );
-
-			methodSignature.Append( method.DeclaringType.ToString() ).Append( "." ).Append( method.Name ).Append( "(" );
-			for( int i = 0; i < parameterTypes.Length; i++ )
+			if( parameterTypes.Length > 0 )
 			{
-				int parameterSignatureStartIndex = methodSignature.Length;
+				methodSignature.Append( " " );
 
-				methodSignature.Append( GetTypeReadableName( parameterTypes[i] ) ).Append( " " ).Append( ( parameterNames != null && i < parameterNames.Length && !string.IsNullOrEmpty( parameterNames[i] ) ) ? parameterNames[i] : parameters[i].Name );
+				for( int i = 0; i < parameterTypes.Length; i++ )
+				{
+					int parameterSignatureStartIndex = methodSignature.Length;
 
-				if( i < parameterTypes.Length - 1 )
-					methodSignature.Append( ", " );
+					methodSignature.Append( "[" ).Append( GetTypeReadableName( parameterTypes[i] ) ).Append( " " ).Append( ( parameterNames != null && i < parameterNames.Length && !string.IsNullOrEmpty( parameterNames[i] ) ) ? parameterNames[i] : parameters[i].Name ).Append( "]" );
 
-				parameterSignatures[i] = methodSignature.ToString( parameterSignatureStartIndex, methodSignature.Length - parameterSignatureStartIndex );
+					if( i < parameterTypes.Length - 1 )
+						methodSignature.Append( " " );
+
+					parameterSignatures[i] = methodSignature.ToString( parameterSignatureStartIndex, methodSignature.Length - parameterSignatureStartIndex );
+				}
 			}
 
-			methodSignature.Append( ")" );
+#if USE_BOLD_COMMAND_SIGNATURES
+			methodSignature.Append( "</b>" );
+#endif
 
-			Type returnType = method.ReturnType;
-			if( returnType != typeof( void ) )
-				methodSignature.Append( " : " ).Append( GetTypeReadableName( returnType ) );
+			if( !string.IsNullOrEmpty( description ) )
+				methodSignature.Append( " : " ).Append( description );
 
 			methods.Insert( commandIndex, new ConsoleMethodInfo( method, parameterTypes, instance, command, methodSignature.ToString(), parameterSignatures ) );
 		}
@@ -603,24 +659,25 @@ namespace IngameDebugConsole
 
 			if( matchingMethods.Count == 0 )
 			{
-				if( parameterCountMismatch )
+				string _command = commandArguments[0];
+				FindCommands( _command, !parameterCountMismatch, matchingMethods );
+
+				if( matchingMethods.Count == 0 )
+					Debug.LogWarning( string.Concat( "ERROR: can't find command '", _command, "'" ) );
+				else
 				{
-					string _command = commandArguments[0];
 					int commandsLength = _command.Length + 75;
-					for( int i = 0; i < methods.Count; i++ )
-					{
-						if( caseInsensitiveComparer.Compare( methods[i].command, _command, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) == 0 )
-							commandsLength += methods[i].signature.Length + 3;
-					}
+					for( int i = 0; i < matchingMethods.Count; i++ )
+						commandsLength += matchingMethods[i].signature.Length + 7;
 
 					StringBuilder stringBuilder = new StringBuilder( commandsLength );
-					stringBuilder.Append( "ERROR: " ).Append( _command ).Append( " doesn't take " ).Append( commandArguments.Count - 1 ).Append( " parameter(s). Available command(s):" );
+					if( parameterCountMismatch )
+						stringBuilder.Append( "ERROR: '" ).Append( _command ).Append( "' doesn't take " ).Append( commandArguments.Count - 1 ).Append( " parameter(s). Available command(s):" );
+					else
+						stringBuilder.Append( "ERROR: can't find command '" ).Append( _command ).Append( "'. Did you mean:" );
 
-					for( int i = 0; i < methods.Count; i++ )
-					{
-						if( caseInsensitiveComparer.Compare( methods[i].command, _command, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) == 0 )
-							stringBuilder.Append( "\n- " ).Append( methods[i].signature );
-					}
+					for( int i = 0; i < matchingMethods.Count; i++ )
+						stringBuilder.Append( "\n    - " ).Append( matchingMethods[i].signature );
 
 					Debug.LogWarning( stringBuilder.ToString() );
 
@@ -631,8 +688,6 @@ namespace IngameDebugConsole
 						DebugLogManager.Instance.StripStackTraceFromLatestPendingLog();
 					}
 				}
-				else
-					Debug.LogWarning( "ERROR: can't find command: " + commandArguments[0] );
 
 				return;
 			}
@@ -677,17 +732,15 @@ namespace IngameDebugConsole
 				Debug.LogWarning( !string.IsNullOrEmpty( errorMessage ) ? errorMessage : "ERROR: something went wrong" );
 			else
 			{
-				Debug.Log( "Executing command: " + commandArguments[0] );
-
 				// Execute the method associated with the command
 				object result = methodToExecute.method.Invoke( methodToExecute.instance, parameters );
 				if( methodToExecute.method.ReturnType != typeof( void ) )
 				{
 					// Print the returned value to the console
 					if( result == null || result.Equals( null ) )
-						Debug.Log( "Value returned: null" );
+						Debug.Log( "Returned: null" );
 					else
-						Debug.Log( "Value returned: " + result.ToString() );
+						Debug.Log( "Returned: " + result.ToString() );
 				}
 			}
 		}
@@ -711,6 +764,26 @@ namespace IngameDebugConsole
 					int endIndex = IndexOfChar( command, ' ', i + 1 );
 					commandArguments.Add( command.Substring( i, command[endIndex - 1] == ',' ? endIndex - 1 - i : endIndex - i ) );
 					i = endIndex;
+				}
+			}
+		}
+
+		public static void FindCommands( string commandName, bool allowSubstringMatching, List<ConsoleMethodInfo> matchingCommands )
+		{
+			if( allowSubstringMatching )
+			{
+				for( int i = 0; i < methods.Count; i++ )
+				{
+					if( methods[i].IsValid() && caseInsensitiveComparer.IndexOf( methods[i].command, commandName, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) >= 0 )
+						matchingCommands.Add( methods[i] );
+				}
+			}
+			else
+			{
+				for( int i = 0; i < methods.Count; i++ )
+				{
+					if( methods[i].IsValid() && caseInsensitiveComparer.Compare( methods[i].command, commandName, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) == 0 )
+						matchingCommands.Add( methods[i] );
 				}
 			}
 		}
@@ -1148,7 +1221,7 @@ namespace IngameDebugConsole
 			const int NONE = 0, OR = 1, AND = 2;
 
 			int outputInt = 0;
-			int operation = 0; // 0: nothing, 1: OR with outputInt, 2: AND with outputInt
+			int operation = NONE; // 0: nothing, 1: OR with outputInt, 2: AND with outputInt
 			for( int i = 0; i < input.Length; i++ )
 			{
 				string enumStr;
@@ -1162,9 +1235,12 @@ namespace IngameDebugConsole
 				int value;
 				if( !int.TryParse( enumStr, out value ) )
 				{
-					if( Enum.IsDefined( enumType, enumStr ) )
-						value = Convert.ToInt32( Enum.Parse( enumType, enumStr ) );
-					else
+					try
+					{
+						// Case-insensitive enum parsing
+						value = Convert.ToInt32( Enum.Parse( enumType, enumStr, true ) );
+					}
+					catch
 					{
 						output = null;
 						return false;

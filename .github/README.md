@@ -46,7 +46,7 @@ While testing on Unity editor, right clicking a log entry will open the correspo
 
 ### Executing Commands
 
-You can enter commands using the input field at the bottom of the console. Initially, only "*help*" and "*sysinfo*" commands are available.
+You can enter commands using the input field at the bottom of the console. To see all available commands, simply type "*help*".
 
 A command is basically a function that can be called from the console via the command input field. This function can be **static** or an **instance function** (non static), in which case, a living instance is required to call the function. The return type of the function can be anything (including *void*). If the function returns an object, it will be printed to the console. The function can also take any number of parameters; the only restriction applies to the types of these parameters. Supported parameter types are:
 
