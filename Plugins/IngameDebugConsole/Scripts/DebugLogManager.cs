@@ -189,7 +189,7 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private RectTransform logWindowTR;
 
-		private RectTransform canvasTR;
+		internal RectTransform canvasTR;
 
 		[SerializeField]
 		private RectTransform logItemsContainer;
@@ -638,7 +638,7 @@ namespace IngameDebugConsole
 				if( isLogWindowVisible )
 					recycledListView.OnViewportHeightChanged();
 				else
-					popupManager.OnViewportDimensionsChanged();
+					popupManager.UpdatePosition( true );
 
 #if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
 				CheckScreenCutout();

@@ -44,31 +44,26 @@ namespace IngameDebugConsole
 		private Color normalColor;
 
 		private bool isPopupBeingDragged = false;
+		private Vector2 normalizedPosition;
 
 		// Coroutines for simple code-based animations
 		private IEnumerator moveToPosCoroutine = null;
 
-		void Awake()
+		private void Awake()
 		{
 			popupTransform = (RectTransform) transform;
 			backgroundImage = GetComponent<Image>();
 			canvasGroup = GetComponent<CanvasGroup>();
 
 			normalColor = backgroundImage.color;
-		}
 
-		void Start()
-		{
-			halfSize = popupTransform.sizeDelta * 0.5f * popupTransform.root.localScale.x;
-		}
+			halfSize = popupTransform.sizeDelta * 0.5f;
 
-		public void OnViewportDimensionsChanged()
-		{
-			if( !gameObject.activeSelf )
-				return;
-
-			halfSize = popupTransform.sizeDelta * 0.5f * popupTransform.root.localScale.x;
-			OnEndDrag( null );
+			Vector2 pos = popupTransform.anchoredPosition;
+			if( pos.x != 0f || pos.y != 0f )
+				normalizedPosition = pos.normalized; // Respect the initial popup position set in the prefab
+			else
+				normalizedPosition = new Vector2( 0.5f, 0f ); // Right edge by default
 		}
 
 		public void NewLogsArrived( int newInfo, int newWarning, int newError )
@@ -113,15 +108,15 @@ namespace IngameDebugConsole
 		}
 
 		// A simple smooth movement animation
-		private IEnumerator MoveToPosAnimation( Vector3 targetPos )
+		private IEnumerator MoveToPosAnimation( Vector2 targetPos )
 		{
 			float modifier = 0f;
-			Vector3 initialPos = popupTransform.position;
+			Vector2 initialPos = popupTransform.anchoredPosition;
 
 			while( modifier < 1f )
 			{
 				modifier += 4f * Time.unscaledDeltaTime;
-				popupTransform.position = Vector3.Lerp( initialPos, targetPos, modifier );
+				popupTransform.anchoredPosition = Vector2.Lerp( initialPos, targetPos, modifier );
 
 				yield return null;
 			}
@@ -145,8 +140,8 @@ namespace IngameDebugConsole
 			// Reset the counters
 			Reset();
 
-			// Update position in case resolution changed while hidden
-			OnViewportDimensionsChanged();
+			// Update position in case resolution was changed while the popup was hidden
+			UpdatePosition( true );
 		}
 
 		// Hide the popup
@@ -174,23 +169,36 @@ namespace IngameDebugConsole
 		// Reposition the popup
 		public void OnDrag( PointerEventData data )
 		{
-			popupTransform.position = data.position;
+			Vector2 localPoint;
+			if( RectTransformUtility.ScreenPointToLocalPointInRectangle( debugManager.canvasTR, data.position, data.pressEventCamera, out localPoint ) )
+				popupTransform.anchoredPosition = localPoint;
 		}
 
 		// Smoothly translate the popup to the nearest edge
 		public void OnEndDrag( PointerEventData data )
 		{
-			int screenWidth = Screen.width;
-			int screenHeight = Screen.height;
+			isPopupBeingDragged = false;
+			UpdatePosition( false );
+		}
 
-			Vector3 pos = popupTransform.position;
+		public void UpdatePosition( bool immediately )
+		{
+			Vector2 canvasSize = debugManager.canvasTR.rect.size;
+
+			float canvasWidth = canvasSize.x;
+			float canvasHeight = canvasSize.y;
+
+			// normalizedPosition allows us to glue the popup to a specific edge of the screen. It becomes useful when
+			// the popup is at the right edge and we switch from portrait screen orientation to landscape screen orientation.
+			// Without normalizedPosition, popup could jump to bottom or top edges instead of staying at the right edge
+			Vector2 pos = immediately ? new Vector2( normalizedPosition.x * canvasWidth, normalizedPosition.y * canvasHeight ) : popupTransform.anchoredPosition;
 
 			// Find distances to all four edges
-			float distToLeft = pos.x;
-			float distToRight = Mathf.Abs( pos.x - screenWidth );
+			float distToLeft = canvasWidth * 0.5f + pos.x;
+			float distToRight = canvasWidth - distToLeft;
 
-			float distToBottom = Mathf.Abs( pos.y );
-			float distToTop = Mathf.Abs( pos.y - screenHeight );
+			float distToBottom = canvasHeight * 0.5f + pos.y;
+			float distToTop = canvasHeight - distToBottom;
 
 			float horDistance = Mathf.Min( distToLeft, distToRight );
 			float vertDistance = Mathf.Min( distToBottom, distToTop );
@@ -199,31 +207,39 @@ namespace IngameDebugConsole
 			if( horDistance < vertDistance )
 			{
 				if( distToLeft < distToRight )
-					pos = new Vector3( halfSize.x, pos.y, 0f );
+					pos = new Vector2( canvasWidth * -0.5f + halfSize.x, pos.y );
 				else
-					pos = new Vector3( screenWidth - halfSize.x, pos.y, 0f );
+					pos = new Vector2( canvasWidth * 0.5f - halfSize.x, pos.y );
 
-				pos.y = Mathf.Clamp( pos.y, halfSize.y, screenHeight - halfSize.y );
+				pos.y = Mathf.Clamp( pos.y, canvasHeight * -0.5f + halfSize.y, canvasHeight * 0.5f - halfSize.y );
 			}
 			else
 			{
 				if( distToBottom < distToTop )
-					pos = new Vector3( pos.x, halfSize.y, 0f );
+					pos = new Vector2( pos.x, canvasHeight * -0.5f + halfSize.y );
 				else
-					pos = new Vector3( pos.x, screenHeight - halfSize.y, 0f );
+					pos = new Vector2( pos.x, canvasHeight * 0.5f - halfSize.y );
 
-				pos.x = Mathf.Clamp( pos.x, halfSize.x, screenWidth - halfSize.x );
+				pos.x = Mathf.Clamp( pos.x, canvasWidth * -0.5f + halfSize.x, canvasWidth * 0.5f - halfSize.x );
 			}
+
+			normalizedPosition.Set( pos.x / canvasWidth, pos.y / canvasHeight );
 
 			// If another smooth movement animation is in progress, cancel it
 			if( moveToPosCoroutine != null )
+			{
 				StopCoroutine( moveToPosCoroutine );
+				moveToPosCoroutine = null;
+			}
 
-			// Smoothly translate the popup to the specified position
-			moveToPosCoroutine = MoveToPosAnimation( pos );
-			StartCoroutine( moveToPosCoroutine );
-
-			isPopupBeingDragged = false;
+			if( immediately )
+				popupTransform.anchoredPosition = pos;
+			else
+			{
+				// Smoothly translate the popup to the specified position
+				moveToPosCoroutine = MoveToPosAnimation( pos );
+				StartCoroutine( moveToPosCoroutine );
+			}
 		}
 	}
 }
