@@ -44,7 +44,7 @@ namespace IngameDebugConsole
 		private float deltaHeightOfSelectedLogEntry;
 
 		// Log items used to visualize the debug entries at specified indices
-		private Dictionary<int, DebugLogItem> logItemsAtIndices = new Dictionary<int, DebugLogItem>();
+		private readonly Dictionary<int, DebugLogItem> logItemsAtIndices = new Dictionary<int, DebugLogItem>( 256 );
 
 		private bool isCollapseOn = false;
 
@@ -167,8 +167,34 @@ namespace IngameDebugConsole
 				logItem.ShowCount();
 		}
 
-		// Log window is resized, update the list
-		public void OnViewportDimensionsChanged()
+		// Log window's width has changed, update the expanded (currently selected) log's height
+		public void OnViewportWidthChanged()
+		{
+			if( indexOfSelectedLogEntry >= indicesOfEntriesToShow.Count )
+				return;
+
+			if( currentTopIndex == -1 )
+			{
+				UpdateItemsInTheList( false ); // Try to generate some DebugLogItems, we need one DebugLogItem to calculate the text height
+				if( currentTopIndex == -1 ) // No DebugLogItems are generated, weird
+					return;
+			}
+
+			DebugLogItem referenceItem = logItemsAtIndices[currentTopIndex];
+
+			heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[indexOfSelectedLogEntry]].ToString() );
+			deltaHeightOfSelectedLogEntry = heightOfSelectedLogEntry - logItemHeight;
+
+			CalculateContentHeight();
+
+			HardResetItems();
+			UpdateItemsInTheList( true );
+
+			manager.ValidateScrollPosition();
+		}
+
+		// Log window's height has changed, update the list
+		public void OnViewportHeightChanged()
 		{
 			viewportHeight = viewportTransform.rect.height;
 			UpdateItemsInTheList( false );

@@ -249,6 +249,7 @@ namespace IngameDebugConsole
 		}
 
 		private bool screenDimensionsChanged = true;
+		private float logWindowPreviousWidth;
 
 		// Number of entries filtered by their types
 		private int infoEntryCount = 0, warningEntryCount = 0, errorEntryCount = 0;
@@ -581,7 +582,7 @@ namespace IngameDebugConsole
 			{
 				// Update the recycled list view
 				if( isLogWindowVisible )
-					recycledListView.OnViewportDimensionsChanged();
+					recycledListView.OnViewportHeightChanged();
 				else
 					popupManager.OnViewportDimensionsChanged();
 
@@ -589,9 +590,16 @@ namespace IngameDebugConsole
 				CheckScreenCutout();
 #endif
 
+				screenDimensionsChanged = false;
+			}
+
+			float logWindowWidth = logWindowTR.rect.width;
+			if( !Mathf.Approximately( logWindowWidth, logWindowPreviousWidth ) )
+			{
+				logWindowPreviousWidth = logWindowWidth;
+
 				if( searchbar )
 				{
-					float logWindowWidth = logWindowTR.rect.width;
 					if( logWindowWidth >= topSearchbarMinWidth )
 					{
 						if( searchbar.parent == searchbarSlotBottom )
@@ -619,7 +627,8 @@ namespace IngameDebugConsole
 					}
 				}
 
-				screenDimensionsChanged = false;
+				if( isLogWindowVisible )
+					recycledListView.OnViewportWidthChanged();
 			}
 
 			// If snapToBottom is enabled, force the scrollbar to the bottom
@@ -1149,7 +1158,7 @@ namespace IngameDebugConsole
 			logWindowTR.anchorMin = anchorMin;
 
 			// Update the recycled list view
-			recycledListView.OnViewportDimensionsChanged();
+			recycledListView.OnViewportHeightChanged();
 		}
 
 		// Determine the filtered list of debug entries to show on screen
