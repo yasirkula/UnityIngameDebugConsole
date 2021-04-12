@@ -32,7 +32,11 @@ namespace IngameDebugConsole
 			startInPopupMode = serializedObject.FindProperty( "startInPopupMode" );
 			startMinimized = serializedObject.FindProperty( "startMinimized" );
 			toggleWithKey = serializedObject.FindProperty( "toggleWithKey" );
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+			toggleKey = serializedObject.FindProperty( "toggleBinding" );
+#else
 			toggleKey = serializedObject.FindProperty( "toggleKey" );
+#endif
 			enableSearchbar = serializedObject.FindProperty( "enableSearchbar" );
 			topSearchbarMinWidth = serializedObject.FindProperty( "topSearchbarMinWidth" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );

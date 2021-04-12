@@ -5,6 +5,9 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 #if UNITY_EDITOR && UNITY_2021_1_OR_NEWER
 using Screen = UnityEngine.Device.Screen; // To support Device Simulator on Unity 2021.1+
 #endif
@@ -78,9 +81,15 @@ namespace IngameDebugConsole
 		[Tooltip( "If enabled, pressing the Toggle Key will show/hide (i.e. toggle) the console window at runtime" )]
 		private bool toggleWithKey = false;
 
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+		[SerializeField]
+		[HideInInspector]
+		public InputAction toggleBinding = new InputAction( "Toggle Binding", type: InputActionType.Button, binding: "<Keyboard>/backquote", expectedControlType: "Button" );
+#else
 		[SerializeField]
 		[HideInInspector]
 		private KeyCode toggleKey = KeyCode.BackQuote;
+#endif
 
 		[SerializeField]
 		[HideInInspector]
@@ -413,6 +422,22 @@ namespace IngameDebugConsole
 			snapToBottomButton.GetComponent<Button>().onClick.AddListener( () => SetSnapToBottom( true ) );
 
 			nullPointerEventData = new PointerEventData( null );
+
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+			toggleBinding.performed += ( context ) =>
+			{
+				if( toggleWithKey )
+				{
+					if( isLogWindowVisible )
+						HideLogWindow();
+					else
+						ShowLogWindow();
+				}
+			};
+
+			// On new Input System, scroll sensitivity is much higher than legacy Input system
+			logItemsScrollRect.scrollSensitivity *= 0.25f;
+#endif
 		}
 
 		private void OnEnable()
@@ -437,6 +462,11 @@ namespace IngameDebugConsole
 			DebugLogConsole.AddCommand( "logs.save", "Saves logs to persistentDataPath", SaveLogsToFile );
 			DebugLogConsole.AddCommand<string>( "logs.save", "Saves logs to the specified file", SaveLogsToFile );
 
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+			if( toggleWithKey )
+				toggleBinding.Enable();
+#endif
+
 			//Debug.LogAssertion( "assert" );
 			//Debug.LogError( "error" );
 			//Debug.LogException( new System.IO.EndOfStreamException() );
@@ -458,6 +488,11 @@ namespace IngameDebugConsole
 #endif
 
 			DebugLogConsole.RemoveCommand( "logs.save" );
+
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+			if( toggleBinding.enabled )
+				toggleBinding.Disable();
+#endif
 		}
 
 		private void Start()
@@ -489,6 +524,7 @@ namespace IngameDebugConsole
 			screenDimensionsChanged = true;
 		}
 
+#if !ENABLE_INPUT_SYSTEM || ENABLE_LEGACY_INPUT_MANAGER
 		private void Update()
 		{
 			// Toggling the console with toggleKey is handled in Update instead of LateUpdate because
@@ -506,6 +542,7 @@ namespace IngameDebugConsole
 				}
 			}
 		}
+#endif
 
 		private void LateUpdate()
 		{
@@ -648,27 +685,40 @@ namespace IngameDebugConsole
 
 			if( isLogWindowVisible && commandInputField.isFocused && commandHistory.Count > 0 )
 			{
-				if( Input.GetKeyDown( KeyCode.UpArrow ) )
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+				if( Keyboard.current != null )
+#endif
 				{
-					if( commandHistoryIndex == -1 )
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+					if( Keyboard.current[Key.UpArrow].wasPressedThisFrame )
+#else
+					if( Input.GetKeyDown( KeyCode.UpArrow ) )
+#endif
 					{
-						commandHistoryIndex = commandHistory.Count - 1;
-						unfinishedCommand = commandInputField.text;
-					}
-					else if( --commandHistoryIndex < 0 )
-						commandHistoryIndex = 0;
+						if( commandHistoryIndex == -1 )
+						{
+							commandHistoryIndex = commandHistory.Count - 1;
+							unfinishedCommand = commandInputField.text;
+						}
+						else if( --commandHistoryIndex < 0 )
+							commandHistoryIndex = 0;
 
-					commandInputField.text = commandHistory[commandHistoryIndex];
-					commandInputField.caretPosition = commandInputField.text.Length;
-				}
-				else if( Input.GetKeyDown( KeyCode.DownArrow ) && commandHistoryIndex != -1 )
-				{
-					if( ++commandHistoryIndex < commandHistory.Count )
 						commandInputField.text = commandHistory[commandHistoryIndex];
-					else
+						commandInputField.caretPosition = commandInputField.text.Length;
+					}
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+					else if( Keyboard.current[Key.DownArrow].wasPressedThisFrame && commandHistoryIndex != -1 )
+#else
+					else if( Input.GetKeyDown( KeyCode.DownArrow ) && commandHistoryIndex != -1 )
+#endif
 					{
-						commandHistoryIndex = -1;
-						commandInputField.text = unfinishedCommand ?? string.Empty;
+						if( ++commandHistoryIndex < commandHistory.Count )
+							commandInputField.text = commandHistory[commandHistoryIndex];
+						else
+						{
+							commandHistoryIndex = -1;
+							commandInputField.text = unfinishedCommand ?? string.Empty;
+						}
 					}
 				}
 			}
