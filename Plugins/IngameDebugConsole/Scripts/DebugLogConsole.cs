@@ -545,7 +545,7 @@ namespace IngameDebugConsole
 #endif
 
 			if( !string.IsNullOrEmpty( description ) )
-				methodSignature.Append( " : " ).Append( description );
+				methodSignature.Append( ": " ).Append( description );
 
 			methods.Insert( commandIndex, new ConsoleMethodInfo( method, parameterTypes, instance, command, methodSignature.ToString(), parameterSignatures ) );
 		}
