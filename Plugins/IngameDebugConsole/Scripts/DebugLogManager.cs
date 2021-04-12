@@ -58,6 +58,11 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		[Tooltip( "If enabled, console window's resize button will be located at bottom-right corner. Otherwise, it will be located at bottom-left corner" )]
+		private bool resizeFromRight = true;
+
+		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "Minimum width of the console window" )]
 		private float minimumWidth = 240f;
 
@@ -394,8 +399,20 @@ namespace IngameDebugConsole
 			recycledListView.Initialize( this, collapsedLogEntries, indicesOfListEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
 			recycledListView.UpdateItemsInTheList( true );
 
+			if( minimumWidth < 100f )
+				minimumWidth = 100f;
 			if( minimumHeight < 200f )
 				minimumHeight = 200f;
+
+			if( !resizeFromRight )
+			{
+				RectTransform resizeButtonTR = (RectTransform) resizeButton.GetComponentInParent<DebugLogResizeListener>().transform;
+				resizeButtonTR.anchorMin = new Vector2( 0f, resizeButtonTR.anchorMin.y );
+				resizeButtonTR.anchorMax = new Vector2( 0f, resizeButtonTR.anchorMax.y );
+				resizeButtonTR.pivot = new Vector2( 0f, resizeButtonTR.pivot.y );
+
+				( (RectTransform) commandInputField.transform ).anchoredPosition += new Vector2( resizeButtonTR.sizeDelta.x, 0f );
+			}
 
 			if( enableSearchbar )
 				searchbar.GetComponent<InputField>().onValueChanged.AddListener( SearchTermChanged );
@@ -1181,30 +1198,52 @@ namespace IngameDebugConsole
 		// preventing window dimensions from going below the minimum dimensions
 		internal void Resize( PointerEventData eventData )
 		{
-			Vector3 logWindowPosition = logWindowTR.position;
-			Vector3 canvasScale = canvasTR.lossyScale;
+			Vector2 localPoint;
+			if( !RectTransformUtility.ScreenPointToLocalPointInRectangle( canvasTR, eventData.position, eventData.pressEventCamera, out localPoint ) )
+				return;
 
+			// To be able to maximize the log window easily:
+			// - When enableHorizontalResizing is true and resizing horizontally, resize button will be grabbed from its left edge (if resizeFromRight is true) or its right edge
+			// - While resizing vertically, resize button will be grabbed from its top edge
+			const float resizeButtonWidth = 64f;
+			const float resizeButtonHeight = 36f;
+
+			Vector2 canvasPivot = canvasTR.pivot;
+			Vector2 canvasSize = canvasTR.rect.size;
+			Vector2 anchorMin = logWindowTR.anchorMin;
+
+			// Horizontal resizing
 			if( enableHorizontalResizing )
 			{
-				// Grab the resize button from left; 64f is the width of the resize button
-				// Subtracting logWindowTR.sizeDelta to compensate any changes to anchoredPosition (e.g. on notch screens)
-				float newWidth = ( eventData.position.x - logWindowPosition.x ) / canvasScale.x - logWindowTR.sizeDelta.x + 64f;
-				if( newWidth < minimumWidth )
-					newWidth = minimumWidth;
+				if( resizeFromRight )
+				{
+					localPoint.x += canvasPivot.x * canvasSize.x + resizeButtonWidth;
+					if( localPoint.x < minimumWidth )
+						localPoint.x = minimumWidth;
 
-				Vector2 anchorMax = logWindowTR.anchorMax;
-				anchorMax.x = Mathf.Min( newWidth / canvasTR.sizeDelta.x, 1f );
-				logWindowTR.anchorMax = anchorMax;
+					Vector2 anchorMax = logWindowTR.anchorMax;
+					anchorMax.x = Mathf.Clamp01( localPoint.x / canvasSize.x );
+					logWindowTR.anchorMax = anchorMax;
+				}
+				else
+				{
+					localPoint.x += canvasPivot.x * canvasSize.x - resizeButtonWidth;
+					if( localPoint.x > canvasSize.x - minimumWidth )
+						localPoint.x = canvasSize.x - minimumWidth;
+
+					anchorMin.x = Mathf.Clamp01( localPoint.x / canvasSize.x );
+				}
 			}
 
-			// Grab the resize button from top; 36f is the height of the resize button
-			// Subtracting logWindowTR.sizeDelta to compensate any changes to anchoredPosition (e.g. on notch screens)
-			float newHeight = ( eventData.position.y - logWindowPosition.y ) / -canvasScale.y - logWindowTR.sizeDelta.y + 36f;
-			if( newHeight < minimumHeight )
-				newHeight = minimumHeight;
+			// Vertical resizing
+			float notchHeight = -logWindowTR.sizeDelta.y; // Size of notch screen cutouts at the top of the screen
 
-			Vector2 anchorMin = logWindowTR.anchorMin;
-			anchorMin.y = Mathf.Max( 0f, 1f - newHeight / canvasTR.sizeDelta.y );
+			localPoint.y += canvasPivot.y * canvasSize.y - resizeButtonHeight;
+			if( localPoint.y > canvasSize.y - minimumHeight - notchHeight )
+				localPoint.y = canvasSize.y - minimumHeight - notchHeight;
+
+			anchorMin.y = Mathf.Clamp01( localPoint.y / canvasSize.y );
+
 			logWindowTR.anchorMin = anchorMin;
 
 			// Update the recycled list view
