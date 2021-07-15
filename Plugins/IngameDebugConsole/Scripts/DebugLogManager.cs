@@ -127,10 +127,16 @@ namespace IngameDebugConsole
 		private bool receiveLogcatLogsInAndroid = false;
 
 #pragma warning disable 0414
+#if UNITY_2018_3_OR_NEWER // On older Unity versions, disabling CS0169 is problematic: "Cannot restore warning 'CS0169' because it was disabled globally"
+#pragma warning disable 0169
+#endif
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "Native logs will be filtered using these arguments. If left blank, all native logs of the application will be logged to the console. But if you want to e.g. see Admob's logs only, you can enter \"-s Ads\" (without quotes) here" )]
 		private string logcatArguments;
+#if UNITY_2018_3_OR_NEWER
+#pragma warning restore 0169
+#endif
 #pragma warning restore 0414
 
 		[SerializeField]

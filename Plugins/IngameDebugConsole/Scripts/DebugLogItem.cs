@@ -80,6 +80,7 @@ namespace IngameDebugConsole
 
 		// Debug entry to show with this log item
 		private DebugLogEntry logEntry;
+		public DebugLogEntry Entry { get { return logEntry; } }
 
 		// Index of the entry in the list of entries
 		private int entryIndex;
@@ -98,6 +99,10 @@ namespace IngameDebugConsole
 			logTextOriginalPosition = logText.rectTransform.anchoredPosition;
 			logTextOriginalSize = logText.rectTransform.sizeDelta;
 			copyLogButtonHeight = copyLogButton.anchoredPosition.y + copyLogButton.sizeDelta.y + 2f; // 2f: space between text and button
+
+#if !UNITY_EDITOR && UNITY_WEBGL
+			copyLogButton.gameObject.AddComponent<DebugLogItemCopyWebGL>().Initialize( this );
+#endif
 		}
 
 		public void SetContent( DebugLogEntry logEntry, int entryIndex, bool isExpanded )
@@ -179,6 +184,7 @@ namespace IngameDebugConsole
 
 		public void CopyLog()
 		{
+#if UNITY_EDITOR || !UNITY_WEBGL
 			string log = logEntry.ToString();
 			if( string.IsNullOrEmpty( log ) )
 				return;
@@ -189,6 +195,7 @@ namespace IngameDebugConsole
 			AJC.CallStatic( "CopyText", Context, log );
 #elif UNITY_IOS
 			_DebugConsole_CopyText( log );
+#endif
 #endif
 		}
 
