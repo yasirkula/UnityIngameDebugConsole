@@ -21,7 +21,7 @@ namespace IngameDebugConsole
 
 		public void OnPointerDown( PointerEventData eventData )
 		{
-			string log = logItem.Entry.ToString();
+			string log = logItem.GetCopyContent();
 			if( !string.IsNullOrEmpty( log ) )
 				IngameDebugConsoleStartCopy( log );
 		}

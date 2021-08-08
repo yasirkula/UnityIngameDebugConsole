@@ -108,6 +108,16 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		[Tooltip( "If enabled, the arrival times of logs will be recorded and displayed when a log is expanded" )]
+		private bool captureLogTimestamps = false;
+
+		[SerializeField]
+		[HideInInspector]
+		[Tooltip( "If enabled, timestamps will be displayed for logs even if they aren't expanded" )]
+		internal bool alwaysDisplayTimestamps = false;
+
+		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "If enabled, the command input field at the bottom of the console window will automatically be cleared after entering a command" )]
 		private bool clearCommandAfterExecution = true;
 
@@ -291,16 +301,19 @@ namespace IngameDebugConsole
 
 		// List of unique debug entries (duplicates of entries are not kept)
 		private List<DebugLogEntry> collapsedLogEntries;
+		private List<DebugLogEntryTimestamp> collapsedLogEntriesTimestamps;
 
 		// Dictionary to quickly find if a log already exists in collapsedLogEntries
 		private Dictionary<DebugLogEntry, int> collapsedLogEntriesMap;
 
 		// The order the collapsedLogEntries are received 
 		// (duplicate entries have the same index (value))
-		private DebugLogIndexList uncollapsedLogEntriesIndices;
+		private DebugLogIndexList<int> uncollapsedLogEntriesIndices;
+		private DebugLogIndexList<DebugLogEntryTimestamp> uncollapsedLogEntriesTimestamps;
 
 		// Filtered list of debug entries to show
-		private DebugLogIndexList indicesOfListEntriesToShow;
+		private DebugLogIndexList<int> indicesOfListEntriesToShow;
+		private DebugLogIndexList<DebugLogEntryTimestamp> timestampsOfListEntriesToShow;
 
 		// The log entry that must be focused this frame
 		private int indexOfLogEntryToSelectAndFocus = -1;
@@ -318,7 +331,6 @@ namespace IngameDebugConsole
 		private int visibleCommandSuggestionInstances = 0;
 		private List<ConsoleMethodInfo> matchingCommandSuggestions;
 		private List<int> commandCaretIndexIncrements;
-		private StringBuilder commandSuggestionsStringBuilder;
 		private string commandInputFieldPrevCommand;
 		private string commandInputFieldPrevCommandName;
 		private int commandInputFieldPrevParamCount = -1;
@@ -333,6 +345,12 @@ namespace IngameDebugConsole
 		private CircularBuffer<string> commandHistory;
 		private int commandHistoryIndex = -1;
 		private string unfinishedCommand;
+
+		// StringBuilder used by various functions
+		internal StringBuilder sharedStringBuilder;
+
+		// Offset of DateTime.Now from DateTime.UtcNow
+		private System.TimeSpan localTimeUtcOffset;
 
 		// Required in ValidateScrollPosition() function
 		private PointerEventData nullPointerEventData;
@@ -374,7 +392,7 @@ namespace IngameDebugConsole
 			commandHistory = new CircularBuffer<string>( commandHistorySize );
 
 			logEntriesLock = new object();
-			commandSuggestionsStringBuilder = new StringBuilder( 128 );
+			sharedStringBuilder = new StringBuilder( 1024 );
 
 			canvasTR = (RectTransform) transform;
 			logItemsScrollRectTR = (RectTransform) logItemsScrollRect.transform;
@@ -399,10 +417,17 @@ namespace IngameDebugConsole
 
 			collapsedLogEntries = new List<DebugLogEntry>( 128 );
 			collapsedLogEntriesMap = new Dictionary<DebugLogEntry, int>( 128 );
-			uncollapsedLogEntriesIndices = new DebugLogIndexList();
-			indicesOfListEntriesToShow = new DebugLogIndexList();
+			uncollapsedLogEntriesIndices = new DebugLogIndexList<int>();
+			indicesOfListEntriesToShow = new DebugLogIndexList<int>();
 
-			recycledListView.Initialize( this, collapsedLogEntries, indicesOfListEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
+			if( captureLogTimestamps )
+			{
+				collapsedLogEntriesTimestamps = new List<DebugLogEntryTimestamp>( 128 );
+				uncollapsedLogEntriesTimestamps = new DebugLogIndexList<DebugLogEntryTimestamp>();
+				timestampsOfListEntriesToShow = new DebugLogIndexList<DebugLogEntryTimestamp>();
+			}
+
+			recycledListView.Initialize( this, collapsedLogEntries, indicesOfListEntriesToShow, timestampsOfListEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
 			recycledListView.UpdateItemsInTheList( true );
 
 			if( minimumWidth < 100f )
@@ -444,6 +469,7 @@ namespace IngameDebugConsole
 			filterErrorButton.GetComponent<Button>().onClick.AddListener( FilterErrorButtonPressed );
 			snapToBottomButton.GetComponent<Button>().onClick.AddListener( () => SetSnapToBottom( true ) );
 
+			localTimeUtcOffset = System.DateTime.Now - System.DateTime.UtcNow;
 			nullPointerEventData = new PointerEventData( null );
 
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
@@ -921,6 +947,9 @@ namespace IngameDebugConsole
 				logEntryIndex = collapsedLogEntries.Count;
 				collapsedLogEntries.Add( logEntry );
 				collapsedLogEntriesMap[logEntry] = logEntryIndex;
+
+				if( collapsedLogEntriesTimestamps != null )
+					collapsedLogEntriesTimestamps.Add( new DebugLogEntryTimestamp( localTimeUtcOffset ) );
 			}
 			else
 			{
@@ -930,11 +959,18 @@ namespace IngameDebugConsole
 
 				logEntry = collapsedLogEntries[logEntryIndex];
 				logEntry.count++;
+
+				if( collapsedLogEntriesTimestamps != null )
+					collapsedLogEntriesTimestamps[logEntryIndex] = new DebugLogEntryTimestamp( localTimeUtcOffset );
 			}
 
 			// Add the index of the unique debug entry to the list
 			// that stores the order the debug entries are received
 			uncollapsedLogEntriesIndices.Add( logEntryIndex );
+
+			// Record log's timestamp if desired
+			if( uncollapsedLogEntriesTimestamps != null )
+				uncollapsedLogEntriesTimestamps.Add( collapsedLogEntriesTimestamps[logEntryIndex] );
 
 			// If this debug entry matches the current filters,
 			// add it to the list of debug entries to show
@@ -949,6 +985,9 @@ namespace IngameDebugConsole
 					else
 						logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.IndexOf( logEntryIndex );
 
+					if( timestampsOfListEntriesToShow != null )
+						timestampsOfListEntriesToShow[logEntryIndexInEntriesToShow] = collapsedLogEntriesTimestamps[logEntryIndex];
+
 					recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndexInEntriesToShow );
 				}
 			}
@@ -959,6 +998,9 @@ namespace IngameDebugConsole
 			{
 				indicesOfListEntriesToShow.Add( logEntryIndex );
 				logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.Count - 1;
+
+				if( timestampsOfListEntriesToShow != null )
+					timestampsOfListEntriesToShow.Add( collapsedLogEntriesTimestamps[logEntryIndex] );
 
 				if( isLogWindowVisible )
 					shouldUpdateRecycledListView = true;
@@ -1018,6 +1060,13 @@ namespace IngameDebugConsole
 			collapsedLogEntriesMap.Clear();
 			uncollapsedLogEntriesIndices.Clear();
 			indicesOfListEntriesToShow.Clear();
+
+			if( collapsedLogEntriesTimestamps != null )
+			{
+				collapsedLogEntriesTimestamps.Clear();
+				uncollapsedLogEntriesTimestamps.Clear();
+				timestampsOfListEntriesToShow.Clear();
+			}
 
 			recycledListView.DeselectSelectedLogItem();
 			recycledListView.OnLogEntriesUpdated( true );
@@ -1158,15 +1207,15 @@ namespace IngameDebugConsole
 					}
 
 					ConsoleMethodInfo suggestedCommand = matchingCommandSuggestions[i];
-					commandSuggestionsStringBuilder.Length = 0;
+					sharedStringBuilder.Length = 0;
 					if( caretArgumentIndex > 0 )
-						commandSuggestionsStringBuilder.Append( suggestedCommand.command );
+						sharedStringBuilder.Append( suggestedCommand.command );
 					else
-						commandSuggestionsStringBuilder.Append( commandSuggestionHighlightStart ).Append( matchingCommandSuggestions[i].command ).Append( commandSuggestionHighlightEnd );
+						sharedStringBuilder.Append( commandSuggestionHighlightStart ).Append( matchingCommandSuggestions[i].command ).Append( commandSuggestionHighlightEnd );
 
 					if( suggestedCommand.parameters.Length > 0 )
 					{
-						commandSuggestionsStringBuilder.Append( " " );
+						sharedStringBuilder.Append( " " );
 
 						// If the command name wasn't highlighted, a parameter must always be highlighted
 						int caretParameterIndex = caretArgumentIndex - 1;
@@ -1176,13 +1225,13 @@ namespace IngameDebugConsole
 						for( int j = 0; j < suggestedCommand.parameters.Length; j++ )
 						{
 							if( caretParameterIndex != j )
-								commandSuggestionsStringBuilder.Append( suggestedCommand.parameters[j] );
+								sharedStringBuilder.Append( suggestedCommand.parameters[j] );
 							else
-								commandSuggestionsStringBuilder.Append( commandSuggestionHighlightStart ).Append( suggestedCommand.parameters[j] ).Append( commandSuggestionHighlightEnd );
+								sharedStringBuilder.Append( commandSuggestionHighlightStart ).Append( suggestedCommand.parameters[j] ).Append( commandSuggestionHighlightEnd );
 						}
 					}
 
-					commandSuggestionInstances[i].text = commandSuggestionsStringBuilder.ToString();
+					commandSuggestionInstances[i].text = sharedStringBuilder.ToString();
 				}
 
 				for( int i = visibleCommandSuggestionInstances - 1; i >= suggestionsCount; i-- )
@@ -1261,6 +1310,9 @@ namespace IngameDebugConsole
 		{
 			indicesOfListEntriesToShow.Clear();
 
+			if( timestampsOfListEntriesToShow != null )
+				timestampsOfListEntriesToShow.Clear();
+
 			if( logFilter != DebugLogFilter.None )
 			{
 				if( logFilter == DebugLogFilter.All )
@@ -1273,14 +1325,24 @@ namespace IngameDebugConsole
 							// So, list of debug entries to show is the same as the
 							// order these unique debug entries are added to collapsedLogEntries
 							for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
+							{
 								indicesOfListEntriesToShow.Add( i );
+
+								if( timestampsOfListEntriesToShow != null )
+									timestampsOfListEntriesToShow.Add( collapsedLogEntriesTimestamps[i] );
+							}
 						}
 						else
 						{
 							for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
 							{
 								if( collapsedLogEntries[i].MatchesSearchTerm( searchTerm ) )
+								{
 									indicesOfListEntriesToShow.Add( i );
+
+									if( timestampsOfListEntriesToShow != null )
+										timestampsOfListEntriesToShow.Add( collapsedLogEntriesTimestamps[i] );
+								}
 							}
 						}
 					}
@@ -1289,14 +1351,24 @@ namespace IngameDebugConsole
 						if( !isInSearchMode )
 						{
 							for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
+							{
 								indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+
+								if( timestampsOfListEntriesToShow != null )
+									timestampsOfListEntriesToShow.Add( uncollapsedLogEntriesTimestamps[i] );
+							}
 						}
 						else
 						{
 							for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
 							{
 								if( collapsedLogEntries[uncollapsedLogEntriesIndices[i]].MatchesSearchTerm( searchTerm ) )
+								{
 									indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+
+									if( timestampsOfListEntriesToShow != null )
+										timestampsOfListEntriesToShow.Add( uncollapsedLogEntriesTimestamps[i] );
+								}
 							}
 						}
 					}
@@ -1317,18 +1389,27 @@ namespace IngameDebugConsole
 							if( isInSearchMode && !logEntry.MatchesSearchTerm( searchTerm ) )
 								continue;
 
+							bool shouldShowLog = false;
 							if( logEntry.logTypeSpriteRepresentation == infoLog )
 							{
 								if( isInfoEnabled )
-									indicesOfListEntriesToShow.Add( i );
+									shouldShowLog = true;
 							}
 							else if( logEntry.logTypeSpriteRepresentation == warningLog )
 							{
 								if( isWarningEnabled )
-									indicesOfListEntriesToShow.Add( i );
+									shouldShowLog = true;
 							}
 							else if( isErrorEnabled )
+								shouldShowLog = true;
+
+							if( shouldShowLog )
+							{
 								indicesOfListEntriesToShow.Add( i );
+
+								if( timestampsOfListEntriesToShow != null )
+									timestampsOfListEntriesToShow.Add( collapsedLogEntriesTimestamps[i] );
+							}
 						}
 					}
 					else
@@ -1340,18 +1421,27 @@ namespace IngameDebugConsole
 							if( isInSearchMode && !logEntry.MatchesSearchTerm( searchTerm ) )
 								continue;
 
+							bool shouldShowLog = false;
 							if( logEntry.logTypeSpriteRepresentation == infoLog )
 							{
 								if( isInfoEnabled )
-									indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+									shouldShowLog = true;
 							}
 							else if( logEntry.logTypeSpriteRepresentation == warningLog )
 							{
 								if( isWarningEnabled )
-									indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+									shouldShowLog = true;
 							}
 							else if( isErrorEnabled )
+								shouldShowLog = true;
+
+							if( shouldShowLog )
+							{
 								indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+
+								if( timestampsOfListEntriesToShow != null )
+									timestampsOfListEntriesToShow.Add( uncollapsedLogEntriesTimestamps[i] );
+							}
 						}
 					}
 				}
@@ -1375,12 +1465,22 @@ namespace IngameDebugConsole
 				length += entry.logString.Length + entry.stackTrace.Length + newLineLength * 3;
 			}
 
+			if( uncollapsedLogEntriesTimestamps != null )
+				length += count * 12; // Timestamp: "[HH:mm:ss]: "
+
 			length += 100; // Just in case...
 
 			StringBuilder sb = new StringBuilder( length );
 			for( int i = 0; i < count; i++ )
 			{
 				DebugLogEntry entry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
+
+				if( uncollapsedLogEntriesTimestamps != null )
+				{
+					uncollapsedLogEntriesTimestamps[i].AppendTime( sb );
+					sb.Append( ": " );
+				}
+
 				sb.AppendLine( entry.logString ).AppendLine( entry.stackTrace ).AppendLine();
 			}
 

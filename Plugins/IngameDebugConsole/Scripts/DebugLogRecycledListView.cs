@@ -16,9 +16,6 @@ namespace IngameDebugConsole
 		private RectTransform viewportTransform;
 
 		[SerializeField]
-		private DebugLogManager debugManager;
-
-		[SerializeField]
 		private Color logItemNormalColor1;
 		[SerializeField]
 		private Color logItemNormalColor2;
@@ -26,7 +23,7 @@ namespace IngameDebugConsole
 		private Color logItemSelectedColor;
 #pragma warning restore 0649
 
-		private DebugLogManager manager;
+		internal DebugLogManager manager;
 		private ScrollRect scrollView;
 
 		private float logItemHeight, _1OverLogItemHeight;
@@ -36,7 +33,8 @@ namespace IngameDebugConsole
 		private List<DebugLogEntry> collapsedLogEntries = null;
 
 		// Indices of debug entries to show in collapsedLogEntries
-		private DebugLogIndexList indicesOfEntriesToShow = null;
+		private DebugLogIndexList<int> indicesOfEntriesToShow = null;
+		private DebugLogIndexList<DebugLogEntryTimestamp> timestampsOfEntriesToShow = null;
 
 		private int indexOfSelectedLogEntry = int.MaxValue;
 		private float positionOfSelectedLogEntry = float.MaxValue;
@@ -62,11 +60,12 @@ namespace IngameDebugConsole
 			viewportHeight = viewportTransform.rect.height;
 		}
 
-		public void Initialize( DebugLogManager manager, List<DebugLogEntry> collapsedLogEntries, DebugLogIndexList indicesOfEntriesToShow, float logItemHeight )
+		public void Initialize( DebugLogManager manager, List<DebugLogEntry> collapsedLogEntries, DebugLogIndexList<int> indicesOfEntriesToShow, DebugLogIndexList<DebugLogEntryTimestamp> timestampsOfEntriesToShow, float logItemHeight )
 		{
 			this.manager = manager;
 			this.collapsedLogEntries = collapsedLogEntries;
 			this.indicesOfEntriesToShow = indicesOfEntriesToShow;
+			this.timestampsOfEntriesToShow = timestampsOfEntriesToShow;
 			this.logItemHeight = logItemHeight;
 			_1OverLogItemHeight = 1f / logItemHeight;
 		}
@@ -115,7 +114,7 @@ namespace IngameDebugConsole
 
 				indexOfSelectedLogEntry = itemIndex;
 				positionOfSelectedLogEntry = itemIndex * logItemHeight;
-				heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[itemIndex]].ToString() );
+				heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[itemIndex]], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[itemIndex] : (DebugLogEntryTimestamp?) null );
 				deltaHeightOfSelectedLogEntry = heightOfSelectedLogEntry - logItemHeight;
 
 				manager.SetSnapToBottom( false );
@@ -164,7 +163,12 @@ namespace IngameDebugConsole
 		{
 			DebugLogItem logItem;
 			if( logItemsAtIndices.TryGetValue( index, out logItem ) )
+			{
 				logItem.ShowCount();
+
+				if( timestampsOfEntriesToShow != null )
+					logItem.UpdateTimestamp( timestampsOfEntriesToShow[index] );
+			}
 		}
 
 		// Log window's width has changed, update the expanded (currently selected) log's height
@@ -182,7 +186,7 @@ namespace IngameDebugConsole
 
 			DebugLogItem referenceItem = logItemsAtIndices[currentTopIndex];
 
-			heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[indexOfSelectedLogEntry]].ToString() );
+			heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[indexOfSelectedLogEntry]], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[indexOfSelectedLogEntry] : (DebugLogEntryTimestamp?) null );
 			deltaHeightOfSelectedLogEntry = heightOfSelectedLogEntry - logItemHeight;
 
 			CalculateContentHeight();
@@ -337,7 +341,7 @@ namespace IngameDebugConsole
 		// Create (or unpool) a log item
 		private void CreateLogItemAtIndex( int index )
 		{
-			DebugLogItem logItem = debugManager.PopLogItem();
+			DebugLogItem logItem = manager.PopLogItem();
 
 			// Reposition the log item
 			Vector2 anchoredPosition = new Vector2( 1f, -index * logItemHeight );
@@ -356,7 +360,7 @@ namespace IngameDebugConsole
 		private void DestroyLogItemsBetweenIndices( int topIndex, int bottomIndex )
 		{
 			for( int i = topIndex; i <= bottomIndex; i++ )
-				debugManager.PoolLogItem( logItemsAtIndices[i] );
+				manager.PoolLogItem( logItemsAtIndices[i] );
 		}
 
 		private void UpdateLogItemContentsBetweenIndices( int topIndex, int bottomIndex )
@@ -365,7 +369,7 @@ namespace IngameDebugConsole
 			for( int i = topIndex; i <= bottomIndex; i++ )
 			{
 				logItem = logItemsAtIndices[i];
-				logItem.SetContent( collapsedLogEntries[indicesOfEntriesToShow[i]], i, i == indexOfSelectedLogEntry );
+				logItem.SetContent( collapsedLogEntries[indicesOfEntriesToShow[i]], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[i] : (DebugLogEntryTimestamp?) null, i, i == indexOfSelectedLogEntry );
 
 				if( isCollapseOn )
 					logItem.ShowCount();

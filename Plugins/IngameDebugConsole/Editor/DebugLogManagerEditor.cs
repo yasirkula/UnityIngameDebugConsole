@@ -17,6 +17,8 @@ namespace IngameDebugConsole
 		private SerializedProperty toggleKey;
 		private SerializedProperty enableSearchbar;
 		private SerializedProperty topSearchbarMinWidth;
+		private SerializedProperty captureLogTimestamps;
+		private SerializedProperty alwaysDisplayTimestamps;
 		private SerializedProperty clearCommandAfterExecution;
 		private SerializedProperty commandHistorySize;
 		private SerializedProperty showCommandSuggestions;
@@ -41,6 +43,8 @@ namespace IngameDebugConsole
 #endif
 			enableSearchbar = serializedObject.FindProperty( "enableSearchbar" );
 			topSearchbarMinWidth = serializedObject.FindProperty( "topSearchbarMinWidth" );
+			captureLogTimestamps = serializedObject.FindProperty( "captureLogTimestamps" );
+			alwaysDisplayTimestamps = serializedObject.FindProperty( "alwaysDisplayTimestamps" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
 			commandHistorySize = serializedObject.FindProperty( "commandHistorySize" );
 			showCommandSuggestions = serializedObject.FindProperty( "showCommandSuggestions" );
@@ -75,6 +79,10 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( enableSearchbar );
 			if( enableSearchbar.boolValue )
 				DrawSubProperty( topSearchbarMinWidth );
+
+			EditorGUILayout.PropertyField( captureLogTimestamps );
+			if( captureLogTimestamps.boolValue )
+				DrawSubProperty( alwaysDisplayTimestamps );
 
 			EditorGUILayout.PropertyField( clearCommandAfterExecution );
 			EditorGUILayout.PropertyField( commandHistorySize );

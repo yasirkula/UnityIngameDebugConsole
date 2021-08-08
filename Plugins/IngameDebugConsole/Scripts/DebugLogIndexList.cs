@@ -1,25 +1,29 @@
 ﻿namespace IngameDebugConsole
 {
-	public class DebugLogIndexList
+	public class DebugLogIndexList<T>
 	{
-		private int[] indices;
+		private T[] indices;
 		private int size;
 
 		public int Count { get { return size; } }
-		public int this[int index] { get { return indices[index]; } }
+		public T this[int index]
+		{
+			get { return indices[index]; }
+			set { indices[index] = value; }
+		}
 
 		public DebugLogIndexList()
 		{
-			indices = new int[64];
+			indices = new T[64];
 			size = 0;
 		}
 
-		public void Add( int index )
+		public void Add( T value )
 		{
 			if( size == indices.Length )
 				System.Array.Resize( ref indices, size * 2 );
 
-			indices[size++] = index;
+			indices[size++] = value;
 		}
 
 		public void Clear()
@@ -27,9 +31,9 @@
 			size = 0;
 		}
 
-		public int IndexOf( int index )
+		public int IndexOf( T value )
 		{
-			return System.Array.IndexOf( indices, index );
+			return System.Array.IndexOf( indices, value );
 		}
 	}
 }
