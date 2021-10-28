@@ -6,6 +6,8 @@
 
 **Forum Thread:** http://forum.unity3d.com/threads/in-game-debug-console-with-ugui-free.411323/
 
+**Discord:** https://discord.gg/UJJt549AaV
+
 **[Support the Developer ☕](https://yasirkula.itch.io/unity3d)**
 
 ## ABOUT
