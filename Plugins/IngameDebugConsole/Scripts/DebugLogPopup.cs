@@ -133,7 +133,6 @@ namespace IngameDebugConsole
 		// Hides the log window and shows the popup
 		public void Show()
 		{
-			canvasGroup.interactable = true;
 			canvasGroup.blocksRaycasts = true;
 			canvasGroup.alpha = 1f;
 
@@ -147,7 +146,6 @@ namespace IngameDebugConsole
 		// Hide the popup
 		public void Hide()
 		{
-			canvasGroup.interactable = false;
 			canvasGroup.blocksRaycasts = false;
 			canvasGroup.alpha = 0f;
 

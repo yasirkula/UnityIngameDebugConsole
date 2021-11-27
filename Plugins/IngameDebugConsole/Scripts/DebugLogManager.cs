@@ -157,7 +157,7 @@ namespace IngameDebugConsole
 		[Tooltip( "If a log is longer than this limit, it will be truncated. This helps avoid reaching Unity's 65000 vertex limit for UI canvases" )]
 		private int maxLogLength = 10000;
 
-#if UNITY_EDITOR || UNITY_STANDALONE
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
 		[SerializeField]
 		[Tooltip( "If enabled, on standalone platforms, command input field will automatically be focused (start receiving keyboard input) after opening the console window" )]
 		private bool autoFocusOnCommandInputField = true;
@@ -337,6 +337,10 @@ namespace IngameDebugConsole
 		private int commandInputFieldPrevCaretPos = -1;
 		private int commandInputFieldPrevCaretArgumentIndex = -1;
 
+		// Value of the command input field when autocomplete was first requested
+		private string commandInputFieldAutoCompleteBase;
+		private bool commandInputFieldAutoCompletedNow;
+
 		// Pools for memory efficiency
 		private List<DebugLogEntry> pooledLogEntries;
 		private List<DebugLogItem> pooledLogItems;
@@ -459,7 +463,7 @@ namespace IngameDebugConsole
 
 			// Register to UI events
 			commandInputField.onValidateInput += OnValidateCommand;
-			commandInputField.onValueChanged.AddListener( RefreshCommandSuggestions );
+			commandInputField.onValueChanged.AddListener( OnEditCommand );
 			commandInputField.onEndEdit.AddListener( OnEndEditCommand );
 			hideButton.onClick.AddListener( HideLogWindow );
 			clearButton.onClick.AddListener( ClearLogs );
@@ -785,7 +789,6 @@ namespace IngameDebugConsole
 		public void ShowLogWindow()
 		{
 			// Show the log window
-			logWindowCanvasGroup.interactable = true;
 			logWindowCanvasGroup.blocksRaycasts = true;
 			logWindowCanvasGroup.alpha = 1f;
 
@@ -795,7 +798,7 @@ namespace IngameDebugConsole
 			// (in case new entries were intercepted while log window was hidden)
 			recycledListView.OnLogEntriesUpdated( true );
 
-#if UNITY_EDITOR || UNITY_STANDALONE
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
 			// Focus on the command input field on standalone platforms when the console is opened
 			if( autoFocusOnCommandInputField )
 				StartCoroutine( ActivateCommandInputFieldCoroutine() );
@@ -810,7 +813,6 @@ namespace IngameDebugConsole
 		public void HideLogWindow()
 		{
 			// Hide the log window
-			logWindowCanvasGroup.interactable = false;
 			logWindowCanvasGroup.blocksRaycasts = false;
 			logWindowCanvasGroup.alpha = 0f;
 
@@ -832,9 +834,15 @@ namespace IngameDebugConsole
 			{
 				if( !string.IsNullOrEmpty( text ) )
 				{
-					string autoCompletedCommand = DebugLogConsole.GetAutoCompleteCommand( text );
-					if( !string.IsNullOrEmpty( autoCompletedCommand ) )
+					if( string.IsNullOrEmpty( commandInputFieldAutoCompleteBase ) )
+						commandInputFieldAutoCompleteBase = text;
+
+					string autoCompletedCommand = DebugLogConsole.GetAutoCompleteCommand( commandInputFieldAutoCompleteBase, text );
+					if( !string.IsNullOrEmpty( autoCompletedCommand ) && autoCompletedCommand != text )
+					{
+						commandInputFieldAutoCompletedNow = true;
 						commandInputField.text = autoCompletedCommand;
+					}
 				}
 
 				return '\0';
@@ -1027,6 +1035,10 @@ namespace IngameDebugConsole
 		// Make sure the scroll bar of the scroll rect is adjusted properly
 		internal void ValidateScrollPosition()
 		{
+			// When scrollbar is snapped to the very bottom of the scroll view, sometimes OnScroll alone doesn't work
+			if( logItemsScrollRect.verticalNormalizedPosition <= Mathf.Epsilon )
+				logItemsScrollRect.verticalNormalizedPosition = 0.0001f;
+
 			logItemsScrollRect.OnScroll( nullPointerEventData );
 		}
 
@@ -1239,6 +1251,17 @@ namespace IngameDebugConsole
 
 				visibleCommandSuggestionInstances = suggestionsCount;
 			}
+		}
+
+		// Command input field's text has changed
+		private void OnEditCommand( string command )
+		{
+			RefreshCommandSuggestions( command );
+
+			if( !commandInputFieldAutoCompletedNow )
+				commandInputFieldAutoCompleteBase = null;
+			else // This change was caused by autocomplete
+				commandInputFieldAutoCompletedNow = false;
 		}
 
 		// Command input field has lost focus
@@ -1525,7 +1548,7 @@ namespace IngameDebugConsole
 #endif
 		}
 
-#if UNITY_EDITOR || UNITY_STANDALONE
+#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
 		private IEnumerator ActivateCommandInputFieldCoroutine()
 		{
 			// Waiting 1 frame before activating commandInputField ensures that the toggleKey isn't captured by it
