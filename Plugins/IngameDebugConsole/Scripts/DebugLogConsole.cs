@@ -199,6 +199,7 @@ namespace IngameDebugConsole
 				}
 				catch( NotSupportedException ) { }
 				catch( System.IO.FileNotFoundException ) { }
+				catch( ReflectionTypeLoadException ) { }
 				catch( Exception e )
 				{
 					Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assemblyName + "\n" + e.ToString() );
