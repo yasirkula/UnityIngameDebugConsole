@@ -502,6 +502,12 @@ namespace IngameDebugConsole
 			Application.logMessageReceivedThreaded -= ReceivedLog;
 			Application.logMessageReceivedThreaded += ReceivedLog;
 
+#if UNITY_2018_1_OR_NEWER
+			// OnApplicationQuit isn't reliable on some Unity versions with Application.wantsToQuit support; Application.quitting is the only reliable solution on those versions
+			Application.quitting -= OnApplicationQuitting;
+			Application.quitting += OnApplicationQuitting;
+#endif
+
 			if( receiveLogcatLogsInAndroid )
 			{
 #if !UNITY_EDITOR && UNITY_ANDROID
@@ -535,6 +541,10 @@ namespace IngameDebugConsole
 			// Stop receiving debug entries
 			Application.logMessageReceivedThreaded -= ReceivedLog;
 
+#if UNITY_2018_1_OR_NEWER
+			Application.quitting -= OnApplicationQuitting;
+#endif
+
 #if !UNITY_EDITOR && UNITY_ANDROID
 			if( logcatListener != null )
 				logcatListener.Stop();
@@ -565,7 +575,11 @@ namespace IngameDebugConsole
 				resizeButton.sprite = enableHorizontalResizing ? resizeIconAllDirections : resizeIconVerticalOnly;
 		}
 
+#if UNITY_2018_1_OR_NEWER
+		private void OnApplicationQuitting()
+#else
 		private void OnApplicationQuit()
+#endif
 		{
 			isQuittingApplication = true;
 		}
