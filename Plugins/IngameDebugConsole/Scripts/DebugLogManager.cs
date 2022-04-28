@@ -476,6 +476,13 @@ namespace IngameDebugConsole
 			localTimeUtcOffset = System.DateTime.Now - System.DateTime.UtcNow;
 			nullPointerEventData = new PointerEventData( null );
 
+#if UNITY_EDITOR && UNITY_2018_1_OR_NEWER
+			// OnApplicationQuit isn't reliable on some Unity versions when Application.wantsToQuit is used; Application.quitting is the only reliable solution on those versions
+			// https://issuetracker.unity3d.com/issues/onapplicationquit-method-is-called-before-application-dot-wantstoquit-event-is-raised
+			Application.quitting -= OnApplicationQuitting;
+			Application.quitting += OnApplicationQuitting;
+#endif
+
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 			toggleBinding.performed += ( context ) =>
 			{
@@ -501,12 +508,6 @@ namespace IngameDebugConsole
 			// Intercept debug entries
 			Application.logMessageReceivedThreaded -= ReceivedLog;
 			Application.logMessageReceivedThreaded += ReceivedLog;
-
-#if UNITY_2018_1_OR_NEWER
-			// OnApplicationQuit isn't reliable on some Unity versions with Application.wantsToQuit support; Application.quitting is the only reliable solution on those versions
-			Application.quitting -= OnApplicationQuitting;
-			Application.quitting += OnApplicationQuitting;
-#endif
 
 			if( receiveLogcatLogsInAndroid )
 			{
@@ -541,10 +542,6 @@ namespace IngameDebugConsole
 			// Stop receiving debug entries
 			Application.logMessageReceivedThreaded -= ReceivedLog;
 
-#if UNITY_2018_1_OR_NEWER
-			Application.quitting -= OnApplicationQuitting;
-#endif
-
 #if !UNITY_EDITOR && UNITY_ANDROID
 			if( logcatListener != null )
 				logcatListener.Stop();
@@ -567,6 +564,13 @@ namespace IngameDebugConsole
 
 			PopupEnabled = enablePopup;
 		}
+
+#if UNITY_EDITOR && UNITY_2018_1_OR_NEWER
+		private void OnDestroy()
+		{
+			Application.quitting -= OnApplicationQuitting;
+		}
+#endif
 
 #if UNITY_EDITOR
 		private void OnValidate()
