@@ -25,6 +25,7 @@ namespace IngameDebugConsole
 		private SerializedProperty receiveExceptionLogs;
 		private SerializedProperty captureLogTimestamps;
 		private SerializedProperty alwaysDisplayTimestamps;
+		private SerializedProperty queuedLogLimit;
 		private SerializedProperty clearCommandAfterExecution;
 		private SerializedProperty commandHistorySize;
 		private SerializedProperty showCommandSuggestions;
@@ -64,6 +65,7 @@ namespace IngameDebugConsole
 			receiveExceptionLogs = serializedObject.FindProperty( "receiveExceptionLogs" );
 			captureLogTimestamps = serializedObject.FindProperty( "captureLogTimestamps" );
 			alwaysDisplayTimestamps = serializedObject.FindProperty( "alwaysDisplayTimestamps" );
+			queuedLogLimit = serializedObject.FindProperty( "queuedLogLimit" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
 			commandHistorySize = serializedObject.FindProperty( "commandHistorySize" );
 			showCommandSuggestions = serializedObject.FindProperty( "showCommandSuggestions" );
@@ -129,6 +131,8 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( captureLogTimestamps );
 			if( captureLogTimestamps.boolValue )
 				DrawSubProperty( alwaysDisplayTimestamps );
+
+			EditorGUILayout.PropertyField( queuedLogLimit );
 
 			EditorGUILayout.Space();
 

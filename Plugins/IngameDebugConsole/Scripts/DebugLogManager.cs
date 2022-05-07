@@ -127,6 +127,11 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		[Tooltip( "While the console window is hidden, incoming logs will be queued but not immediately processed until the console window is opened (to avoid wasting CPU resources). When the log queue exceeds this limit, the first logs in the queue will be processed to enforce this limit. Processed logs won't increase RAM usage if they've been seen before (i.e. collapsible logs) but this is not the case for queued logs, so if a log is spammed every frame, it will fill the whole queue in an instant. Which is why there is a queue limit" )]
+		private int queuedLogLimit = 256;
+
+		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "If enabled, the command input field at the bottom of the console window will automatically be cleared after entering a command" )]
 		private bool clearCommandAfterExecution = true;
 
@@ -415,7 +420,7 @@ namespace IngameDebugConsole
 			commandSuggestionInstances = new List<Text>( 8 );
 			matchingCommandSuggestions = new List<ConsoleMethodInfo>( 8 );
 			commandCaretIndexIncrements = new List<int>( 8 );
-			queuedLogEntries = new DynamicCircularBuffer<QueuedDebugLogEntry>( 16 );
+			queuedLogEntries = new DynamicCircularBuffer<QueuedDebugLogEntry>( Mathf.Clamp( queuedLogLimit, 16, 4096 ) );
 			commandHistory = new CircularBuffer<string>( commandHistorySize );
 
 			logEntriesLock = new object();
@@ -615,6 +620,8 @@ namespace IngameDebugConsole
 #if UNITY_EDITOR
 		private void OnValidate()
 		{
+			queuedLogLimit = Mathf.Max( 0, queuedLogLimit );
+
 			if( UnityEditor.EditorApplication.isPlaying )
 			{
 				resizeButton.sprite = enableHorizontalResizing ? resizeIconAllDirections : resizeIconVerticalOnly;
@@ -684,6 +691,23 @@ namespace IngameDebugConsole
 				return;
 #endif
 
+			int numberOfLogsToProcess = isLogWindowVisible ? queuedLogEntries.Count : ( queuedLogEntries.Count - queuedLogLimit );
+			if( numberOfLogsToProcess > 0 )
+			{
+				for( int i = 0; i < numberOfLogsToProcess; i++ )
+				{
+					QueuedDebugLogEntry logEntry;
+					DebugLogEntryTimestamp timestamp;
+					lock( logEntriesLock )
+					{
+						logEntry = queuedLogEntries.RemoveFirst();
+						timestamp = queuedLogEntriesTimestamps != null ? queuedLogEntriesTimestamps.RemoveFirst() : dummyLogEntryTimestamp;
+					}
+
+					ProcessLog( logEntry, timestamp );
+				}
+			}
+
 			// Don't perform CPU heavy tasks if neither the log window nor the popup is visible
 			if( !isLogWindowVisible && !PopupEnabled )
 				return;
@@ -734,23 +758,6 @@ namespace IngameDebugConsole
 
 			if( isLogWindowVisible )
 			{
-				int queuedLogCount = queuedLogEntries.Count;
-				if( queuedLogCount > 0 )
-				{
-					for( int i = 0; i < queuedLogCount; i++ )
-					{
-						QueuedDebugLogEntry logEntry;
-						DebugLogEntryTimestamp timestamp;
-						lock( logEntriesLock )
-						{
-							logEntry = queuedLogEntries.RemoveFirst();
-							timestamp = queuedLogEntriesTimestamps != null ? queuedLogEntriesTimestamps.RemoveFirst() : dummyLogEntryTimestamp;
-						}
-
-						ProcessLog( logEntry, timestamp );
-					}
-				}
-
 				// Update visible logs if necessary
 				if( shouldUpdateRecycledListView )
 				{
