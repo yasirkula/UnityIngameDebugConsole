@@ -1004,17 +1004,21 @@ namespace IngameDebugConsole
 			Sprite logTypeSpriteRepresentation = logEntry.logTypeSpriteRepresentation;
 			if( isCollapseOn && isEntryInCollapsedEntryList )
 			{
-				if( isLogWindowVisible )
+				if( isLogWindowVisible || timestampsOfListEntriesToShow != null )
 				{
 					if( !isInSearchMode && logFilter == DebugLogFilter.All )
 						logEntryIndexInEntriesToShow = logEntryIndex;
 					else
 						logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.IndexOf( logEntryIndex );
 
-					if( timestampsOfListEntriesToShow != null )
-						timestampsOfListEntriesToShow[logEntryIndexInEntriesToShow] = collapsedLogEntriesTimestamps[logEntryIndex];
+					if( logEntryIndexInEntriesToShow >= 0 )
+					{
+						if( timestampsOfListEntriesToShow != null )
+							timestampsOfListEntriesToShow[logEntryIndexInEntriesToShow] = collapsedLogEntriesTimestamps[logEntryIndex];
 
-					recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndexInEntriesToShow );
+						if( isLogWindowVisible )
+							recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndexInEntriesToShow );
+					}
 				}
 			}
 			else if( ( !isInSearchMode || queuedLogEntry.MatchesSearchTerm( searchTerm ) ) && ( logFilter == DebugLogFilter.All ||
