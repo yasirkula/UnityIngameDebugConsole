@@ -119,7 +119,7 @@ namespace IngameDebugConsole
 		private static readonly string[] inputDelimiters = new string[] { "\"\"", "''", "{}", "()", "[]" };
 
 		// CompareInfo used for case-insensitive command name comparison
-		private static readonly CompareInfo caseInsensitiveComparer = new CultureInfo( "en-US" ).CompareInfo;
+		internal static readonly CompareInfo caseInsensitiveComparer = new CultureInfo( "en-US" ).CompareInfo;
 
 		static DebugLogConsole()
 		{

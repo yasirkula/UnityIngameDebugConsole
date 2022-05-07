@@ -1,6 +1,7 @@
 ﻿//#define IDG_OMIT_ELAPSED_TIME
 //#define IDG_OMIT_FRAMECOUNT
 
+﻿using System.Globalization;
 using System.Text;
 using UnityEngine;
 
@@ -43,8 +44,8 @@ namespace IngameDebugConsole
 		// Checks if logString or stackTrace contains the search term
 		public bool MatchesSearchTerm( string searchTerm )
 		{
-			return ( logString != null && logString.IndexOf( searchTerm, System.StringComparison.OrdinalIgnoreCase ) >= 0 ) ||
-				( stackTrace != null && stackTrace.IndexOf( searchTerm, System.StringComparison.OrdinalIgnoreCase ) >= 0 );
+			return ( logString != null && DebugLogConsole.caseInsensitiveComparer.IndexOf( logString, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) >= 0 ) ||
+				( stackTrace != null && DebugLogConsole.caseInsensitiveComparer.IndexOf( stackTrace, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) >= 0 );
 		}
 
 		// Return a string containing complete information about this debug entry
@@ -89,8 +90,8 @@ namespace IngameDebugConsole
 		// Checks if logString or stackTrace contains the search term
 		public bool MatchesSearchTerm( string searchTerm )
 		{
-			return ( logString != null && logString.IndexOf( searchTerm, System.StringComparison.OrdinalIgnoreCase ) >= 0 ) ||
-				( stackTrace != null && stackTrace.IndexOf( searchTerm, System.StringComparison.OrdinalIgnoreCase ) >= 0 );
+			return ( logString != null && DebugLogConsole.caseInsensitiveComparer.IndexOf( logString, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) >= 0 ) ||
+				( stackTrace != null && DebugLogConsole.caseInsensitiveComparer.IndexOf( stackTrace, searchTerm, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace ) >= 0 );
 		}
 	}
 
