@@ -1060,17 +1060,23 @@ namespace IngameDebugConsole
 			logItemsScrollRect.OnScroll( nullPointerEventData );
 		}
 
-		// Automatically expand the latest log in queuedLogEntries
-		public void ExpandLatestPendingLog()
+		// Modifies certain properties of the most recently received log
+		public void AdjustLatestPendingLog( bool autoExpand, bool stripStackTrace )
 		{
-			pendingLogToAutoExpand = queuedLogEntries.Count;
-		}
+			lock( logEntriesLock )
+			{
+				if( queuedLogEntries.Count == 0 )
+					return;
 
-		// Omits the latest log's stack trace
-		public void StripStackTraceFromLatestPendingLog()
-		{
-			QueuedDebugLogEntry log = queuedLogEntries[queuedLogEntries.Count - 1];
-			queuedLogEntries[queuedLogEntries.Count - 1] = new QueuedDebugLogEntry( log.logString, string.Empty, log.logType );
+				if( autoExpand ) // Automatically expand the latest log in queuedLogEntries
+					pendingLogToAutoExpand = queuedLogEntries.Count;
+
+				if( stripStackTrace ) // Omit the latest log's stack trace
+				{
+					QueuedDebugLogEntry log = queuedLogEntries[queuedLogEntries.Count - 1];
+					queuedLogEntries[queuedLogEntries.Count - 1] = new QueuedDebugLogEntry( log.logString, string.Empty, log.logType );
+				}
+			}
 		}
 
 		// Clear all the logs
