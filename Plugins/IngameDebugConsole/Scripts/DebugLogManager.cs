@@ -159,6 +159,7 @@ namespace IngameDebugConsole
 #pragma warning restore 0414
 
 		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "If enabled, on Android and iOS devices with notch screens, the console window will be repositioned so that the cutout(s) don't obscure it" )]
 		private bool avoidScreenCutout = true;
 
@@ -168,6 +169,7 @@ namespace IngameDebugConsole
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
 		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "If enabled, on standalone platforms, command input field will automatically be focused (start receiving keyboard input) after opening the console window" )]
 		private bool autoFocusOnCommandInputField = true;
 #endif

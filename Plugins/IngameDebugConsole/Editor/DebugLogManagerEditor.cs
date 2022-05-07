@@ -30,6 +30,8 @@ namespace IngameDebugConsole
 		private SerializedProperty showCommandSuggestions;
 		private SerializedProperty receiveLogcatLogsInAndroid;
 		private SerializedProperty logcatArguments;
+		private SerializedProperty avoidScreenCutout;
+		private SerializedProperty autoFocusOnCommandInputField;
 
 		private readonly GUIContent receivedLogTypesLabel = new GUIContent( "Received Log Types", "Only these logs will be received by the console window, other logs will simply be skipped" );
 		private readonly GUIContent receiveInfoLogsLabel = new GUIContent( "Info" );
@@ -67,6 +69,8 @@ namespace IngameDebugConsole
 			showCommandSuggestions = serializedObject.FindProperty( "showCommandSuggestions" );
 			receiveLogcatLogsInAndroid = serializedObject.FindProperty( "receiveLogcatLogsInAndroid" );
 			logcatArguments = serializedObject.FindProperty( "logcatArguments" );
+			avoidScreenCutout = serializedObject.FindProperty( "avoidScreenCutout" );
+			autoFocusOnCommandInputField = serializedObject.FindProperty( "autoFocusOnCommandInputField" );
 		}
 
 		public override void OnInspectorGUI()
@@ -74,6 +78,9 @@ namespace IngameDebugConsole
 			serializedObject.Update();
 
 			EditorGUILayout.PropertyField( singleton );
+
+			EditorGUILayout.Space();
+
 			EditorGUILayout.PropertyField( minimumHeight );
 
 			EditorGUILayout.PropertyField( enableHorizontalResizing );
@@ -82,6 +89,10 @@ namespace IngameDebugConsole
 				DrawSubProperty( resizeFromRight );
 				DrawSubProperty( minimumWidth );
 			}
+
+			EditorGUILayout.PropertyField( avoidScreenCutout );
+
+			EditorGUILayout.Space();
 
 			EditorGUILayout.PropertyField( enablePopup );
 			if( enablePopup.boolValue )
@@ -93,9 +104,13 @@ namespace IngameDebugConsole
 			if( toggleWithKey.boolValue )
 				DrawSubProperty( toggleKey );
 
+			EditorGUILayout.Space();
+
 			EditorGUILayout.PropertyField( enableSearchbar );
 			if( enableSearchbar.boolValue )
 				DrawSubProperty( topSearchbarMinWidth );
+
+			EditorGUILayout.Space();
 
 			EditorGUILayout.PropertyField( receiveLogsWhileInactive );
 
@@ -107,17 +122,22 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( receiveExceptionLogs, receiveExceptionLogsLabel );
 			EditorGUI.indentLevel--;
 
+			EditorGUILayout.PropertyField( receiveLogcatLogsInAndroid );
+			if( receiveLogcatLogsInAndroid.boolValue )
+				DrawSubProperty( logcatArguments );
+
 			EditorGUILayout.PropertyField( captureLogTimestamps );
 			if( captureLogTimestamps.boolValue )
 				DrawSubProperty( alwaysDisplayTimestamps );
 
+			EditorGUILayout.Space();
+
 			EditorGUILayout.PropertyField( clearCommandAfterExecution );
 			EditorGUILayout.PropertyField( commandHistorySize );
 			EditorGUILayout.PropertyField( showCommandSuggestions );
+			EditorGUILayout.PropertyField( autoFocusOnCommandInputField );
 
-			EditorGUILayout.PropertyField( receiveLogcatLogsInAndroid );
-			if( receiveLogcatLogsInAndroid.boolValue )
-				DrawSubProperty( logcatArguments );
+			EditorGUILayout.Space();
 
 			DrawPropertiesExcluding( serializedObject, "m_Script" );
 			serializedObject.ApplyModifiedProperties();
