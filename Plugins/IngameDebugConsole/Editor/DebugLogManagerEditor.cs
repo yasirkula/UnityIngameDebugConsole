@@ -1,4 +1,5 @@
 ﻿using UnityEditor;
+using UnityEngine;
 
 namespace IngameDebugConsole
 {
@@ -17,6 +18,10 @@ namespace IngameDebugConsole
 		private SerializedProperty toggleKey;
 		private SerializedProperty enableSearchbar;
 		private SerializedProperty topSearchbarMinWidth;
+		private SerializedProperty receiveInfoLogs;
+		private SerializedProperty receiveWarningLogs;
+		private SerializedProperty receiveErrorLogs;
+		private SerializedProperty receiveExceptionLogs;
 		private SerializedProperty captureLogTimestamps;
 		private SerializedProperty alwaysDisplayTimestamps;
 		private SerializedProperty clearCommandAfterExecution;
@@ -24,6 +29,12 @@ namespace IngameDebugConsole
 		private SerializedProperty showCommandSuggestions;
 		private SerializedProperty receiveLogcatLogsInAndroid;
 		private SerializedProperty logcatArguments;
+
+		private readonly GUIContent receivedLogTypesLabel = new GUIContent( "Received Log Types", "Only these logs will be received by the console window, other logs will simply be skipped" );
+		private readonly GUIContent receiveInfoLogsLabel = new GUIContent( "Info" );
+		private readonly GUIContent receiveWarningLogsLabel = new GUIContent( "Warning" );
+		private readonly GUIContent receiveErrorLogsLabel = new GUIContent( "Error" );
+		private readonly GUIContent receiveExceptionLogsLabel = new GUIContent( "Exception" );
 
 		private void OnEnable()
 		{
@@ -43,6 +54,10 @@ namespace IngameDebugConsole
 #endif
 			enableSearchbar = serializedObject.FindProperty( "enableSearchbar" );
 			topSearchbarMinWidth = serializedObject.FindProperty( "topSearchbarMinWidth" );
+			receiveInfoLogs = serializedObject.FindProperty( "receiveInfoLogs" );
+			receiveWarningLogs = serializedObject.FindProperty( "receiveWarningLogs" );
+			receiveErrorLogs = serializedObject.FindProperty( "receiveErrorLogs" );
+			receiveExceptionLogs = serializedObject.FindProperty( "receiveExceptionLogs" );
 			captureLogTimestamps = serializedObject.FindProperty( "captureLogTimestamps" );
 			alwaysDisplayTimestamps = serializedObject.FindProperty( "alwaysDisplayTimestamps" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
@@ -79,6 +94,14 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( enableSearchbar );
 			if( enableSearchbar.boolValue )
 				DrawSubProperty( topSearchbarMinWidth );
+
+			EditorGUILayout.PrefixLabel( receivedLogTypesLabel );
+			EditorGUI.indentLevel++;
+			EditorGUILayout.PropertyField( receiveInfoLogs, receiveInfoLogsLabel );
+			EditorGUILayout.PropertyField( receiveWarningLogs, receiveWarningLogsLabel );
+			EditorGUILayout.PropertyField( receiveErrorLogs, receiveErrorLogsLabel );
+			EditorGUILayout.PropertyField( receiveExceptionLogs, receiveExceptionLogsLabel );
+			EditorGUI.indentLevel--;
 
 			EditorGUILayout.PropertyField( captureLogTimestamps );
 			if( captureLogTimestamps.boolValue )

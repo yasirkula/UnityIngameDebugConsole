@@ -108,6 +108,10 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		private bool receiveInfoLogs = true, receiveWarningLogs = true, receiveErrorLogs = true, receiveExceptionLogs = true;
+
+		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "If enabled, the arrival times of logs will be recorded and displayed when a log is expanded" )]
 		private bool captureLogTimestamps = false;
 
@@ -458,6 +462,10 @@ namespace IngameDebugConsole
 				searchbarSlotBottom.gameObject.SetActive( false );
 			}
 
+			filterInfoButton.gameObject.SetActive( receiveInfoLogs );
+			filterWarningButton.gameObject.SetActive( receiveWarningLogs );
+			filterErrorButton.gameObject.SetActive( receiveErrorLogs || receiveExceptionLogs );
+
 			if( commandSuggestionsContainer.gameObject.activeSelf )
 				commandSuggestionsContainer.gameObject.SetActive( false );
 
@@ -576,7 +584,13 @@ namespace IngameDebugConsole
 		private void OnValidate()
 		{
 			if( UnityEditor.EditorApplication.isPlaying )
+			{
 				resizeButton.sprite = enableHorizontalResizing ? resizeIconAllDirections : resizeIconVerticalOnly;
+
+				filterInfoButton.gameObject.SetActive( receiveInfoLogs );
+				filterWarningButton.gameObject.SetActive( receiveWarningLogs );
+				filterErrorButton.gameObject.SetActive( receiveErrorLogs || receiveExceptionLogs );
+			}
 		}
 
 #if UNITY_2018_1_OR_NEWER
@@ -899,6 +913,15 @@ namespace IngameDebugConsole
 			if( isQuittingApplication )
 				return;
 #endif
+
+			switch( logType )
+			{
+				case LogType.Log: if( !receiveInfoLogs ) return; break;
+				case LogType.Warning: if( !receiveWarningLogs ) return; break;
+				case LogType.Error: if( !receiveErrorLogs ) return; break;
+				case LogType.Assert:
+				case LogType.Exception: if( !receiveExceptionLogs ) return; break;
+			}
 
 			// Truncate the log if it is longer than maxLogLength
 			int logLength = logString.Length;
