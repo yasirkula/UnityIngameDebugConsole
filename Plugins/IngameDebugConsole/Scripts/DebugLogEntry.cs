@@ -1,6 +1,3 @@
-﻿//#define IDG_OMIT_ELAPSED_TIME
-//#define IDG_OMIT_FRAMECOUNT
-
 ﻿using System.Globalization;
 using System.Text;
 using UnityEngine;
@@ -105,15 +102,22 @@ namespace IngameDebugConsole
 		public readonly int frameCount;
 #endif
 
-		public DebugLogEntryTimestamp( System.TimeSpan localTimeUtcOffset )
+#if !IDG_OMIT_ELAPSED_TIME && !IDG_OMIT_FRAMECOUNT
+		public DebugLogEntryTimestamp( System.DateTime dateTime, float elapsedSeconds, int frameCount )
+#elif !IDG_OMIT_ELAPSED_TIME
+		public DebugLogEntryTimestamp( System.DateTime dateTime, float elapsedSeconds )
+#elif !IDG_OMIT_FRAMECOUNT
+		public DebugLogEntryTimestamp( System.DateTime dateTime, int frameCount )
+#else
+		public DebugLogEntryTimestamp( System.DateTime dateTime )
+#endif
 		{
-			// It is 10 times faster to cache local time's offset from UtcNow and add it to UtcNow to get local time at any time
-			dateTime = System.DateTime.UtcNow + localTimeUtcOffset;
+			this.dateTime = dateTime;
 #if !IDG_OMIT_ELAPSED_TIME
-			elapsedSeconds = Time.realtimeSinceStartup;
+			this.elapsedSeconds = elapsedSeconds;
 #endif
 #if !IDG_OMIT_FRAMECOUNT
-			frameCount = Time.frameCount;
+			this.frameCount = frameCount;
 #endif
 		}
 

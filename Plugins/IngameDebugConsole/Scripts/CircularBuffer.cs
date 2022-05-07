@@ -35,6 +35,8 @@ namespace IngameDebugConsole
 		private int startIndex;
 
 		public int Count { get; private set; }
+		public int Capacity { get { return arr.Length; } }
+
 		public T this[int index]
 		{
 			get { return arr[( startIndex + index ) % arr.Length]; }
