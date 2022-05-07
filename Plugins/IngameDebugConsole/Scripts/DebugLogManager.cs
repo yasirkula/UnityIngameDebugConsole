@@ -108,6 +108,11 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		[Tooltip( "If enabled, the console window will continue receiving logs in the background even if its GameObject is inactive. But the console window's GameObject needs to be activated at least once because its Awake function must be triggered for this to work" )]
+		private bool receiveLogsWhileInactive = false;
+
+		[SerializeField]
+		[HideInInspector]
 		private bool receiveInfoLogs = true, receiveWarningLogs = true, receiveErrorLogs = true, receiveExceptionLogs = true;
 
 		[SerializeField]
@@ -484,6 +489,12 @@ namespace IngameDebugConsole
 			localTimeUtcOffset = System.DateTime.Now - System.DateTime.UtcNow;
 			nullPointerEventData = new PointerEventData( null );
 
+			if( receiveLogsWhileInactive )
+			{
+				Application.logMessageReceivedThreaded -= ReceivedLog;
+				Application.logMessageReceivedThreaded += ReceivedLog;
+			}
+
 #if UNITY_EDITOR && UNITY_2018_1_OR_NEWER
 			// OnApplicationQuit isn't reliable on some Unity versions when Application.wantsToQuit is used; Application.quitting is the only reliable solution on those versions
 			// https://issuetracker.unity3d.com/issues/onapplicationquit-method-is-called-before-application-dot-wantstoquit-event-is-raised
@@ -513,9 +524,11 @@ namespace IngameDebugConsole
 			if( Instance != this )
 				return;
 
-			// Intercept debug entries
-			Application.logMessageReceivedThreaded -= ReceivedLog;
-			Application.logMessageReceivedThreaded += ReceivedLog;
+			if( !receiveLogsWhileInactive )
+			{
+				Application.logMessageReceivedThreaded -= ReceivedLog;
+				Application.logMessageReceivedThreaded += ReceivedLog;
+			}
 
 			if( receiveLogcatLogsInAndroid )
 			{
@@ -547,8 +560,8 @@ namespace IngameDebugConsole
 			if( Instance != this )
 				return;
 
-			// Stop receiving debug entries
-			Application.logMessageReceivedThreaded -= ReceivedLog;
+			if( !receiveLogsWhileInactive )
+				Application.logMessageReceivedThreaded -= ReceivedLog;
 
 #if !UNITY_EDITOR && UNITY_ANDROID
 			if( logcatListener != null )
@@ -573,12 +586,15 @@ namespace IngameDebugConsole
 			PopupEnabled = enablePopup;
 		}
 
-#if UNITY_EDITOR && UNITY_2018_1_OR_NEWER
 		private void OnDestroy()
 		{
+			if( receiveLogsWhileInactive )
+				Application.logMessageReceivedThreaded -= ReceivedLog;
+
+#if UNITY_EDITOR && UNITY_2018_1_OR_NEWER
 			Application.quitting -= OnApplicationQuitting;
-		}
 #endif
+		}
 
 #if UNITY_EDITOR
 		private void OnValidate()

@@ -18,6 +18,7 @@ namespace IngameDebugConsole
 		private SerializedProperty toggleKey;
 		private SerializedProperty enableSearchbar;
 		private SerializedProperty topSearchbarMinWidth;
+		private SerializedProperty receiveLogsWhileInactive;
 		private SerializedProperty receiveInfoLogs;
 		private SerializedProperty receiveWarningLogs;
 		private SerializedProperty receiveErrorLogs;
@@ -54,6 +55,7 @@ namespace IngameDebugConsole
 #endif
 			enableSearchbar = serializedObject.FindProperty( "enableSearchbar" );
 			topSearchbarMinWidth = serializedObject.FindProperty( "topSearchbarMinWidth" );
+			receiveLogsWhileInactive = serializedObject.FindProperty( "receiveLogsWhileInactive" );
 			receiveInfoLogs = serializedObject.FindProperty( "receiveInfoLogs" );
 			receiveWarningLogs = serializedObject.FindProperty( "receiveWarningLogs" );
 			receiveErrorLogs = serializedObject.FindProperty( "receiveErrorLogs" );
@@ -94,6 +96,8 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( enableSearchbar );
 			if( enableSearchbar.boolValue )
 				DrawSubProperty( topSearchbarMinWidth );
+
+			EditorGUILayout.PropertyField( receiveLogsWhileInactive );
 
 			EditorGUILayout.PrefixLabel( receivedLogTypesLabel );
 			EditorGUI.indentLevel++;
