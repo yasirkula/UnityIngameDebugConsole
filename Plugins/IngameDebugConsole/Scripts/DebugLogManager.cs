@@ -692,21 +692,7 @@ namespace IngameDebugConsole
 #endif
 
 			int numberOfLogsToProcess = isLogWindowVisible ? queuedLogEntries.Count : ( queuedLogEntries.Count - queuedLogLimit );
-			if( numberOfLogsToProcess > 0 )
-			{
-				for( int i = 0; i < numberOfLogsToProcess; i++ )
-				{
-					QueuedDebugLogEntry logEntry;
-					DebugLogEntryTimestamp timestamp;
-					lock( logEntriesLock )
-					{
-						logEntry = queuedLogEntries.RemoveFirst();
-						timestamp = queuedLogEntriesTimestamps != null ? queuedLogEntriesTimestamps.RemoveFirst() : dummyLogEntryTimestamp;
-					}
-
-					ProcessLog( logEntry, timestamp );
-				}
-			}
+			ProcessQueuedLogs( numberOfLogsToProcess );
 
 			// Don't perform CPU heavy tasks if neither the log window nor the popup is visible
 			if( !isLogWindowVisible && !PopupEnabled )
@@ -1070,6 +1056,23 @@ namespace IngameDebugConsole
 					newWarningEntryCount++;
 				else
 					newErrorEntryCount++;
+			}
+		}
+
+		// Process a number of logs waiting in the pending logs queue
+		private void ProcessQueuedLogs( int numberOfLogsToProcess )
+		{
+			for( int i = 0; i < numberOfLogsToProcess; i++ )
+			{
+				QueuedDebugLogEntry logEntry;
+				DebugLogEntryTimestamp timestamp;
+				lock( logEntriesLock )
+				{
+					logEntry = queuedLogEntries.RemoveFirst();
+					timestamp = queuedLogEntriesTimestamps != null ? queuedLogEntriesTimestamps.RemoveFirst() : dummyLogEntryTimestamp;
+				}
+
+				ProcessLog( logEntry, timestamp );
 			}
 		}
 
@@ -1626,6 +1629,9 @@ namespace IngameDebugConsole
 
 		public string GetAllLogs()
 		{
+			// Process all pending logs since we want to return "all" logs
+			ProcessQueuedLogs( queuedLogEntries.Count );
+
 			int count = uncollapsedLogEntriesIndices.Count;
 			int length = 0;
 			int newLineLength = System.Environment.NewLine.Length;
