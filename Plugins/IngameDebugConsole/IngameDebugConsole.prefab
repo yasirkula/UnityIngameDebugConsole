@@ -34,7 +34,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &110786
 GameObject:
   m_ObjectHideFlags: 1
@@ -135,6 +135,7 @@ GameObject:
   - component: {fileID: 11440770}
   - component: {fileID: 11490438}
   - component: {fileID: 11452418}
+  - component: {fileID: 114573443145823088}
   m_Layer: 5
   m_Name: IngameDebugConsole
   m_TagString: Untagged
@@ -1266,6 +1267,14 @@ MonoBehaviour:
   toggleKey: 96
   enableSearchbar: 1
   topSearchbarMinWidth: 360
+  receiveLogsWhileInactive: 0
+  receiveInfoLogs: 1
+  receiveWarningLogs: 1
+  receiveErrorLogs: 1
+  receiveExceptionLogs: 1
+  captureLogTimestamps: 0
+  alwaysDisplayTimestamps: 0
+  queuedLogLimit: 256
   clearCommandAfterExecution: 1
   commandHistorySize: 15
   showCommandSuggestions: 1
@@ -1325,7 +1334,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   transformComponent: {fileID: 22400762}
   viewportTransform: {fileID: 22485076}
-  debugManager: {fileID: 11452418}
   logItemNormalColor1: {r: 0.23529412, g: 0.23529412, b: 0.23529412, a: 0.697}
   logItemNormalColor2: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 0.697}
   logItemSelectedColor: {r: 0.32941177, g: 0.4862745, b: 0.7058824, a: 0.697}
@@ -3258,6 +3266,18 @@ MonoBehaviour:
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
+--- !u!114 &114573443145823088
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 132536}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3cc1b407f337e641ad32a2e91d5b478, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  embeddedEventSystem: {fileID: 109254}
 --- !u!114 &114575087663981696
 MonoBehaviour:
   m_ObjectHideFlags: 1
