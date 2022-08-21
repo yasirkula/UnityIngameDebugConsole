@@ -32,6 +32,7 @@ namespace IngameDebugConsole
 		private SerializedProperty receiveLogcatLogsInAndroid;
 		private SerializedProperty logcatArguments;
 		private SerializedProperty avoidScreenCutout;
+		private SerializedProperty popupAvoidsScreenCutout;
 		private SerializedProperty autoFocusOnCommandInputField;
 
 		private readonly GUIContent receivedLogTypesLabel = new GUIContent( "Received Log Types", "Only these logs will be received by the console window, other logs will simply be skipped" );
@@ -72,6 +73,7 @@ namespace IngameDebugConsole
 			receiveLogcatLogsInAndroid = serializedObject.FindProperty( "receiveLogcatLogsInAndroid" );
 			logcatArguments = serializedObject.FindProperty( "logcatArguments" );
 			avoidScreenCutout = serializedObject.FindProperty( "avoidScreenCutout" );
+			popupAvoidsScreenCutout = serializedObject.FindProperty( "popupAvoidsScreenCutout" );
 			autoFocusOnCommandInputField = serializedObject.FindProperty( "autoFocusOnCommandInputField" );
 		}
 
@@ -93,6 +95,7 @@ namespace IngameDebugConsole
 			}
 
 			EditorGUILayout.PropertyField( avoidScreenCutout );
+			DrawSubProperty( popupAvoidsScreenCutout );
 
 			EditorGUILayout.Space();
 

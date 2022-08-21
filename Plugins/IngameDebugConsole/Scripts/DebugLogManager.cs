@@ -169,6 +169,11 @@ namespace IngameDebugConsole
 		private bool avoidScreenCutout = true;
 
 		[SerializeField]
+		[HideInInspector]
+		[Tooltip( "If enabled, on Android and iOS devices with notch screens, the console window's popup won't be obscured by the screen cutouts" )]
+		internal bool popupAvoidsScreenCutout = false;
+
+		[SerializeField]
 		[Tooltip( "If a log is longer than this limit, it will be truncated. This helps avoid reaching Unity's 65000 vertex limit for UI canvases" )]
 		private int maxLogLength = 10000;
 

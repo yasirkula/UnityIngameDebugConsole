@@ -2,6 +2,9 @@
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections;
+#if UNITY_EDITOR && UNITY_2021_1_OR_NEWER
+using Screen = UnityEngine.Device.Screen; // To support Device Simulator on Unity 2021.1+
+#endif
 
 // Manager class for the debug popup
 namespace IngameDebugConsole
@@ -179,49 +182,80 @@ namespace IngameDebugConsole
 			UpdatePosition( false );
 		}
 
+		// There are 2 different spaces used in these calculations:
+		// RectTransform space: raw anchoredPosition of the popup that's in range [-canvasSize/2, canvasSize/2]
+		// Safe area space: Screen.safeArea space that's in range [safeAreaBottomLeft, safeAreaTopRight] where these corner positions
+		//                  are all positive (calculated from bottom left corner of the screen instead of the center of the screen)
 		public void UpdatePosition( bool immediately )
 		{
-			Vector2 canvasSize = debugManager.canvasTR.rect.size;
+			Vector2 canvasRawSize = debugManager.canvasTR.rect.size;
 
-			float canvasWidth = canvasSize.x;
-			float canvasHeight = canvasSize.y;
+			// Calculate safe area bounds
+			float canvasWidth = canvasRawSize.x;
+			float canvasHeight = canvasRawSize.y;
 
+			float canvasBottomLeftX = 0f;
+			float canvasBottomLeftY = 0f;
+
+			if( debugManager.popupAvoidsScreenCutout )
+			{
+#if UNITY_2017_2_OR_NEWER && ( UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS )
+				Rect safeArea = Screen.safeArea;
+
+				int screenWidth = Screen.width;
+				int screenHeight = Screen.height;
+
+				canvasWidth *= safeArea.width / screenWidth;
+				canvasHeight *= safeArea.height / screenHeight;
+
+				canvasBottomLeftX = canvasRawSize.x * ( safeArea.x / screenWidth );
+				canvasBottomLeftY = canvasRawSize.y * ( safeArea.y / screenHeight );
+#endif
+			}
+
+			// Calculate safe area position of the popup
 			// normalizedPosition allows us to glue the popup to a specific edge of the screen. It becomes useful when
 			// the popup is at the right edge and we switch from portrait screen orientation to landscape screen orientation.
 			// Without normalizedPosition, popup could jump to bottom or top edges instead of staying at the right edge
-			Vector2 pos = immediately ? new Vector2( normalizedPosition.x * canvasWidth, normalizedPosition.y * canvasHeight ) : popupTransform.anchoredPosition;
+			Vector2 pos = canvasRawSize * 0.5f + ( immediately ? new Vector2( normalizedPosition.x * canvasWidth, normalizedPosition.y * canvasHeight ) : ( popupTransform.anchoredPosition - new Vector2( canvasBottomLeftX, canvasBottomLeftY ) ) );
 
-			// Find distances to all four edges
-			float distToLeft = canvasWidth * 0.5f + pos.x;
+			// Find distances to all four edges of the safe area
+			float distToLeft = pos.x;
 			float distToRight = canvasWidth - distToLeft;
 
-			float distToBottom = canvasHeight * 0.5f + pos.y;
+			float distToBottom = pos.y;
 			float distToTop = canvasHeight - distToBottom;
 
 			float horDistance = Mathf.Min( distToLeft, distToRight );
 			float vertDistance = Mathf.Min( distToBottom, distToTop );
 
-			// Find the nearest edge's coordinates
+			// Find the nearest edge's safe area coordinates
 			if( horDistance < vertDistance )
 			{
 				if( distToLeft < distToRight )
-					pos = new Vector2( canvasWidth * -0.5f + halfSize.x, pos.y );
+					pos = new Vector2( halfSize.x, pos.y );
 				else
-					pos = new Vector2( canvasWidth * 0.5f - halfSize.x, pos.y );
+					pos = new Vector2( canvasWidth - halfSize.x, pos.y );
 
-				pos.y = Mathf.Clamp( pos.y, canvasHeight * -0.5f + halfSize.y, canvasHeight * 0.5f - halfSize.y );
+				pos.y = Mathf.Clamp( pos.y, halfSize.y, canvasHeight - halfSize.y );
 			}
 			else
 			{
 				if( distToBottom < distToTop )
-					pos = new Vector2( pos.x, canvasHeight * -0.5f + halfSize.y );
+					pos = new Vector2( pos.x, halfSize.y );
 				else
-					pos = new Vector2( pos.x, canvasHeight * 0.5f - halfSize.y );
+					pos = new Vector2( pos.x, canvasHeight - halfSize.y );
 
-				pos.x = Mathf.Clamp( pos.x, canvasWidth * -0.5f + halfSize.x, canvasWidth * 0.5f - halfSize.x );
+				pos.x = Mathf.Clamp( pos.x, halfSize.x, canvasWidth - halfSize.x );
 			}
 
+			pos -= canvasRawSize * 0.5f;
+
 			normalizedPosition.Set( pos.x / canvasWidth, pos.y / canvasHeight );
+
+			// Safe area's bottom left coordinates are added to pos only after normalizedPosition's value
+			// is set because normalizedPosition is in range [-canvasWidth / 2, canvasWidth / 2]
+			pos += new Vector2( canvasBottomLeftX, canvasBottomLeftY );
 
 			// If another smooth movement animation is in progress, cancel it
 			if( moveToPosCoroutine != null )
