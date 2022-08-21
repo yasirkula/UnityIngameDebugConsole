@@ -1,4 +1,4 @@
-= In-game Debug Console =
+= In-game Debug Console (v1.5.8) =
 
 Online documentation available at: https://github.com/yasirkula/UnityIngameDebugConsole
 E-mail: yasirkula@gmail.com
