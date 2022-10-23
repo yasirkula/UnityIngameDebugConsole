@@ -39,7 +39,7 @@ namespace IngameDebugConsole.Commands
 
 			if ( searchType == null ) return;
 			UnityEngine.Object foundObj = UnityEngine.Object.FindObjectOfType( searchType, true );
-			if ( foundObj == null) return;
+			if ( foundObj == null ) return;
 			Component foundComp = foundObj as Component;
 			if ( foundObj == null ) return;
 			foundComp.gameObject.SetActive( !foundComp.gameObject.activeSelf );
