@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 using Type = System.Type;
+using System.Reflection;
+using System;
 
 namespace IngameDebugConsole.Commands
 {
@@ -29,16 +30,15 @@ namespace IngameDebugConsole.Commands
 			{ typeName = TypeAliases[loweredKeyword]; exactTypeName = true; }
 			else typeName = loweredKeyword;
 
-			IEnumerable<Type> allFoundTypes = System.AppDomain.CurrentDomain
-				.GetAssemblies()
-				.Reverse()
-				.SelectMany( a => a.GetTypes() );
+			List<Type> allFoundTypes = new List<Type>();
+			foreach ( Assembly a in AppDomain.CurrentDomain.GetAssemblies() )
+				foreach ( Type t in a.GetTypes() ) allFoundTypes.Add( t );
 			if ( exactTypeName )
-				searchType = allFoundTypes.FirstOrDefault( t => t.FullName == typeName );
-			else searchType = allFoundTypes.FirstOrDefault( t => t.Name.ToLower().Contains( typeName ) );
+				searchType = allFoundTypes.Find( t => t.FullName == typeName );
+			else searchType = allFoundTypes.Find( t => t.Name.ToLower().Contains( typeName ) );
 
 			if ( searchType == null ) return;
-			Object foundObj = Object.FindObjectOfType( searchType, true );
+			UnityEngine.Object foundObj = UnityEngine.Object.FindObjectOfType( searchType, true );
 			if ( foundObj == null) return;
 			Component foundComp = foundObj as Component;
 			if ( foundObj == null ) return;
@@ -52,8 +52,10 @@ namespace IngameDebugConsole.Commands
 			UnityEngine.Scripting.Preserve]
 		public static string ListTypeAliases()
 		{
-			return string.Join( "\n",
-				TypeAliases.Select( p => "[" + p.Key + "] = " + p.Value ) );
+			List<string> lines = new List<string>();
+			foreach ( KeyValuePair<string, string> p in TypeAliases )
+				lines.Add( "[" + p.Key + "] = " + p.Value );
+			return string.Join( "\n", lines.ToArray() );
 		}
 	}
 }
