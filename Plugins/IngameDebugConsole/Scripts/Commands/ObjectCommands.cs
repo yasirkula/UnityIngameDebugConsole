@@ -97,7 +97,7 @@ namespace IngameDebugConsole.Commands
 		{
 			string loweredKeyword = keyword.ToLower();
 			List<GameObject> allSceneObjects = new List<GameObject>();
-			for (int i = 0; i < SceneManager.sceneCount; ++i)
+			for ( int i = 0; i < SceneManager.sceneCount; ++i )
 			{
 				GameObject[] rootGameObjects = SceneManager.GetSceneAt( i )
 					.GetRootGameObjects();
@@ -121,7 +121,7 @@ namespace IngameDebugConsole.Commands
 		{
 			string loweredKeyword = keyword.ToLower();
 			List<GameObject> allSceneObjects = new List<GameObject>();
-			for (int i = 0; i < SceneManager.sceneCount; ++i)
+			for ( int i = 0; i < SceneManager.sceneCount; ++i )
 			{
 				GameObject[] rootGameObjects = SceneManager.GetSceneAt( i )
 					.GetRootGameObjects();
