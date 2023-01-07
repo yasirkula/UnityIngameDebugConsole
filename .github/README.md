@@ -50,8 +50,7 @@ This plugin supports Unity's new Input System but it requires some manual modifi
 
 - the plugin mustn't be installed as a package, i.e. it must reside inside the *Assets* folder and not the *Packages* folder (it can reside inside a subfolder of Assets like *Assets/Plugins*)
 - if Unity 2019.2.5 or earlier is used, add `ENABLE_INPUT_SYSTEM` compiler directive to **Player Settings/Scripting Define Symbols** (these symbols are platform specific, so if you change the active platform later, you'll have to add the compiler directive again)
-- add `Unity.InputSystem` assembly to **IngameDebugConsole.Runtime** Assembly Definition File's *Assembly Definition References* list
-- open *IngameDebugConsole* prefab, select *EventSystem* child object and replace *StandaloneInputModule* component with *InputSystemUIInputModule* component (or, if your scene(s) already have EventSystem objects, you can delete IngameDebugConsole prefab's EventSystem child object)
+- Create a prefab variant from *IngameDebugConsole* prefab, select *EventSystem* child object and replace the *StandaloneInputModule* component with *InputSystemUIInputModule* component (or, if your scene(s) already have EventSystem objects, you can delete IngameDebugConsole prefab's EventSystem child object)
 
 ## COMMAND CONSOLE
 
