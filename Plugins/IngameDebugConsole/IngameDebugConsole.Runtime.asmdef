@@ -1,6 +1,6 @@
 {
     "name": "IngameDebugConsole.Runtime",
-    "rootNamespace": "",
+    "rootNamespace": "IngameDebugConsole",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
