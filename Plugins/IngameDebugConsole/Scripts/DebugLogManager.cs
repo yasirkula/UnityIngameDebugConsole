@@ -866,8 +866,6 @@ namespace IngameDebugConsole
 				// Update the recycled list view
 				if( isLogWindowVisible )
 					recycledListView.OnViewportHeightChanged();
-				else
-					popupManager.UpdatePosition( true );
 
 #if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
 				CheckScreenCutout();
