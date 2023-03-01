@@ -13,7 +13,13 @@ namespace IngameDebugConsole
 		public string Description { get { return m_description; } }
 		public string[] ParameterNames { get { return m_parameterNames; } }
 
-		public ConsoleMethodAttribute( string command, string description, params string[] parameterNames )
+		/// <summary>
+		/// Define static Method as callable from In Game Console
+		/// </summary>
+		/// <param name="command">Give your desired Command without whitespace</param>
+		/// <param name="description">Describe your Command</param>
+		/// <param name="parameterNames">Give your Methods Parameter if has</param>
+		public ConsoleMethodAttribute(string command, string description, params string[] parameterNames)
 		{
 			m_command = command;
 			m_description = description;
