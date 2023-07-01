@@ -923,8 +923,9 @@ namespace IngameDebugConsole
 
 			isLogWindowVisible = false;
 
-			// Clear currently selected object.
-			ClearEventSystemSelection();
+			// Clear the currently selected object on the current EventSystem in order to avoid invoking UI elements through input.
+			if (EventSystem.current != null)
+				EventSystem.current.SetSelectedGameObject(null);
 
 			if( OnLogWindowHidden != null )
 				OnLogWindowHidden();
@@ -1754,8 +1755,4 @@ namespace IngameDebugConsole
 			return newLogItem;
 		}
 	}
-
-	private void ClearEventSystemSelection() {
-            EventSystem.current.SetSelectedGameObject(null);
-        }
 }
