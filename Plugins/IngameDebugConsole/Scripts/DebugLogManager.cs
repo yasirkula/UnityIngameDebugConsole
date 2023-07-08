@@ -923,9 +923,9 @@ namespace IngameDebugConsole
 
 			isLogWindowVisible = false;
 
-			// Clear the currently selected object on the current EventSystem in order to avoid invoking UI elements through input.
-			if (EventSystem.current != null)
-				EventSystem.current.SetSelectedGameObject(null);
+			// Deselect the currently selected UI object (if any) when the log window is hidden to avoid edge cases: https://github.com/yasirkula/UnityIngameDebugConsole/pull/85
+			if( EventSystem.current != null )
+				EventSystem.current.SetSelectedGameObject( null );
 
 			if( OnLogWindowHidden != null )
 				OnLogWindowHidden();
