@@ -34,6 +34,14 @@ There are 5 ways to install this plugin:
 
 ## FAQ
 
+- **New Input System isn't supported on Unity 2019.2.5 or earlier**
+
+Add `ENABLE_INPUT_SYSTEM` compiler directive to **Player Settings/Scripting Define Symbols** (these symbols are platform specific, so if you change the active platform later, you'll have to add the compiler directive again).
+
+- **"Unity.InputSystem" assembly can't be resolved on Unity 2018.4 or earlier**
+
+Remove `Unity.InputSystem` assembly from **IngameDebugConsole.Runtime** Assembly Definition File's *Assembly Definition References* list.
+
 - **"Receive Logcat Logs In Android" isn't working, it says "java.lang.ClassNotFoundException: com.yasirkula.unity.DebugConsoleLogcatLogger" in Logcat**
 
 If you are sure that your plugin is up-to-date, then enable **Custom Proguard File** option from *Player Settings* and add the following line to that file: `-keep class com.yasirkula.unity.* { *; }`

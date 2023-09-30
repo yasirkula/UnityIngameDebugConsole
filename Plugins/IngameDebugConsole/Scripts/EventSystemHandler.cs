@@ -1,6 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem.UI;
+#endif
 
 namespace IngameDebugConsole
 {
@@ -12,6 +15,18 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private GameObject embeddedEventSystem;
 #pragma warning restore 0649
+
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+		private void Awake()
+		{
+			StandaloneInputModule legacyInputModule = embeddedEventSystem.GetComponent<StandaloneInputModule>();
+			if( legacyInputModule )
+			{
+				DestroyImmediate( legacyInputModule );
+				embeddedEventSystem.AddComponent<InputSystemUIInputModule>();
+			}
+		}
+#endif
 
 		private void OnEnable()
 		{
