@@ -199,13 +199,13 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private Sprite errorLog;
 
+		private Sprite[] logSpriteRepresentations;
+
 		// Visuals for resize button
 		[SerializeField]
 		private Sprite resizeIconAllDirections;
 		[SerializeField]
 		private Sprite resizeIconVerticalOnly;
-
-		private Dictionary<LogType, Sprite> logSpriteRepresentations;
 
 		[SerializeField]
 		private Color collapseButtonNormalColor;
@@ -436,14 +436,12 @@ namespace IngameDebugConsole
 			logItemsScrollRectOriginalSize = logItemsScrollRectTR.sizeDelta;
 
 			// Associate sprites with log types
-			logSpriteRepresentations = new Dictionary<LogType, Sprite>()
-			{
-				{ LogType.Log, infoLog },
-				{ LogType.Warning, warningLog },
-				{ LogType.Error, errorLog },
-				{ LogType.Exception, errorLog },
-				{ LogType.Assert, errorLog }
-			};
+			logSpriteRepresentations = new Sprite[5];
+			logSpriteRepresentations[(int) LogType.Log] = infoLog;
+			logSpriteRepresentations[(int) LogType.Warning] = warningLog;
+			logSpriteRepresentations[(int) LogType.Error] = errorLog;
+			logSpriteRepresentations[(int) LogType.Exception] = errorLog;
+			logSpriteRepresentations[(int) LogType.Assert] = errorLog;
 
 			// Initially, all log types are visible
 			filterInfoButton.color = filterButtonsSelectedColor;
@@ -1107,7 +1105,7 @@ namespace IngameDebugConsole
 			{
 				// It is not a duplicate,
 				// add it to the list of unique debug entries
-				logEntry.logTypeSpriteRepresentation = logSpriteRepresentations[logType];
+				logEntry.logTypeSpriteRepresentation = logSpriteRepresentations[(int) logType];
 
 				logEntryIndex = collapsedLogEntries.Count;
 				collapsedLogEntries.Add( logEntry );
