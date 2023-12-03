@@ -29,12 +29,8 @@ namespace IngameDebugConsole
 		private float logItemHeight, _1OverLogItemHeight;
 		private float viewportHeight;
 
-		// Unique debug entries
-		private List<DebugLogEntry> collapsedLogEntries = null;
-
-		// Indices of debug entries to show in collapsedLogEntries
-		private DebugLogIndexList<int> indicesOfEntriesToShow = null;
-		private DebugLogIndexList<DebugLogEntryTimestamp> timestampsOfEntriesToShow = null;
+		private List<DebugLogEntry> entriesToShow = null;
+		private List<DebugLogEntryTimestamp> timestampsOfEntriesToShow = null;
 
 		private int indexOfSelectedLogEntry = int.MaxValue;
 		private float positionOfSelectedLogEntry = float.MaxValue;
@@ -60,11 +56,10 @@ namespace IngameDebugConsole
 			viewportHeight = viewportTransform.rect.height;
 		}
 
-		public void Initialize( DebugLogManager manager, List<DebugLogEntry> collapsedLogEntries, DebugLogIndexList<int> indicesOfEntriesToShow, DebugLogIndexList<DebugLogEntryTimestamp> timestampsOfEntriesToShow, float logItemHeight )
+		public void Initialize( DebugLogManager manager, List<DebugLogEntry> entriesToShow, List<DebugLogEntryTimestamp> timestampsOfEntriesToShow, float logItemHeight )
 		{
 			this.manager = manager;
-			this.collapsedLogEntries = collapsedLogEntries;
-			this.indicesOfEntriesToShow = indicesOfEntriesToShow;
+			this.entriesToShow = entriesToShow;
 			this.timestampsOfEntriesToShow = timestampsOfEntriesToShow;
 			this.logItemHeight = logItemHeight;
 			_1OverLogItemHeight = 1f / logItemHeight;
@@ -100,27 +95,16 @@ namespace IngameDebugConsole
 
 		private void OnLogItemClickedInternal( int itemIndex, DebugLogItem referenceItem = null )
 		{
+			DeselectSelectedLogItem();
+
 			if( indexOfSelectedLogEntry != itemIndex )
 			{
-				DeselectSelectedLogItem();
-
-				if( !referenceItem )
-				{
-					if( currentTopIndex == -1 )
-						UpdateItemsInTheList( false ); // Try to generate some DebugLogItems, we need one DebugLogItem to calculate the text height
-
-					referenceItem = logItemsAtIndices[currentTopIndex];
-				}
-
 				indexOfSelectedLogEntry = itemIndex;
 				positionOfSelectedLogEntry = itemIndex * logItemHeight;
-				heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[itemIndex]], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[itemIndex] : (DebugLogEntryTimestamp?) null );
-				deltaHeightOfSelectedLogEntry = heightOfSelectedLogEntry - logItemHeight;
+				CalculateSelectedLogEntryHeight( referenceItem );
 
 				manager.SetSnapToBottom( false );
 			}
-			else
-				DeselectSelectedLogItem();
 
 			if( indexOfSelectedLogEntry >= currentTopIndex && indexOfSelectedLogEntry <= currentBottomIndex )
 				ColorLogItem( logItemsAtIndices[indexOfSelectedLogEntry], indexOfSelectedLogEntry );
@@ -174,21 +158,10 @@ namespace IngameDebugConsole
 		// Log window's width has changed, update the expanded (currently selected) log's height
 		public void OnViewportWidthChanged()
 		{
-			if( indexOfSelectedLogEntry >= indicesOfEntriesToShow.Count )
+			if( indexOfSelectedLogEntry >= entriesToShow.Count )
 				return;
 
-			if( currentTopIndex == -1 )
-			{
-				UpdateItemsInTheList( false ); // Try to generate some DebugLogItems, we need one DebugLogItem to calculate the text height
-				if( currentTopIndex == -1 ) // No DebugLogItems are generated, weird
-					return;
-			}
-
-			DebugLogItem referenceItem = logItemsAtIndices[currentTopIndex];
-
-			heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( collapsedLogEntries[indicesOfEntriesToShow[indexOfSelectedLogEntry]], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[indexOfSelectedLogEntry] : (DebugLogEntryTimestamp?) null );
-			deltaHeightOfSelectedLogEntry = heightOfSelectedLogEntry - logItemHeight;
-
+			CalculateSelectedLogEntryHeight();
 			CalculateContentHeight();
 
 			HardResetItems();
@@ -215,8 +188,26 @@ namespace IngameDebugConsole
 
 		private void CalculateContentHeight()
 		{
-			float newHeight = Mathf.Max( 1f, indicesOfEntriesToShow.Count * logItemHeight + deltaHeightOfSelectedLogEntry );
+			float newHeight = Mathf.Max( 1f, entriesToShow.Count * logItemHeight + deltaHeightOfSelectedLogEntry );
 			transformComponent.sizeDelta = new Vector2( 0f, newHeight );
+		}
+
+		private void CalculateSelectedLogEntryHeight( DebugLogItem referenceItem = null )
+		{
+			if( !referenceItem )
+			{
+				if( currentTopIndex == -1 )
+				{
+					UpdateItemsInTheList( false ); // Try to generate some DebugLogItems, we need one DebugLogItem to calculate the text height
+					if( currentTopIndex == -1 ) // No DebugLogItems are generated, weird
+						return;
+				}
+
+				referenceItem = logItemsAtIndices[currentTopIndex];
+			}
+
+			heightOfSelectedLogEntry = referenceItem.CalculateExpandedHeight( entriesToShow[indexOfSelectedLogEntry], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[indexOfSelectedLogEntry] : (DebugLogEntryTimestamp?) null );
+			deltaHeightOfSelectedLogEntry = heightOfSelectedLogEntry - logItemHeight;
 		}
 
 		// Calculate the indices of log entries to show
@@ -224,7 +215,7 @@ namespace IngameDebugConsole
 		public void UpdateItemsInTheList( bool updateAllVisibleItemContents )
 		{
 			// If there is at least one log entry to show
-			if( indicesOfEntriesToShow.Count > 0 )
+			if( entriesToShow.Count > 0 )
 			{
 				float contentPosTop = transformComponent.anchoredPosition.y - 1f;
 				float contentPosBottom = contentPosTop + viewportHeight + 2f;
@@ -256,8 +247,8 @@ namespace IngameDebugConsole
 				if( newTopIndex < 0 )
 					newTopIndex = 0;
 
-				if( newBottomIndex > indicesOfEntriesToShow.Count - 1 )
-					newBottomIndex = indicesOfEntriesToShow.Count - 1;
+				if( newBottomIndex > entriesToShow.Count - 1 )
+					newBottomIndex = entriesToShow.Count - 1;
 
 				if( currentTopIndex == -1 )
 				{
@@ -369,7 +360,7 @@ namespace IngameDebugConsole
 			for( int i = topIndex; i <= bottomIndex; i++ )
 			{
 				logItem = logItemsAtIndices[i];
-				logItem.SetContent( collapsedLogEntries[indicesOfEntriesToShow[i]], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[i] : (DebugLogEntryTimestamp?) null, i, i == indexOfSelectedLogEntry );
+				logItem.SetContent( entriesToShow[i], ( timestampsOfEntriesToShow != null ) ? timestampsOfEntriesToShow[i] : (DebugLogEntryTimestamp?) null, i, i == indexOfSelectedLogEntry );
 
 				if( isCollapseOn )
 					logItem.ShowCount();

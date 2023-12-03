@@ -326,16 +326,16 @@ namespace IngameDebugConsole
 		private List<DebugLogEntryTimestamp> collapsedLogEntriesTimestamps;
 
 		// Dictionary to quickly find if a log already exists in collapsedLogEntries
-		private Dictionary<DebugLogEntry, int> collapsedLogEntriesMap;
+		private Dictionary<DebugLogEntry, DebugLogEntry> collapsedLogEntriesMap;
 
 		// The order the collapsedLogEntries are received 
-		// (duplicate entries have the same index (value))
-		private DebugLogIndexList<int> uncollapsedLogEntriesIndices;
-		private DebugLogIndexList<DebugLogEntryTimestamp> uncollapsedLogEntriesTimestamps;
+		// (duplicate entries have the same value)
+		private List<DebugLogEntry> uncollapsedLogEntries;
+		private List<DebugLogEntryTimestamp> uncollapsedLogEntriesTimestamps;
 
 		// Filtered list of debug entries to show
-		private DebugLogIndexList<int> indicesOfListEntriesToShow;
-		private DebugLogIndexList<DebugLogEntryTimestamp> timestampsOfListEntriesToShow;
+		private List<DebugLogEntry> logEntriesToShow;
+		private List<DebugLogEntryTimestamp> timestampsOfLogEntriesToShow;
 
 		// The log entry that must be focused this frame
 		private int indexOfLogEntryToSelectAndFocus = -1;
@@ -451,19 +451,19 @@ namespace IngameDebugConsole
 			resizeButton.sprite = enableHorizontalResizing ? resizeIconAllDirections : resizeIconVerticalOnly;
 
 			collapsedLogEntries = new List<DebugLogEntry>( 128 );
-			collapsedLogEntriesMap = new Dictionary<DebugLogEntry, int>( 128 );
-			uncollapsedLogEntriesIndices = new DebugLogIndexList<int>();
-			indicesOfListEntriesToShow = new DebugLogIndexList<int>();
+			collapsedLogEntriesMap = new Dictionary<DebugLogEntry, DebugLogEntry>( 128, new DebugLogEntryContentEqualityComparer() );
+			uncollapsedLogEntries = new List<DebugLogEntry>( 256 );
+			logEntriesToShow = new List<DebugLogEntry>( 256 );
 
 			if( captureLogTimestamps )
 			{
 				collapsedLogEntriesTimestamps = new List<DebugLogEntryTimestamp>( 128 );
-				uncollapsedLogEntriesTimestamps = new DebugLogIndexList<DebugLogEntryTimestamp>();
-				timestampsOfListEntriesToShow = new DebugLogIndexList<DebugLogEntryTimestamp>();
+				uncollapsedLogEntriesTimestamps = new List<DebugLogEntryTimestamp>( 256 );
+				timestampsOfLogEntriesToShow = new List<DebugLogEntryTimestamp>( 256 );
 				queuedLogEntriesTimestamps = new DynamicCircularBuffer<DebugLogEntryTimestamp>( queuedLogEntries.Capacity );
 			}
 
-			recycledListView.Initialize( this, collapsedLogEntries, indicesOfListEntriesToShow, timestampsOfListEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
+			recycledListView.Initialize( this, logEntriesToShow, timestampsOfLogEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
 			recycledListView.UpdateItemsInTheList( true );
 
 			if( minimumWidth < 100f )
@@ -757,7 +757,7 @@ namespace IngameDebugConsole
 				// Automatically expand the target log (if any)
 				if( indexOfLogEntryToSelectAndFocus >= 0 )
 				{
-					if( indexOfLogEntryToSelectAndFocus < indicesOfListEntriesToShow.Count )
+					if( indexOfLogEntryToSelectAndFocus < logEntriesToShow.Count )
 						recycledListView.SelectAndFocusOnLogItemAtIndex( indexOfLogEntryToSelectAndFocus );
 
 					indexOfLogEntryToSelectAndFocus = -1;
@@ -1099,17 +1099,17 @@ namespace IngameDebugConsole
 			logEntry.Initialize( queuedLogEntry.logString, queuedLogEntry.stackTrace );
 
 			// Check if this entry is a duplicate (i.e. has been received before)
-			int logEntryIndex;
-			bool isEntryInCollapsedEntryList = collapsedLogEntriesMap.TryGetValue( logEntry, out logEntryIndex );
+			DebugLogEntry existingLogEntry;
+			bool isEntryInCollapsedEntryList = collapsedLogEntriesMap.TryGetValue( logEntry, out existingLogEntry );
 			if( !isEntryInCollapsedEntryList )
 			{
 				// It is not a duplicate,
 				// add it to the list of unique debug entries
 				logEntry.logTypeSpriteRepresentation = logSpriteRepresentations[(int) logType];
+				logEntry.collapsedIndex = collapsedLogEntries.Count;
 
-				logEntryIndex = collapsedLogEntries.Count;
 				collapsedLogEntries.Add( logEntry );
-				collapsedLogEntriesMap[logEntry] = logEntryIndex;
+				collapsedLogEntriesMap[logEntry] = logEntry;
 
 				if( collapsedLogEntriesTimestamps != null )
 					collapsedLogEntriesTimestamps.Add( timestamp );
@@ -1120,18 +1120,15 @@ namespace IngameDebugConsole
 				// increment the original debug item's collapsed count
 				pooledLogEntries.Add( logEntry );
 
-				logEntry = collapsedLogEntries[logEntryIndex];
+				logEntry = existingLogEntry;
 				logEntry.count++;
 
 				if( collapsedLogEntriesTimestamps != null )
-					collapsedLogEntriesTimestamps[logEntryIndex] = timestamp;
+					collapsedLogEntriesTimestamps[logEntry.collapsedIndex] = timestamp;
 			}
 
-			// Add the index of the unique debug entry to the list
-			// that stores the order the debug entries are received
-			uncollapsedLogEntriesIndices.Add( logEntryIndex );
+			uncollapsedLogEntries.Add( logEntry );
 
-			// Record log's timestamp if desired
 			if( uncollapsedLogEntriesTimestamps != null )
 				uncollapsedLogEntriesTimestamps.Add( timestamp );
 
@@ -1141,17 +1138,17 @@ namespace IngameDebugConsole
 			Sprite logTypeSpriteRepresentation = logEntry.logTypeSpriteRepresentation;
 			if( isCollapseOn && isEntryInCollapsedEntryList )
 			{
-				if( isLogWindowVisible || timestampsOfListEntriesToShow != null )
+				if( isLogWindowVisible || timestampsOfLogEntriesToShow != null )
 				{
 					if( !isInSearchMode && logFilter == DebugLogFilter.All )
-						logEntryIndexInEntriesToShow = logEntryIndex;
+						logEntryIndexInEntriesToShow = logEntry.collapsedIndex;
 					else
-						logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.IndexOf( logEntryIndex );
+						logEntryIndexInEntriesToShow = logEntriesToShow.IndexOf( logEntry );
 
 					if( logEntryIndexInEntriesToShow >= 0 )
 					{
-						if( timestampsOfListEntriesToShow != null )
-							timestampsOfListEntriesToShow[logEntryIndexInEntriesToShow] = timestamp;
+						if( timestampsOfLogEntriesToShow != null )
+							timestampsOfLogEntriesToShow[logEntryIndexInEntriesToShow] = timestamp;
 
 						if( isLogWindowVisible )
 							recycledListView.OnCollapsedLogEntryAtIndexUpdated( logEntryIndexInEntriesToShow );
@@ -1163,11 +1160,11 @@ namespace IngameDebugConsole
 			   ( logTypeSpriteRepresentation == warningLog && ( ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning ) ) ||
 			   ( logTypeSpriteRepresentation == errorLog && ( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) ) ) )
 			{
-				indicesOfListEntriesToShow.Add( logEntryIndex );
-				logEntryIndexInEntriesToShow = indicesOfListEntriesToShow.Count - 1;
+				logEntriesToShow.Add( logEntry );
+				logEntryIndexInEntriesToShow = logEntriesToShow.Count - 1;
 
-				if( timestampsOfListEntriesToShow != null )
-					timestampsOfListEntriesToShow.Add( timestamp );
+				if( timestampsOfLogEntriesToShow != null )
+					timestampsOfLogEntriesToShow.Add( timestamp );
 
 				shouldUpdateRecycledListView = true;
 			}
@@ -1227,14 +1224,14 @@ namespace IngameDebugConsole
 
 			collapsedLogEntries.Clear();
 			collapsedLogEntriesMap.Clear();
-			uncollapsedLogEntriesIndices.Clear();
-			indicesOfListEntriesToShow.Clear();
+			uncollapsedLogEntries.Clear();
+			logEntriesToShow.Clear();
 
 			if( collapsedLogEntriesTimestamps != null )
 			{
 				collapsedLogEntriesTimestamps.Clear();
 				uncollapsedLogEntriesTimestamps.Clear();
-				timestampsOfListEntriesToShow.Clear();
+				timestampsOfLogEntriesToShow.Clear();
 			}
 
 			recycledListView.DeselectSelectedLogItem();
@@ -1488,67 +1485,35 @@ namespace IngameDebugConsole
 		// Determine the filtered list of debug entries to show on screen
 		private void FilterLogs()
 		{
-			indicesOfListEntriesToShow.Clear();
+			logEntriesToShow.Clear();
 
-			if( timestampsOfListEntriesToShow != null )
-				timestampsOfListEntriesToShow.Clear();
+			if( timestampsOfLogEntriesToShow != null )
+				timestampsOfLogEntriesToShow.Clear();
 
 			if( logFilter != DebugLogFilter.None )
 			{
+				List<DebugLogEntry> targetLogEntries = isCollapseOn ? collapsedLogEntries : uncollapsedLogEntries;
+				List<DebugLogEntryTimestamp> targetLogEntriesTimestamps = isCollapseOn ? collapsedLogEntriesTimestamps : uncollapsedLogEntriesTimestamps;
+
 				if( logFilter == DebugLogFilter.All )
 				{
-					if( isCollapseOn )
+					if( !isInSearchMode )
 					{
-						if( !isInSearchMode )
-						{
-							// All the unique debug entries will be listed just once.
-							// So, list of debug entries to show is the same as the
-							// order these unique debug entries are added to collapsedLogEntries
-							for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
-							{
-								indicesOfListEntriesToShow.Add( i );
+						logEntriesToShow.AddRange( targetLogEntries );
 
-								if( timestampsOfListEntriesToShow != null )
-									timestampsOfListEntriesToShow.Add( collapsedLogEntriesTimestamps[i] );
-							}
-						}
-						else
-						{
-							for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
-							{
-								if( collapsedLogEntries[i].MatchesSearchTerm( searchTerm ) )
-								{
-									indicesOfListEntriesToShow.Add( i );
-
-									if( timestampsOfListEntriesToShow != null )
-										timestampsOfListEntriesToShow.Add( collapsedLogEntriesTimestamps[i] );
-								}
-							}
-						}
+						if( timestampsOfLogEntriesToShow != null )
+							timestampsOfLogEntriesToShow.AddRange( targetLogEntriesTimestamps );
 					}
 					else
 					{
-						if( !isInSearchMode )
+						for( int i = 0, count = targetLogEntries.Count; i < count; i++ )
 						{
-							for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
+							if( targetLogEntries[i].MatchesSearchTerm( searchTerm ) )
 							{
-								indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+								logEntriesToShow.Add( targetLogEntries[i] );
 
-								if( timestampsOfListEntriesToShow != null )
-									timestampsOfListEntriesToShow.Add( uncollapsedLogEntriesTimestamps[i] );
-							}
-						}
-						else
-						{
-							for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
-							{
-								if( collapsedLogEntries[uncollapsedLogEntriesIndices[i]].MatchesSearchTerm( searchTerm ) )
-								{
-									indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
-
-									if( timestampsOfListEntriesToShow != null )
-										timestampsOfListEntriesToShow.Add( uncollapsedLogEntriesTimestamps[i] );
-								}
+								if( timestampsOfLogEntriesToShow != null )
+									timestampsOfLogEntriesToShow.Add( targetLogEntriesTimestamps[i] );
 							}
 						}
 					}
@@ -1560,68 +1525,33 @@ namespace IngameDebugConsole
 					bool isWarningEnabled = ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning;
 					bool isErrorEnabled = ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error;
 
-					if( isCollapseOn )
+					for( int i = 0, count = targetLogEntries.Count; i < count; i++ )
 					{
-						for( int i = 0, count = collapsedLogEntries.Count; i < count; i++ )
+						DebugLogEntry logEntry = targetLogEntries[i];
+
+						if( isInSearchMode && !logEntry.MatchesSearchTerm( searchTerm ) )
+							continue;
+
+						bool shouldShowLog = false;
+						if( logEntry.logTypeSpriteRepresentation == infoLog )
 						{
-							DebugLogEntry logEntry = collapsedLogEntries[i];
-
-							if( isInSearchMode && !logEntry.MatchesSearchTerm( searchTerm ) )
-								continue;
-
-							bool shouldShowLog = false;
-							if( logEntry.logTypeSpriteRepresentation == infoLog )
-							{
-								if( isInfoEnabled )
-									shouldShowLog = true;
-							}
-							else if( logEntry.logTypeSpriteRepresentation == warningLog )
-							{
-								if( isWarningEnabled )
-									shouldShowLog = true;
-							}
-							else if( isErrorEnabled )
+							if( isInfoEnabled )
 								shouldShowLog = true;
-
-							if( shouldShowLog )
-							{
-								indicesOfListEntriesToShow.Add( i );
-
-								if( timestampsOfListEntriesToShow != null )
-									timestampsOfListEntriesToShow.Add( collapsedLogEntriesTimestamps[i] );
-							}
 						}
-					}
-					else
-					{
-						for( int i = 0, count = uncollapsedLogEntriesIndices.Count; i < count; i++ )
+						else if( logEntry.logTypeSpriteRepresentation == warningLog )
 						{
-							DebugLogEntry logEntry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
-
-							if( isInSearchMode && !logEntry.MatchesSearchTerm( searchTerm ) )
-								continue;
-
-							bool shouldShowLog = false;
-							if( logEntry.logTypeSpriteRepresentation == infoLog )
-							{
-								if( isInfoEnabled )
-									shouldShowLog = true;
-							}
-							else if( logEntry.logTypeSpriteRepresentation == warningLog )
-							{
-								if( isWarningEnabled )
-									shouldShowLog = true;
-							}
-							else if( isErrorEnabled )
+							if( isWarningEnabled )
 								shouldShowLog = true;
+						}
+						else if( isErrorEnabled )
+							shouldShowLog = true;
 
-							if( shouldShowLog )
-							{
-								indicesOfListEntriesToShow.Add( uncollapsedLogEntriesIndices[i] );
+						if( shouldShowLog )
+						{
+							logEntriesToShow.Add( logEntry );
 
-								if( timestampsOfListEntriesToShow != null )
-									timestampsOfListEntriesToShow.Add( uncollapsedLogEntriesTimestamps[i] );
-							}
+							if( timestampsOfLogEntriesToShow != null )
+								timestampsOfLogEntriesToShow.Add( targetLogEntriesTimestamps[i] );
 						}
 					}
 				}
@@ -1639,12 +1569,12 @@ namespace IngameDebugConsole
 			// Process all pending logs since we want to return "all" logs
 			ProcessQueuedLogs( queuedLogEntries.Count );
 
-			int count = uncollapsedLogEntriesIndices.Count;
+			int count = uncollapsedLogEntries.Count;
 			int length = 0;
 			int newLineLength = System.Environment.NewLine.Length;
 			for( int i = 0; i < count; i++ )
 			{
-				DebugLogEntry entry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
+				DebugLogEntry entry = uncollapsedLogEntries[i];
 				length += entry.logString.Length + entry.stackTrace.Length + newLineLength * 3;
 			}
 
@@ -1656,7 +1586,7 @@ namespace IngameDebugConsole
 			StringBuilder sb = new StringBuilder( length );
 			for( int i = 0; i < count; i++ )
 			{
-				DebugLogEntry entry = collapsedLogEntries[uncollapsedLogEntriesIndices[i]];
+				DebugLogEntry entry = uncollapsedLogEntries[i];
 
 				if( uncollapsedLogEntriesTimestamps != null )
 				{

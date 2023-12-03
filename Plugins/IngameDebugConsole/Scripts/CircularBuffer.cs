@@ -1,6 +1,4 @@
-﻿// #define RESET_REMOVED_ELEMENTS
-
-namespace IngameDebugConsole
+﻿namespace IngameDebugConsole
 {
 	public class CircularBuffer<T>
 	{
@@ -65,9 +63,7 @@ namespace IngameDebugConsole
 						for( int i = 0; i < startIndex; i++ )
 						{
 							arr[i + prevSize] = arr[i];
-#if RESET_REMOVED_ELEMENTS
 							arr[i] = default( T );
-#endif
 						}
 					}
 					else
@@ -77,9 +73,7 @@ namespace IngameDebugConsole
 						for( int i = prevSize - 1; i >= startIndex; i-- )
 						{
 							arr[i + delta] = arr[i];
-#if RESET_REMOVED_ELEMENTS
 							arr[i] = default( T );
-#endif
 						}
 
 						startIndex += delta;
@@ -93,9 +87,7 @@ namespace IngameDebugConsole
 		public T RemoveFirst()
 		{
 			T element = arr[startIndex];
-#if RESET_REMOVED_ELEMENTS
 			arr[startIndex] = default( T );
-#endif
 
 			if( ++startIndex >= arr.Length )
 				startIndex = 0;
@@ -108,9 +100,7 @@ namespace IngameDebugConsole
 		{
 			int index = ( startIndex + Count - 1 ) % arr.Length;
 			T element = arr[index];
-#if RESET_REMOVED_ELEMENTS
 			arr[index] = default( T );
-#endif
 
 			Count--;
 			return element;
