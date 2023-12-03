@@ -25,6 +25,8 @@ namespace IngameDebugConsole
 		private SerializedProperty receiveExceptionLogs;
 		private SerializedProperty captureLogTimestamps;
 		private SerializedProperty alwaysDisplayTimestamps;
+		private SerializedProperty maxLogCount;
+		private SerializedProperty logsToRemoveAfterMaxLogCount;
 		private SerializedProperty queuedLogLimit;
 		private SerializedProperty clearCommandAfterExecution;
 		private SerializedProperty commandHistorySize;
@@ -66,6 +68,8 @@ namespace IngameDebugConsole
 			receiveExceptionLogs = serializedObject.FindProperty( "receiveExceptionLogs" );
 			captureLogTimestamps = serializedObject.FindProperty( "captureLogTimestamps" );
 			alwaysDisplayTimestamps = serializedObject.FindProperty( "alwaysDisplayTimestamps" );
+			maxLogCount = serializedObject.FindProperty( "maxLogCount" );
+			logsToRemoveAfterMaxLogCount = serializedObject.FindProperty( "logsToRemoveAfterMaxLogCount" );
 			queuedLogLimit = serializedObject.FindProperty( "queuedLogLimit" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
 			commandHistorySize = serializedObject.FindProperty( "commandHistorySize" );
@@ -134,6 +138,9 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( captureLogTimestamps );
 			if( captureLogTimestamps.boolValue )
 				DrawSubProperty( alwaysDisplayTimestamps );
+
+			EditorGUILayout.PropertyField( maxLogCount );
+			DrawSubProperty( logsToRemoveAfterMaxLogCount );
 
 			EditorGUILayout.PropertyField( queuedLogLimit );
 

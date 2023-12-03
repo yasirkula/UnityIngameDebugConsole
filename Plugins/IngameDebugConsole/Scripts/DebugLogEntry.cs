@@ -12,7 +12,6 @@ namespace IngameDebugConsole
 
 		public string logString;
 		public string stackTrace;
-
 		private string completeLog;
 
 		// Sprite to show with this entry
@@ -34,6 +33,13 @@ namespace IngameDebugConsole
 			completeLog = null;
 			count = 1;
 			hashValue = HASH_NOT_CALCULATED;
+		}
+
+		public void Clear()
+		{
+			logString = null;
+			stackTrace = null;
+			completeLog = null;
 		}
 
 		// Checks if logString or stackTrace contains the search term

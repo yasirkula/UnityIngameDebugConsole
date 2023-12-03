@@ -16,45 +16,32 @@ namespace IngameDebugConsole
 
 		public void OnScroll( PointerEventData data )
 		{
-			if( IsScrollbarAtBottom() )
-				debugLogManager.SetSnapToBottom( true );
-			else
-				debugLogManager.SetSnapToBottom( false );
+			debugLogManager.SnapToBottom = IsScrollbarAtBottom();
 		}
 
 		public void OnBeginDrag( PointerEventData data )
 		{
-			debugLogManager.SetSnapToBottom( false );
+			debugLogManager.SnapToBottom = false;
 		}
 
 		public void OnEndDrag( PointerEventData data )
 		{
-			if( IsScrollbarAtBottom() )
-				debugLogManager.SetSnapToBottom( true );
-			else
-				debugLogManager.SetSnapToBottom( false );
+			debugLogManager.SnapToBottom = IsScrollbarAtBottom();
 		}
 
 		public void OnScrollbarDragStart( BaseEventData data )
 		{
-			debugLogManager.SetSnapToBottom( false );
+			debugLogManager.SnapToBottom = false;
 		}
 
 		public void OnScrollbarDragEnd( BaseEventData data )
 		{
-			if( IsScrollbarAtBottom() )
-				debugLogManager.SetSnapToBottom( true );
-			else
-				debugLogManager.SetSnapToBottom( false );
+			debugLogManager.SnapToBottom = IsScrollbarAtBottom();
 		}
 
 		private bool IsScrollbarAtBottom()
 		{
-			float scrollbarYPos = debugsScrollRect.verticalNormalizedPosition;
-			if( scrollbarYPos <= 1E-6f )
-				return true;
-
-			return false;
+			return debugsScrollRect.verticalNormalizedPosition <= 1E-6f;
 		}
 	}
 }

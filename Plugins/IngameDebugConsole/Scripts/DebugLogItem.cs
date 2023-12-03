@@ -87,8 +87,7 @@ namespace IngameDebugConsole
 		public DebugLogEntryTimestamp? Timestamp { get { return logEntryTimestamp; } }
 
 		// Index of the entry in the list of entries
-		private int entryIndex;
-		public int Index { get { return entryIndex; } }
+		[System.NonSerialized] public int Index;
 
 		private bool isExpanded;
 		public bool Expanded { get { return isExpanded; } }
@@ -116,7 +115,7 @@ namespace IngameDebugConsole
 		{
 			this.logEntry = logEntry;
 			this.logEntryTimestamp = logEntryTimestamp;
-			this.entryIndex = entryIndex;
+			this.Index = entryIndex;
 			this.isExpanded = isExpanded;
 
 			Vector2 size = transformComponent.sizeDelta;

@@ -127,6 +127,16 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
+		[Tooltip( "If the number of logs reach this limit, the oldest log(s) will be deleted to limit the RAM usage. It's recommended to set this value as low as possible" )]
+		private int maxLogCount = int.MaxValue;
+
+		[SerializeField]
+		[HideInInspector]
+		[Tooltip( "How many log(s) to delete when the threshold is reached (all logs are iterated during this operation so it should neither be too low nor too high)" )]
+		private int logsToRemoveAfterMaxLogCount = 16;
+
+		[SerializeField]
+		[HideInInspector]
 		[Tooltip( "While the console window is hidden, incoming logs will be queued but not immediately processed until the console window is opened (to avoid wasting CPU resources). When the log queue exceeds this limit, the first logs in the queue will be processed to enforce this limit. Processed logs won't increase RAM usage if they've been seen before (i.e. collapsible logs) but this is not the case for queued logs, so if a log is spammed every frame, it will fill the whole queue in an instant. Which is why there is a queue limit" )]
 		private int queuedLogLimit = 256;
 
@@ -319,29 +329,30 @@ namespace IngameDebugConsole
 
 		// If the last log item is completely visible (scrollbar is at the bottom),
 		// scrollbar will remain at the bottom when new debug entries are received
-		private bool snapToBottom = true;
+		[System.NonSerialized]
+		public bool SnapToBottom = true;
 
 		// List of unique debug entries (duplicates of entries are not kept)
-		private List<DebugLogEntry> collapsedLogEntries;
-		private List<DebugLogEntryTimestamp> collapsedLogEntriesTimestamps;
+		private DynamicCircularBuffer<DebugLogEntry> collapsedLogEntries;
+		private DynamicCircularBuffer<DebugLogEntryTimestamp> collapsedLogEntriesTimestamps;
 
 		// Dictionary to quickly find if a log already exists in collapsedLogEntries
 		private Dictionary<DebugLogEntry, DebugLogEntry> collapsedLogEntriesMap;
 
 		// The order the collapsedLogEntries are received 
 		// (duplicate entries have the same value)
-		private List<DebugLogEntry> uncollapsedLogEntries;
-		private List<DebugLogEntryTimestamp> uncollapsedLogEntriesTimestamps;
+		private DynamicCircularBuffer<DebugLogEntry> uncollapsedLogEntries;
+		private DynamicCircularBuffer<DebugLogEntryTimestamp> uncollapsedLogEntriesTimestamps;
 
 		// Filtered list of debug entries to show
-		private List<DebugLogEntry> logEntriesToShow;
-		private List<DebugLogEntryTimestamp> timestampsOfLogEntriesToShow;
+		private DynamicCircularBuffer<DebugLogEntry> logEntriesToShow;
+		private DynamicCircularBuffer<DebugLogEntryTimestamp> timestampsOfLogEntriesToShow;
 
 		// The log entry that must be focused this frame
 		private int indexOfLogEntryToSelectAndFocus = -1;
 
 		// Whether or not logs list view should be updated this frame
-		private bool shouldUpdateRecycledListView = false;
+		private bool shouldUpdateRecycledListView = true;
 
 		// Logs that should be registered in Update-loop
 		private DynamicCircularBuffer<QueuedDebugLogEntry> queuedLogEntries;
@@ -365,8 +376,12 @@ namespace IngameDebugConsole
 		private bool commandInputFieldAutoCompletedNow;
 
 		// Pools for memory efficiency
-		private List<DebugLogEntry> pooledLogEntries;
-		private List<DebugLogItem> pooledLogItems;
+		private Stack<DebugLogEntry> pooledLogEntries;
+		private Stack<DebugLogItem> pooledLogItems;
+
+		/// Variables used by <see cref="RemoveOldestLogs"/>
+		private bool anyCollapsedLogRemoved;
+		private int removedLogEntriesToShowCount;
 
 		// History of the previously entered commands
 		private CircularBuffer<string> commandHistory;
@@ -391,6 +406,12 @@ namespace IngameDebugConsole
 
 		// Required in ValidateScrollPosition() function
 		private PointerEventData nullPointerEventData;
+
+		private System.Action<DebugLogEntry> poolLogEntryAction;
+		private System.Action<DebugLogEntry> removeUncollapsedLogEntryAction;
+		private System.Predicate<DebugLogEntry> shouldRemoveCollapsedLogEntryPredicate;
+		private System.Predicate<DebugLogEntry> shouldRemoveLogEntryToShowPredicate;
+		private System.Action<DebugLogEntry, int> updateLogEntryCollapsedIndexAction;
 
 		// Callbacks for log window show/hide events
 		public System.Action OnLogWindowShown, OnLogWindowHidden;
@@ -420,8 +441,8 @@ namespace IngameDebugConsole
 				return;
 			}
 
-			pooledLogEntries = new List<DebugLogEntry>( 16 );
-			pooledLogItems = new List<DebugLogItem>( 16 );
+			pooledLogEntries = new Stack<DebugLogEntry>( 64 );
+			pooledLogItems = new Stack<DebugLogItem>( 16 );
 			commandSuggestionInstances = new List<Text>( 8 );
 			matchingCommandSuggestions = new List<ConsoleMethodInfo>( 8 );
 			commandCaretIndexIncrements = new List<int>( 8 );
@@ -450,21 +471,20 @@ namespace IngameDebugConsole
 
 			resizeButton.sprite = enableHorizontalResizing ? resizeIconAllDirections : resizeIconVerticalOnly;
 
-			collapsedLogEntries = new List<DebugLogEntry>( 128 );
+			collapsedLogEntries = new DynamicCircularBuffer<DebugLogEntry>( 128 );
 			collapsedLogEntriesMap = new Dictionary<DebugLogEntry, DebugLogEntry>( 128, new DebugLogEntryContentEqualityComparer() );
-			uncollapsedLogEntries = new List<DebugLogEntry>( 256 );
-			logEntriesToShow = new List<DebugLogEntry>( 256 );
+			uncollapsedLogEntries = new DynamicCircularBuffer<DebugLogEntry>( 256 );
+			logEntriesToShow = new DynamicCircularBuffer<DebugLogEntry>( 256 );
 
 			if( captureLogTimestamps )
 			{
-				collapsedLogEntriesTimestamps = new List<DebugLogEntryTimestamp>( 128 );
-				uncollapsedLogEntriesTimestamps = new List<DebugLogEntryTimestamp>( 256 );
-				timestampsOfLogEntriesToShow = new List<DebugLogEntryTimestamp>( 256 );
+				collapsedLogEntriesTimestamps = new DynamicCircularBuffer<DebugLogEntryTimestamp>( 128 );
+				uncollapsedLogEntriesTimestamps = new DynamicCircularBuffer<DebugLogEntryTimestamp>( 256 );
+				timestampsOfLogEntriesToShow = new DynamicCircularBuffer<DebugLogEntryTimestamp>( 256 );
 				queuedLogEntriesTimestamps = new DynamicCircularBuffer<DebugLogEntryTimestamp>( queuedLogEntries.Capacity );
 			}
 
 			recycledListView.Initialize( this, logEntriesToShow, timestampsOfLogEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
-			recycledListView.UpdateItemsInTheList( true );
 
 			if( minimumWidth < 100f )
 				minimumWidth = 100f;
@@ -507,11 +527,17 @@ namespace IngameDebugConsole
 			filterInfoButton.GetComponent<Button>().onClick.AddListener( FilterLogButtonPressed );
 			filterWarningButton.GetComponent<Button>().onClick.AddListener( FilterWarningButtonPressed );
 			filterErrorButton.GetComponent<Button>().onClick.AddListener( FilterErrorButtonPressed );
-			snapToBottomButton.GetComponent<Button>().onClick.AddListener( () => SetSnapToBottom( true ) );
+			snapToBottomButton.GetComponent<Button>().onClick.AddListener( () => SnapToBottom = true );
 
 			localTimeUtcOffset = System.DateTime.Now - System.DateTime.UtcNow;
 			dummyLogEntryTimestamp = new DebugLogEntryTimestamp();
 			nullPointerEventData = new PointerEventData( null );
+
+			poolLogEntryAction = PoolLogEntry;
+			removeUncollapsedLogEntryAction = RemoveUncollapsedLogEntry;
+			shouldRemoveCollapsedLogEntryPredicate = ShouldRemoveCollapsedLogEntry;
+			shouldRemoveLogEntryToShowPredicate = ShouldRemoveLogEntryToShow;
+			updateLogEntryCollapsedIndexAction = UpdateLogEntryCollapsedIndex;
 
 			if( receiveLogsWhileInactive )
 			{
@@ -612,6 +638,9 @@ namespace IngameDebugConsole
 
 		private void OnDestroy()
 		{
+			if( Instance == this )
+				Instance = null;
+
 			if( receiveLogsWhileInactive )
 				Application.logMessageReceivedThreaded -= ReceivedLog;
 
@@ -623,6 +652,8 @@ namespace IngameDebugConsole
 #if UNITY_EDITOR
 		private void OnValidate()
 		{
+			maxLogCount = Mathf.Max( 2, maxLogCount );
+			logsToRemoveAfterMaxLogCount = Mathf.Max( 1, logsToRemoveAfterMaxLogCount );
 			queuedLogLimit = Mathf.Max( 0, queuedLogLimit );
 
 			if( UnityEditor.EditorApplication.isPlaying )
@@ -697,6 +728,13 @@ namespace IngameDebugConsole
 			int numberOfLogsToProcess = isLogWindowVisible ? queuedLogEntries.Count : ( queuedLogEntries.Count - queuedLogLimit );
 			ProcessQueuedLogs( numberOfLogsToProcess );
 
+			if( uncollapsedLogEntries.Count >= maxLogCount )
+			{
+				/// If log window isn't visible, remove the logs over time (i.e. don't remove more than <see cref="logsToRemoveAfterMaxLogCount"/>) to avoid performance issues.
+				int numberOfLogsToRemove = Mathf.Min( !isLogWindowVisible ? logsToRemoveAfterMaxLogCount : ( uncollapsedLogEntries.Count - maxLogCount + logsToRemoveAfterMaxLogCount ), uncollapsedLogEntries.Count );
+				RemoveOldestLogs( numberOfLogsToRemove );
+			}
+
 			// Don't perform CPU heavy tasks if neither the log window nor the popup is visible
 			if( !isLogWindowVisible && !PopupEnabled )
 				return;
@@ -749,10 +787,7 @@ namespace IngameDebugConsole
 			{
 				// Update visible logs if necessary
 				if( shouldUpdateRecycledListView )
-				{
-					recycledListView.OnLogEntriesUpdated( false );
-					shouldUpdateRecycledListView = false;
-				}
+					OnLogEntriesUpdated( false, false );
 
 				// Automatically expand the target log (if any)
 				if( indexOfLogEntryToSelectAndFocus >= 0 )
@@ -761,6 +796,15 @@ namespace IngameDebugConsole
 						recycledListView.SelectAndFocusOnLogItemAtIndex( indexOfLogEntryToSelectAndFocus );
 
 					indexOfLogEntryToSelectAndFocus = -1;
+				}
+
+				if( entryCountTextsDirty )
+				{
+					infoEntryCountText.text = infoEntryCount.ToString();
+					warningEntryCountText.text = warningEntryCount.ToString();
+					errorEntryCountText.text = errorEntryCount.ToString();
+
+					entryCountTextsDirty = false;
 				}
 
 				float logWindowWidth = logWindowTR.rect.width;
@@ -800,8 +844,8 @@ namespace IngameDebugConsole
 					recycledListView.OnViewportWidthChanged();
 				}
 
-				// If snapToBottom is enabled, force the scrollbar to the bottom
-				if( snapToBottom )
+				// If SnapToBottom is enabled, force the scrollbar to the bottom
+				if( SnapToBottom )
 				{
 					logItemsScrollRect.verticalNormalizedPosition = 0f;
 
@@ -885,22 +929,13 @@ namespace IngameDebugConsole
 
 			// Update the recycled list view 
 			// (in case new entries were intercepted while log window was hidden)
-			recycledListView.OnLogEntriesUpdated( true );
+			OnLogEntriesUpdated( true, true );
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
 			// Focus on the command input field on standalone platforms when the console is opened
 			if( autoFocusOnCommandInputField )
 				StartCoroutine( ActivateCommandInputFieldCoroutine() );
 #endif
-
-			if( entryCountTextsDirty )
-			{
-				infoEntryCountText.text = infoEntryCount.ToString();
-				warningEntryCountText.text = warningEntryCount.ToString();
-				errorEntryCountText.text = errorEntryCount.ToString();
-
-				entryCountTextsDirty = false;
-			}
 
 			isLogWindowVisible = true;
 
@@ -967,7 +1002,7 @@ namespace IngameDebugConsole
 					DebugLogConsole.ExecuteCommand( text );
 
 					// Snap to bottom and select the latest entry
-					SetSnapToBottom( true );
+					SnapToBottom = true;
 				}
 
 				return '\0';
@@ -1052,6 +1087,22 @@ namespace IngameDebugConsole
 
 			lock( logEntriesLock )
 			{
+				/// Enforce <see cref="maxLogCount"/> in queued logs, as well. That's because when it's exceeded, the oldest queued logs will
+				/// be removed by <see cref="RemoveOldestLogs"/> immediately after they're processed anyways (i.e. waste of CPU and RAM).
+				if( queuedLogEntries.Count + 1 >= maxLogCount )
+				{
+					LogType removedLogType = queuedLogEntries.RemoveFirst().logType;
+					if( removedLogType == LogType.Log )
+						newInfoEntryCount--;
+					else if( removedLogType == LogType.Warning )
+						newWarningEntryCount--;
+					else
+						newErrorEntryCount--;
+
+					if( queuedLogEntriesTimestamps != null )
+						queuedLogEntriesTimestamps.RemoveFirst();
+				}
+
 				queuedLogEntries.Add( queuedLogEntry );
 
 				if( queuedLogEntriesTimestamps != null )
@@ -1089,10 +1140,7 @@ namespace IngameDebugConsole
 			LogType logType = queuedLogEntry.logType;
 			DebugLogEntry logEntry;
 			if( pooledLogEntries.Count > 0 )
-			{
-				logEntry = pooledLogEntries[pooledLogEntries.Count - 1];
-				pooledLogEntries.RemoveAt( pooledLogEntries.Count - 1 );
-			}
+				logEntry = pooledLogEntries.Pop();
 			else
 				logEntry = new DebugLogEntry();
 
@@ -1118,7 +1166,7 @@ namespace IngameDebugConsole
 			{
 				// It is a duplicate, pool the duplicate log entry and
 				// increment the original debug item's collapsed count
-				pooledLogEntries.Add( logEntry );
+				PoolLogEntry( logEntry );
 
 				logEntry = existingLogEntry;
 				logEntry.count++;
@@ -1174,10 +1222,119 @@ namespace IngameDebugConsole
 				indexOfLogEntryToSelectAndFocus = logEntryIndexInEntriesToShow;
 		}
 
-		// Value of snapToBottom is changed (user scrolled the list manually)
-		public void SetSnapToBottom( bool snapToBottom )
+		private void RemoveOldestLogs( int numberOfLogsToRemove )
 		{
-			this.snapToBottom = snapToBottom;
+			if( numberOfLogsToRemove <= 0 )
+				return;
+
+			DebugLogEntry logEntryToSelectAndFocus = ( indexOfLogEntryToSelectAndFocus >= 0 && indexOfLogEntryToSelectAndFocus < logEntriesToShow.Count ) ? logEntriesToShow[indexOfLogEntryToSelectAndFocus] : null;
+
+			anyCollapsedLogRemoved = false;
+			removedLogEntriesToShowCount = 0;
+
+			uncollapsedLogEntries.TrimStart( numberOfLogsToRemove, removeUncollapsedLogEntryAction );
+
+			if( uncollapsedLogEntriesTimestamps != null )
+				uncollapsedLogEntriesTimestamps.TrimStart( numberOfLogsToRemove );
+
+			if( removedLogEntriesToShowCount > 0 )
+			{
+				logEntriesToShow.TrimStart( removedLogEntriesToShowCount );
+
+				if( timestampsOfLogEntriesToShow != null )
+					timestampsOfLogEntriesToShow.TrimStart( removedLogEntriesToShowCount );
+			}
+
+			if( anyCollapsedLogRemoved )
+			{
+				collapsedLogEntries.RemoveAll( shouldRemoveCollapsedLogEntryPredicate, updateLogEntryCollapsedIndexAction, collapsedLogEntriesTimestamps );
+
+				if( isCollapseOn )
+					removedLogEntriesToShowCount = logEntriesToShow.RemoveAll( shouldRemoveLogEntryToShowPredicate, null, timestampsOfLogEntriesToShow );
+			}
+
+			if( removedLogEntriesToShowCount > 0 )
+			{
+				if( logEntryToSelectAndFocus == null || logEntryToSelectAndFocus.count == 0 )
+					indexOfLogEntryToSelectAndFocus = -1;
+				else
+				{
+					for( int i = Mathf.Min( indexOfLogEntryToSelectAndFocus, logEntriesToShow.Count - 1 ); i >= 0; i-- )
+					{
+						if( logEntriesToShow[i] == logEntryToSelectAndFocus )
+						{
+							indexOfLogEntryToSelectAndFocus = i;
+							break;
+						}
+					}
+				}
+
+				recycledListView.OnLogEntriesRemoved( removedLogEntriesToShowCount );
+
+				if( isLogWindowVisible )
+					OnLogEntriesUpdated( false, true );
+			}
+			else if( isLogWindowVisible && isCollapseOn )
+				recycledListView.RefreshCollapsedLogEntryCounts();
+
+			entryCountTextsDirty = true;
+		}
+
+		private void RemoveUncollapsedLogEntry( DebugLogEntry logEntry )
+		{
+			if( --logEntry.count <= 0 )
+				anyCollapsedLogRemoved = true;
+
+			if( !isCollapseOn && logEntriesToShow[removedLogEntriesToShowCount] == logEntry )
+				removedLogEntriesToShowCount++;
+
+			if( logEntry.logTypeSpriteRepresentation == infoLog )
+				infoEntryCount--;
+			else if( logEntry.logTypeSpriteRepresentation == warningLog )
+				warningEntryCount--;
+			else
+				errorEntryCount--;
+		}
+
+		private bool ShouldRemoveCollapsedLogEntry( DebugLogEntry logEntry )
+		{
+			if( logEntry.count <= 0 )
+			{
+				PoolLogEntry( logEntry );
+				collapsedLogEntriesMap.Remove( logEntry );
+
+				return true;
+			}
+
+			return false;
+		}
+
+		private bool ShouldRemoveLogEntryToShow( DebugLogEntry logEntry )
+		{
+			return logEntry.count <= 0;
+		}
+
+		private void UpdateLogEntryCollapsedIndex( DebugLogEntry logEntry, int collapsedIndex )
+		{
+			logEntry.collapsedIndex = collapsedIndex;
+		}
+
+		private void OnLogEntriesUpdated( bool updateAllVisibleItemContents, bool validateScrollPosition )
+		{
+			recycledListView.OnLogEntriesUpdated( updateAllVisibleItemContents );
+			shouldUpdateRecycledListView = false;
+
+			if( validateScrollPosition )
+				ValidateScrollPosition();
+		}
+
+		private void PoolLogEntry( DebugLogEntry logEntry )
+		{
+			if( pooledLogEntries.Count < 4096 )
+			{
+				logEntry.Clear();
+				pooledLogEntries.Push( logEntry );
+			}
 		}
 
 		// Make sure the scroll bar of the scroll rect is adjusted properly
@@ -1212,7 +1369,8 @@ namespace IngameDebugConsole
 		// Clear all the logs
 		public void ClearLogs()
 		{
-			snapToBottom = true;
+			SnapToBottom = true;
+			indexOfLogEntryToSelectAndFocus = -1;
 
 			infoEntryCount = 0;
 			warningEntryCount = 0;
@@ -1221,6 +1379,8 @@ namespace IngameDebugConsole
 			infoEntryCountText.text = "0";
 			warningEntryCountText.text = "0";
 			errorEntryCountText.text = "0";
+
+			collapsedLogEntries.ForEach( poolLogEntryAction );
 
 			collapsedLogEntries.Clear();
 			collapsedLogEntriesMap.Clear();
@@ -1235,7 +1395,7 @@ namespace IngameDebugConsole
 			}
 
 			recycledListView.DeselectSelectedLogItem();
-			recycledListView.OnLogEntriesUpdated( true );
+			OnLogEntriesUpdated( true, true );
 		}
 
 		// Collapse button is clicked
@@ -1244,7 +1404,7 @@ namespace IngameDebugConsole
 			// Swap the value of collapse mode
 			isCollapseOn = !isCollapseOn;
 
-			snapToBottom = true;
+			SnapToBottom = true;
 			collapseButton.color = isCollapseOn ? collapseButtonSelectedColor : collapseButtonNormalColor;
 			recycledListView.SetCollapseMode( isCollapseOn );
 
@@ -1437,8 +1597,9 @@ namespace IngameDebugConsole
 			// To be able to maximize the log window easily:
 			// - When enableHorizontalResizing is true and resizing horizontally, resize button will be grabbed from its left edge (if resizeFromRight is true) or its right edge
 			// - While resizing vertically, resize button will be grabbed from its top edge
-			const float resizeButtonWidth = 64f;
-			const float resizeButtonHeight = 36f;
+			Rect resizeButtonRect = ( (RectTransform) resizeButton.rectTransform.parent ).rect;
+			float resizeButtonWidth = resizeButtonRect.width;
+			float resizeButtonHeight = resizeButtonRect.height;
 
 			Vector2 canvasPivot = canvasTR.pivot;
 			Vector2 canvasSize = canvasTR.rect.size;
@@ -1492,8 +1653,8 @@ namespace IngameDebugConsole
 
 			if( logFilter != DebugLogFilter.None )
 			{
-				List<DebugLogEntry> targetLogEntries = isCollapseOn ? collapsedLogEntries : uncollapsedLogEntries;
-				List<DebugLogEntryTimestamp> targetLogEntriesTimestamps = isCollapseOn ? collapsedLogEntriesTimestamps : uncollapsedLogEntriesTimestamps;
+				DynamicCircularBuffer<DebugLogEntry> targetLogEntries = isCollapseOn ? collapsedLogEntries : uncollapsedLogEntries;
+				DynamicCircularBuffer<DebugLogEntryTimestamp> targetLogEntriesTimestamps = isCollapseOn ? collapsedLogEntriesTimestamps : uncollapsedLogEntriesTimestamps;
 
 				if( logFilter == DebugLogFilter.All )
 				{
@@ -1559,9 +1720,7 @@ namespace IngameDebugConsole
 
 			// Update the recycled list view
 			recycledListView.DeselectSelectedLogItem();
-			recycledListView.OnLogEntriesUpdated( true );
-
-			ValidateScrollPosition();
+			OnLogEntriesUpdated( true, true );
 		}
 
 		public string GetAllLogs()
@@ -1656,7 +1815,7 @@ namespace IngameDebugConsole
 			logItem.CanvasGroup.alpha = 0f;
 			logItem.CanvasGroup.blocksRaycasts = false;
 
-			pooledLogItems.Add( logItem );
+			pooledLogItems.Push( logItem );
 		}
 
 		// Fetch a log item from the pool
@@ -1668,9 +1827,7 @@ namespace IngameDebugConsole
 			// create a new log item otherwise
 			if( pooledLogItems.Count > 0 )
 			{
-				newLogItem = pooledLogItems[pooledLogItems.Count - 1];
-				pooledLogItems.RemoveAt( pooledLogItems.Count - 1 );
-
+				newLogItem = pooledLogItems.Pop();
 				newLogItem.CanvasGroup.alpha = 1f;
 				newLogItem.CanvasGroup.blocksRaycasts = true;
 			}
