@@ -1274,6 +1274,8 @@ MonoBehaviour:
   receiveExceptionLogs: 1
   captureLogTimestamps: 0
   alwaysDisplayTimestamps: 0
+  maxLogCount: 2147483647
+  logsToRemoveAfterMaxLogCount: 16
   queuedLogLimit: 256
   clearCommandAfterExecution: 1
   commandHistorySize: 15
@@ -1281,6 +1283,7 @@ MonoBehaviour:
   receiveLogcatLogsInAndroid: 0
   logcatArguments: 
   avoidScreenCutout: 1
+  popupAvoidsScreenCutout: 0
   maxLogLength: 10000
   autoFocusOnCommandInputField: 1
   logItemPrefab: {fileID: 11408050, guid: 391be5df5ef62f345bb76a1051c04da7, type: 2}
@@ -2593,6 +2596,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 224000011255372986}
+  - component: {fileID: 114913451135716890}
   - component: {fileID: 222000010912077860}
   - component: {fileID: 114000013324539428}
   - component: {fileID: 114000010993257018}
@@ -2680,6 +2684,7 @@ GameObject:
   serializedVersion: 5
   m_Component:
   - component: {fileID: 224927884203097686}
+  - component: {fileID: 114705835229318780}
   - component: {fileID: 222677458225366564}
   - component: {fileID: 114677982133495580}
   - component: {fileID: 114664465529608634}
@@ -3466,6 +3471,17 @@ MonoBehaviour:
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
+--- !u!114 &114705835229318780
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1197649202466618}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 049982f63fd78c042851caecd952f3f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &114749866180229960
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -3578,6 +3594,17 @@ MonoBehaviour:
   m_FillAmount: 1
   m_FillClockwise: 1
   m_FillOrigin: 0
+--- !u!114 &114913451135716890
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1000013131456698}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 049982f63fd78c042851caecd952f3f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &114944715489184838
 MonoBehaviour:
   m_ObjectHideFlags: 1
