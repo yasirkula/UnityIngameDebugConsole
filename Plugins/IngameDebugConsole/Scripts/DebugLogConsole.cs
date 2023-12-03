@@ -165,9 +165,9 @@ namespace IngameDebugConsole
 					continue;
 #endif
 
-				string assemblyName = assembly.GetName().Name;
 
 #if UNITY_EDITOR || !NETFX_CORE
+				string assemblyName = assembly.GetName().Name;
 				bool ignoreAssembly = false;
 				for( int i = 0; i < ignoredAssemblies.Length; i++ )
 				{
@@ -182,28 +182,33 @@ namespace IngameDebugConsole
 					continue;
 #endif
 
-				try
+				SearchAssemblyForConsoleMethods( assembly );
+			}
+		}
+
+		public static void SearchAssemblyForConsoleMethods( Assembly assembly )
+		{
+			try
+			{
+				foreach( Type type in assembly.GetExportedTypes() )
 				{
-					foreach( Type type in assembly.GetExportedTypes() )
+					foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
 					{
-						foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
+						foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
 						{
-							foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
-							{
-								ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
-								if( consoleMethod != null )
-									AddCommand( consoleMethod.Command, consoleMethod.Description, method, null, consoleMethod.ParameterNames );
-							}
+							ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
+							if( consoleMethod != null )
+								AddCommand( consoleMethod.Command, consoleMethod.Description, method, null, consoleMethod.ParameterNames );
 						}
 					}
 				}
-				catch( NotSupportedException ) { }
-				catch( System.IO.FileNotFoundException ) { }
-				catch( ReflectionTypeLoadException ) { }
-				catch( Exception e )
-				{
-					Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assemblyName + "\n" + e.ToString() );
-				}
+			}
+			catch( NotSupportedException ) { }
+			catch( System.IO.FileNotFoundException ) { }
+			catch( ReflectionTypeLoadException ) { }
+			catch( Exception e )
+			{
+				Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assembly.GetName().Name + "\n" + e.ToString() );
 			}
 		}
 
