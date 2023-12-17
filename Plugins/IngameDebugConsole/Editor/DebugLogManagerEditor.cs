@@ -8,7 +8,8 @@ namespace IngameDebugConsole
 	{
 		private SerializedProperty singleton;
 		private SerializedProperty minimumHeight;
-		private SerializedProperty enableHorizontalResizing;
+        private SerializedProperty transparency;
+        private SerializedProperty enableHorizontalResizing;
 		private SerializedProperty resizeFromRight;
 		private SerializedProperty minimumWidth;
 		private SerializedProperty enablePopup;
@@ -47,7 +48,8 @@ namespace IngameDebugConsole
 		{
 			singleton = serializedObject.FindProperty( "singleton" );
 			minimumHeight = serializedObject.FindProperty( "minimumHeight" );
-			enableHorizontalResizing = serializedObject.FindProperty( "enableHorizontalResizing" );
+            transparency = serializedObject.FindProperty( "transparency") ;
+            enableHorizontalResizing = serializedObject.FindProperty( "enableHorizontalResizing" );
 			resizeFromRight = serializedObject.FindProperty( "resizeFromRight" );
 			minimumWidth = serializedObject.FindProperty( "minimumWidth" );
 			enablePopup = serializedObject.FindProperty( "enablePopup" );
@@ -91,7 +93,9 @@ namespace IngameDebugConsole
 
 			EditorGUILayout.PropertyField( minimumHeight );
 
-			EditorGUILayout.PropertyField( enableHorizontalResizing );
+            EditorGUILayout.PropertyField( transparency );
+
+            EditorGUILayout.PropertyField( enableHorizontalResizing );
 			if( enableHorizontalResizing.boolValue )
 			{
 				DrawSubProperty( resizeFromRight );

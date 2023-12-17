@@ -51,7 +51,13 @@ namespace IngameDebugConsole
 		[Tooltip( "Minimum height of the console window" )]
 		private float minimumHeight = 200f;
 
-		[SerializeField]
+        [SerializeField]
+        [HideInInspector]
+        [Tooltip("If set to less than 1, console window will become semi-transparent")]
+        [Range(0, 1)]
+        private float transparency = 1;
+
+        [SerializeField]
 		[HideInInspector]
 		[Tooltip( "If enabled, console window can be resized horizontally, as well" )]
 		private bool enableHorizontalResizing = false;
@@ -923,7 +929,7 @@ namespace IngameDebugConsole
 		{
 			// Show the log window
 			logWindowCanvasGroup.blocksRaycasts = true;
-			logWindowCanvasGroup.alpha = 1f;
+			logWindowCanvasGroup.alpha = transparency;
 
 			popupManager.Hide();
 
