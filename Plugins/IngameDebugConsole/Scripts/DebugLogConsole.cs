@@ -54,6 +54,13 @@ namespace IngameDebugConsole
 	{
 		public delegate bool ParseFunction( string input, out object output );
 
+		public delegate void CommandExecutedDelegate( string command, object[] parameters );
+
+		/// <summary>
+		/// Event invoked when a command is executed
+		/// </summary>
+		public static event CommandExecutedDelegate OnCommandExecuted;
+
 		// All the commands
 		private static readonly List<ConsoleMethodInfo> methods = new List<ConsoleMethodInfo>();
 		private static readonly List<ConsoleMethodInfo> matchingMethods = new List<ConsoleMethodInfo>( 4 );
@@ -754,6 +761,8 @@ namespace IngameDebugConsole
 					else
 						Debug.Log( "Returned: " + result.ToString() );
 				}
+				
+				OnCommandExecuted?.Invoke( methodToExecute.command, parameters );
 			}
 		}
 
