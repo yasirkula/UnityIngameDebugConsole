@@ -212,6 +212,15 @@ namespace IngameDebugConsole
 			}
 		}
 
+		/// <summary>
+		/// Returns list of all commands
+		/// </summary>
+		/// <returns></returns>
+		public static List<ConsoleMethodInfo> GetAllCommands()
+		{
+			return methods;
+		}
+		
 		// Logs the list of available commands
 		public static void LogAllCommands()
 		{
