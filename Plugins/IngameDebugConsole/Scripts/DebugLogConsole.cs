@@ -54,6 +54,9 @@ namespace IngameDebugConsole
 	{
 		public delegate bool ParseFunction( string input, out object output );
 
+		public delegate void CommandExecutedDelegate( string command, object[] parameters );
+		public static event CommandExecutedDelegate OnCommandExecuted;
+
 		// All the commands
 		private static readonly List<ConsoleMethodInfo> methods = new List<ConsoleMethodInfo>();
 		private static readonly List<ConsoleMethodInfo> matchingMethods = new List<ConsoleMethodInfo>( 4 );
@@ -210,6 +213,11 @@ namespace IngameDebugConsole
 			{
 				Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assembly.GetName().Name + "\n" + e.ToString() );
 			}
+		}
+
+		public static List<ConsoleMethodInfo> GetAllCommands()
+		{
+			return methods;
 		}
 
 		// Logs the list of available commands
@@ -745,6 +753,9 @@ namespace IngameDebugConsole
 					else
 						Debug.Log( "Returned: " + result.ToString() );
 				}
+
+				if( OnCommandExecuted != null )
+					OnCommandExecuted( methodToExecute.command, parameters );
 			}
 		}
 
