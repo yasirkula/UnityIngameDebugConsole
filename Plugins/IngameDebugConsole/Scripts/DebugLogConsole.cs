@@ -55,10 +55,6 @@ namespace IngameDebugConsole
 		public delegate bool ParseFunction( string input, out object output );
 
 		public delegate void CommandExecutedDelegate( string command, object[] parameters );
-
-		/// <summary>
-		/// Event invoked when a command is executed
-		/// </summary>
 		public static event CommandExecutedDelegate OnCommandExecuted;
 
 		// All the commands
@@ -219,15 +215,11 @@ namespace IngameDebugConsole
 			}
 		}
 
-		/// <summary>
-		/// Returns list of all commands
-		/// </summary>
-		/// <returns></returns>
 		public static List<ConsoleMethodInfo> GetAllCommands()
 		{
 			return methods;
 		}
-		
+
 		// Logs the list of available commands
 		public static void LogAllCommands()
 		{
@@ -761,8 +753,9 @@ namespace IngameDebugConsole
 					else
 						Debug.Log( "Returned: " + result.ToString() );
 				}
-				
-				OnCommandExecuted?.Invoke( methodToExecute.command, parameters );
+
+				if( OnCommandExecuted != null )
+					OnCommandExecuted( methodToExecute.command, parameters );
 			}
 		}
 
