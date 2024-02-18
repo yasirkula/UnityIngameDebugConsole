@@ -52,6 +52,8 @@ namespace IngameDebugConsole
 		// Coroutines for simple code-based animations
 		private IEnumerator moveToPosCoroutine = null;
 
+		public bool IsVisible { get; private set; }
+
 		private void Awake()
 		{
 			popupTransform = (RectTransform) transform;
@@ -137,7 +139,8 @@ namespace IngameDebugConsole
 		public void Show()
 		{
 			canvasGroup.blocksRaycasts = true;
-			canvasGroup.alpha = 1f;
+			canvasGroup.alpha = debugManager.popupOpacity;
+			IsVisible = true;
 
 			// Reset the counters
 			ResetValues();
@@ -152,6 +155,7 @@ namespace IngameDebugConsole
 			canvasGroup.blocksRaycasts = false;
 			canvasGroup.alpha = 0f;
 
+			IsVisible = false;
 			isPopupBeingDragged = false;
 		}
 

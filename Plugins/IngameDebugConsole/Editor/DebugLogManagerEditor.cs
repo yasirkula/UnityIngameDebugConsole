@@ -11,8 +11,10 @@ namespace IngameDebugConsole
 		private SerializedProperty enableHorizontalResizing;
 		private SerializedProperty resizeFromRight;
 		private SerializedProperty minimumWidth;
-		private SerializedProperty enablePopup;
-		private SerializedProperty startInPopupMode;
+		private SerializedProperty logWindowOpacity;
+		private SerializedProperty popupOpacity;
+		private SerializedProperty popupVisibility;
+		private SerializedProperty popupVisibilityLogFilter;
 		private SerializedProperty startMinimized;
 		private SerializedProperty toggleWithKey;
 		private SerializedProperty toggleKey;
@@ -37,6 +39,9 @@ namespace IngameDebugConsole
 		private SerializedProperty popupAvoidsScreenCutout;
 		private SerializedProperty autoFocusOnCommandInputField;
 
+#if UNITY_2017_3_OR_NEWER
+		private readonly GUIContent popupVisibilityLogFilterLabel = new GUIContent( "Log Filter", "Determines which log types will show the popup on screen" );
+#endif
 		private readonly GUIContent receivedLogTypesLabel = new GUIContent( "Received Log Types", "Only these logs will be received by the console window, other logs will simply be skipped" );
 		private readonly GUIContent receiveInfoLogsLabel = new GUIContent( "Info" );
 		private readonly GUIContent receiveWarningLogsLabel = new GUIContent( "Warning" );
@@ -50,8 +55,10 @@ namespace IngameDebugConsole
 			enableHorizontalResizing = serializedObject.FindProperty( "enableHorizontalResizing" );
 			resizeFromRight = serializedObject.FindProperty( "resizeFromRight" );
 			minimumWidth = serializedObject.FindProperty( "minimumWidth" );
-			enablePopup = serializedObject.FindProperty( "enablePopup" );
-			startInPopupMode = serializedObject.FindProperty( "startInPopupMode" );
+			logWindowOpacity = serializedObject.FindProperty( "logWindowOpacity" );
+			popupOpacity = serializedObject.FindProperty( "popupOpacity" );
+			popupVisibility = serializedObject.FindProperty( "popupVisibility" );
+			popupVisibilityLogFilter = serializedObject.FindProperty( "popupVisibilityLogFilter" );
 			startMinimized = serializedObject.FindProperty( "startMinimized" );
 			toggleWithKey = serializedObject.FindProperty( "toggleWithKey" );
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
@@ -103,11 +110,26 @@ namespace IngameDebugConsole
 
 			EditorGUILayout.Space();
 
-			EditorGUILayout.PropertyField( enablePopup );
-			if( enablePopup.boolValue )
-				DrawSubProperty( startInPopupMode );
-			else
-				DrawSubProperty( startMinimized );
+			EditorGUILayout.PropertyField( startMinimized );
+			EditorGUILayout.PropertyField( logWindowOpacity );
+			EditorGUILayout.PropertyField( popupOpacity );
+
+			EditorGUILayout.PropertyField( popupVisibility );
+			if( popupVisibility.intValue == (int) PopupVisibility.WhenLogReceived )
+			{
+				EditorGUI.indentLevel++;
+#if UNITY_2017_3_OR_NEWER
+				popupVisibilityLogFilter.intValue = (int) (DebugLogFilter) EditorGUILayout.EnumFlagsField( popupVisibilityLogFilterLabel, (DebugLogFilter) popupVisibilityLogFilter.intValue );
+#else
+				EditorGUI.BeginChangeCheck();
+				bool infoLog = EditorGUILayout.Toggle( "Info", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Info ) == DebugLogFilter.Info );
+				bool warningLog = EditorGUILayout.Toggle( "Warning", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Warning ) == DebugLogFilter.Warning );
+				bool errorLog = EditorGUILayout.Toggle( "Error", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Error ) == DebugLogFilter.Error );
+				if( EditorGUI.EndChangeCheck() )
+					popupVisibilityLogFilter.intValue = ( infoLog ? (int) DebugLogFilter.Info : 0 ) | ( warningLog ? (int) DebugLogFilter.Warning : 0 ) | ( errorLog ? (int) DebugLogFilter.Error : 0 );
+#endif
+				EditorGUI.indentLevel--;
+			}
 
 			EditorGUILayout.PropertyField( toggleWithKey );
 			if( toggleWithKey.boolValue )

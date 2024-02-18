@@ -32,7 +32,14 @@ namespace IngameDebugConsole
 		Info = 1,
 		Warning = 2,
 		Error = 4,
-		All = 7
+		All = ~0
+	}
+
+	public enum PopupVisibility
+	{
+		Always = 0,
+		WhenLogReceived = 1,
+		Never = 2
 	}
 
 	public class DebugLogManager : MonoBehaviour
@@ -68,13 +75,25 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[HideInInspector]
-		[Tooltip( "If disabled, no popup will be shown when the console window is hidden" )]
-		private bool enablePopup = true;
+		[Tooltip( "Opacity of the console window" )]
+		[Range( 0f, 1f )]
+		private float logWindowOpacity = 1f;
 
 		[SerializeField]
 		[HideInInspector]
-		[Tooltip( "If enabled, console will be initialized as a popup" )]
-		private bool startInPopupMode = true;
+		[Tooltip( "Opacity of the popup" )]
+		[Range( 0f, 1f )]
+		internal float popupOpacity = 1f;
+
+		[SerializeField]
+		[HideInInspector]
+		[Tooltip( "Determines when the popup will show up (after the console window is closed)" )]
+		private PopupVisibility popupVisibility = PopupVisibility.Always;
+
+		[SerializeField]
+		[HideInInspector]
+		[Tooltip( "Determines which log types will show the popup on screen" )]
+		private DebugLogFilter popupVisibilityLogFilter = DebugLogFilter.All;
 
 		[SerializeField]
 		[HideInInspector]
@@ -630,12 +649,12 @@ namespace IngameDebugConsole
 
 		private void Start()
 		{
-			if( ( enablePopup && startInPopupMode ) || ( !enablePopup && startMinimized ) )
+			if( startMinimized )
 				HideLogWindow();
 			else
 				ShowLogWindow();
 
-			PopupEnabled = enablePopup;
+			PopupEnabled = ( popupVisibility != PopupVisibility.Never );
 		}
 
 		private void OnDestroy()
@@ -781,7 +800,19 @@ namespace IngameDebugConsole
 				if( !isLogWindowVisible )
 				{
 					entryCountTextsDirty = true;
-					popupManager.NewLogsArrived( newInfoEntryCount, newWarningEntryCount, newErrorEntryCount );
+
+					if( popupVisibility == PopupVisibility.WhenLogReceived && !popupManager.IsVisible )
+					{
+						if( ( newInfoEntryCount > 0 && ( popupVisibilityLogFilter & DebugLogFilter.Info ) == DebugLogFilter.Info ) ||
+							( newWarningEntryCount > 0 && ( popupVisibilityLogFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning ) ||
+							( newErrorEntryCount > 0 && ( popupVisibilityLogFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) )
+						{
+							popupManager.Show();
+						}
+					}
+
+					if( popupManager.IsVisible )
+						popupManager.NewLogsArrived( newInfoEntryCount, newWarningEntryCount, newErrorEntryCount );
 				}
 			}
 
@@ -925,7 +956,7 @@ namespace IngameDebugConsole
 		{
 			// Show the log window
 			logWindowCanvasGroup.blocksRaycasts = true;
-			logWindowCanvasGroup.alpha = 1f;
+			logWindowCanvasGroup.alpha = logWindowOpacity;
 
 			popupManager.Hide();
 
@@ -954,7 +985,8 @@ namespace IngameDebugConsole
 			if( commandInputField.isFocused )
 				commandInputField.DeactivateInputField();
 
-			popupManager.Show();
+			if( popupVisibility == PopupVisibility.Always )
+				popupManager.Show();
 
 			isLogWindowVisible = false;
 
