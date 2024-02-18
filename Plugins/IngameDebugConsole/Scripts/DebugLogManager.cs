@@ -590,8 +590,10 @@ namespace IngameDebugConsole
 #endif
 			}
 
+#if IDG_ENABLE_HELPER_COMMANDS || IDG_ENABLE_LOGS_SAVE_COMMAND
 			DebugLogConsole.AddCommand( "logs.save", "Saves logs to persistentDataPath", SaveLogsToFile );
 			DebugLogConsole.AddCommand<string>( "logs.save", "Saves logs to the specified file", SaveLogsToFile );
+#endif
 
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 			if( toggleWithKey )
@@ -1759,12 +1761,12 @@ namespace IngameDebugConsole
 			return sb.ToString();
 		}
 
-		private void SaveLogsToFile()
+		public void SaveLogsToFile()
 		{
 			SaveLogsToFile( Path.Combine( Application.persistentDataPath, System.DateTime.Now.ToString( "dd-MM-yyyy--HH-mm-ss" ) + ".txt" ) );
 		}
 
-		private void SaveLogsToFile( string filePath )
+		public void SaveLogsToFile( string filePath )
 		{
 			File.WriteAllText( filePath, GetAllLogs() );
 			Debug.Log( "Logs saved to: " + filePath );

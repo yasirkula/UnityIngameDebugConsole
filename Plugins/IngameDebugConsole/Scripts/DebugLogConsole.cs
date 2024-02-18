@@ -126,9 +126,13 @@ namespace IngameDebugConsole
 
 		static DebugLogConsole()
 		{
+#if !IDG_DISABLE_HELP_COMMAND
 			AddCommand( "help", "Prints all commands", LogAllCommands );
 			AddCommand<string>( "help", "Prints all matching commands", LogAllCommandsWithName );
+#endif
+#if IDG_ENABLE_HELPER_COMMANDS || IDG_ENABLE_SYSINFO_COMMAND
 			AddCommand( "sysinfo", "Prints system information", LogSystemInfo );
+#endif
 
 #if UNITY_EDITOR || !NETFX_CORE
 			// Find all [ConsoleMethod] functions
