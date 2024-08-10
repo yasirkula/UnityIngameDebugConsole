@@ -1,10 +1,9 @@
 {
-  "name": "com.yasirkula.ingamedebugconsole",
+  "name": "com.Mikolaj505.yasirkula.ingamedebugconsole",
   "displayName": "In-game Debug Console",
   "version": "1.6.7",
-  "documentationUrl": "https://github.com/yasirkula/UnityIngameDebugConsole",
-  "changelogUrl": "https://github.com/yasirkula/UnityIngameDebugConsole/releases",
-  "licensesUrl": "https://github.com/yasirkula/UnityIngameDebugConsole/blob/master/LICENSE.txt",
-  "description": "This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging logcat messages to the console on Android platform.",
+  "documentationUrl": "https://github.com/Mikolaj505/UnityIngameDebugConsole_SaveCommands",
+  "licensesUrl": "https://github.com/Mikolaj505/UnityIngameDebugConsole_SaveCommands",
+  "description": "(This is a ford of the original plugin, adding functionality of saving commands history between sessions) This asset helps you see debug messages (logs, warnings, errors, exceptions) runtime in a build (also assertions in editor) and execute commands using its built-in console. It also supports logging logcat messages to the console on Android platform.",
   "hideInEditor": false
 }

@@ -32,6 +32,9 @@ namespace IngameDebugConsole
 		private SerializedProperty queuedLogLimit;
 		private SerializedProperty clearCommandAfterExecution;
 		private SerializedProperty commandHistorySize;
+		private SerializedProperty saveCommandHistoryBetweenSessions;
+		private SerializedProperty commandHistorySeparator;
+		private SerializedProperty commandHistorySaveKey;
 		private SerializedProperty showCommandSuggestions;
 		private SerializedProperty receiveLogcatLogsInAndroid;
 		private SerializedProperty logcatArguments;
@@ -80,6 +83,9 @@ namespace IngameDebugConsole
 			queuedLogLimit = serializedObject.FindProperty( "queuedLogLimit" );
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
 			commandHistorySize = serializedObject.FindProperty( "commandHistorySize" );
+            saveCommandHistoryBetweenSessions = serializedObject.FindProperty("saveCommandHistoryBetweenSessions");
+            commandHistorySeparator = serializedObject.FindProperty("commandHistorySeparator");
+            commandHistorySaveKey = serializedObject.FindProperty("commandHistorySaveKey");
 			showCommandSuggestions = serializedObject.FindProperty( "showCommandSuggestions" );
 			receiveLogcatLogsInAndroid = serializedObject.FindProperty( "receiveLogcatLogsInAndroid" );
 			logcatArguments = serializedObject.FindProperty( "logcatArguments" );
@@ -170,6 +176,9 @@ namespace IngameDebugConsole
 
 			EditorGUILayout.PropertyField( clearCommandAfterExecution );
 			EditorGUILayout.PropertyField( commandHistorySize );
+			EditorGUILayout.PropertyField( saveCommandHistoryBetweenSessions );
+			EditorGUILayout.PropertyField( commandHistorySeparator );
+			EditorGUILayout.PropertyField( commandHistorySaveKey );
 			EditorGUILayout.PropertyField( showCommandSuggestions );
 			EditorGUILayout.PropertyField( autoFocusOnCommandInputField );
 

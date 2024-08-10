@@ -169,7 +169,22 @@ namespace IngameDebugConsole
 		[Tooltip( "Console keeps track of the previously entered commands. This value determines the capacity of the command history (you can scroll through the history via up and down arrow keys while the command input field is focused)" )]
 		private int commandHistorySize = 15;
 
-		[SerializeField]
+        [SerializeField]
+        [HideInInspector]
+        [Tooltip( "Should console save command history between sessions." )]
+        private bool saveCommandHistoryBetweenSessions = true;
+
+        [SerializeField]
+		[HideInInspector]
+        [Tooltip("DO NOT CHANGE UNLESS NECESSARY! Separator used for saving command history. Changing this value might require clearing the saved history on the device.")]
+		private string commandHistorySeparator = ";";
+
+        [SerializeField]
+		[HideInInspector]
+        [Tooltip("DO NOT CHANGE UNLESS NECESSARY! Key used for storing command history on the device. Changing this value might break previously saved command history.")]
+        private string commandHistorySaveKey = "CONSOLE_COMMAND_HISTORY";
+
+        [SerializeField]
 		[HideInInspector]
 		[Tooltip( "If enabled, while typing a command, all of the matching commands' signatures will be displayed in a popup" )]
 		private bool showCommandSuggestions = true;
@@ -407,6 +422,9 @@ namespace IngameDebugConsole
 		private int commandHistoryIndex = -1;
 		private string unfinishedCommand;
 
+		// History save manager
+		private CommandHistorySaveManager commandHistorySaveManager;
+
 		// StringBuilder used by various functions
 		internal StringBuilder sharedStringBuilder;
 
@@ -468,7 +486,13 @@ namespace IngameDebugConsole
 			queuedLogEntries = new DynamicCircularBuffer<QueuedDebugLogEntry>( Mathf.Clamp( queuedLogLimit, 16, 4096 ) );
 			commandHistory = new CircularBuffer<string>( commandHistorySize );
 
-			logEntriesLock = new object();
+			if (saveCommandHistoryBetweenSessions)
+			{
+				commandHistorySaveManager = new CommandHistorySaveManager(commandHistory, commandHistorySize, commandHistorySeparator, commandHistorySaveKey);
+				commandHistorySaveManager.LoadAllCommandsToCommandHistory();
+			}
+
+            logEntriesLock = new object();
 			sharedStringBuilder = new StringBuilder( 1024 );
 
 			canvasTR = (RectTransform) transform;
@@ -1026,8 +1050,14 @@ namespace IngameDebugConsole
 
 				if( text.Length > 0 )
 				{
-					if( commandHistory.Count == 0 || commandHistory[commandHistory.Count - 1] != text )
+					if( commandHistory.Count == 0 || commandHistory[commandHistory.Count - 1] != text)
+					{
 						commandHistory.Add( text );
+						if (saveCommandHistoryBetweenSessions)
+						{
+							commandHistorySaveManager.SaveCommands(commandHistory);
+						}
+					}
 
 					commandHistoryIndex = -1;
 					unfinishedCommand = null;
