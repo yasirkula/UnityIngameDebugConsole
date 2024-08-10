@@ -27,8 +27,8 @@ There are 5 ways to install this plugin:
 - import [IngameDebugConsole.unitypackage](https://github.com/yasirkula/UnityIngameDebugConsole/releases) via *Assets-Import Package*
 - clone/[download](https://github.com/yasirkula/UnityIngameDebugConsole/archive/master.zip) this repository and move the *Plugins* folder to your Unity project's *Assets* folder
 - import it from [Asset Store](https://assetstore.unity.com/packages/tools/gui/in-game-debug-console-68068)
-- *(via Package Manager)* add the following line to *Packages/manifest.json*:
-  - `"com.yasirkula.ingamedebugconsole": "https://github.com/yasirkula/UnityIngameDebugConsole.git",`
+- (FOR THIS FORK, USE THIS WAY)*(via Package Manager)* add the following line to *Packages/manifest.json*:*(via Package Manager)* add the following line to *Packages/manifest.json*:
+  - `"com.mikolaj505.yasirkula.ingamedebugconsole": "https://github.com/Mikolaj505/UnityIngameDebugConsole_SaveCommands.git",`
 - *(via [OpenUPM](https://openupm.com))* after installing [openupm-cli](https://github.com/openupm/openupm-cli), run the following command:
   - `openupm add com.yasirkula.ingamedebugconsole`
 
