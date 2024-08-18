@@ -119,15 +119,21 @@ namespace IngameDebugConsole
 			{
 				EditorGUI.indentLevel++;
 #if UNITY_2017_3_OR_NEWER
-				popupVisibilityLogFilter.intValue = (int) (DebugLogFilter) EditorGUILayout.EnumFlagsField( popupVisibilityLogFilterLabel, (DebugLogFilter) popupVisibilityLogFilter.intValue );
+				Rect rect = EditorGUILayout.GetControlRect();
+				EditorGUI.BeginProperty( rect, GUIContent.none, popupVisibilityLogFilter );
+				popupVisibilityLogFilter.intValue = (int) (DebugLogFilter) EditorGUI.EnumFlagsField( rect, popupVisibilityLogFilterLabel, (DebugLogFilter) popupVisibilityLogFilter.intValue );
 #else
+				EditorGUI.BeginProperty( new Rect(), GUIContent.none, popupVisibilityLogFilter );
 				EditorGUI.BeginChangeCheck();
+
 				bool infoLog = EditorGUILayout.Toggle( "Info", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Info ) == DebugLogFilter.Info );
 				bool warningLog = EditorGUILayout.Toggle( "Warning", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Warning ) == DebugLogFilter.Warning );
 				bool errorLog = EditorGUILayout.Toggle( "Error", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Error ) == DebugLogFilter.Error );
+
 				if( EditorGUI.EndChangeCheck() )
 					popupVisibilityLogFilter.intValue = ( infoLog ? (int) DebugLogFilter.Info : 0 ) | ( warningLog ? (int) DebugLogFilter.Warning : 0 ) | ( errorLog ? (int) DebugLogFilter.Error : 0 );
 #endif
+				EditorGUI.EndProperty();
 				EditorGUI.indentLevel--;
 			}
 
