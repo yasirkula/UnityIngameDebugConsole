@@ -1130,7 +1130,7 @@ namespace IngameDebugConsole
 		public static bool ParseFloat( string input, out object output )
 		{
 			float value;
-			bool result = float.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
+			bool result = float.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), NumberStyles.Float, CultureInfo.InvariantCulture, out value );
 
 			output = value;
 			return result;
@@ -1139,7 +1139,7 @@ namespace IngameDebugConsole
 		public static bool ParseDouble( string input, out object output )
 		{
 			double value;
-			bool result = double.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
+			bool result = double.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), NumberStyles.Float, CultureInfo.InvariantCulture, out value );
 
 			output = value;
 			return result;
@@ -1148,7 +1148,7 @@ namespace IngameDebugConsole
 		public static bool ParseDecimal( string input, out object output )
 		{
 			decimal value;
-			bool result = decimal.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), out value );
+			bool result = decimal.TryParse( !input.EndsWith( "f", StringComparison.OrdinalIgnoreCase ) ? input : input.Substring( 0, input.Length - 1 ), NumberStyles.Float, CultureInfo.InvariantCulture, out value );
 
 			output = value;
 			return result;
