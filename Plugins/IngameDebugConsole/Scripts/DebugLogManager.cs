@@ -650,7 +650,12 @@ namespace IngameDebugConsole
 		private void Start()
 		{
 			if( startMinimized )
+			{
 				HideLogWindow();
+
+				if( popupVisibility != PopupVisibility.Always )
+					popupManager.Hide();
+			}
 			else
 				ShowLogWindow();
 
