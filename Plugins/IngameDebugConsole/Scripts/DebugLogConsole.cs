@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 using Object = UnityEngine.Object;
+using System.Linq;
 #if UNITY_EDITOR && UNITY_2021_1_OR_NEWER
 using SystemInfo = UnityEngine.Device.SystemInfo; // To support Device Simulator on Unity 2021.1+
 #endif
@@ -197,17 +198,16 @@ namespace IngameDebugConsole
 		{
 			try
 			{
-				foreach( Type type in assembly.GetExportedTypes() )
+				TypeSearch[] types = assembly.GetExportedTypes().Select(t => new TypeSearch(t)).ToArray();
+				foreach (TypeSearch.Parser parser in types.SelectMany(t => t.parsers))
 				{
-					foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
-					{
-						foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
-						{
-							ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
-							if( consoleMethod != null )
-								AddCommand( consoleMethod.Command, consoleMethod.Description, method, null, consoleMethod.ParameterNames );
-						}
-					}
+					if (parser.TryBuildFunction(out ParseFunction func))
+						AddCustomParameterType(parser.attribute.type, func, parser.attribute.readableName);
+				}
+
+				foreach (TypeSearch.Command command in types.SelectMany(t => t.commands))
+				{
+					AddCommand(command.attribute.Command, command.attribute.Description, command.method, null, command.attribute.ParameterNames);
 				}
 			}
 			catch( NotSupportedException ) { }
