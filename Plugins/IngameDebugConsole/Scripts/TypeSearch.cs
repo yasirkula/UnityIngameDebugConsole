@@ -24,53 +24,67 @@ namespace IngameDebugConsole
 			{
 				if (!method.IsStatic)
 				{
-					Debug.LogError($"Parser Method {attribute.type.FullName}.{method.Name} is Invalid. Method must be static.");
+					LogParserMethodError("Method must be static.");
+					function = null;
+					return false;
+				}
+
+				if (method.ReturnType != typeof(bool))
+				{
+					LogParserMethodError("Return type must be bool.");
 					function = null;
 					return false;
 				}
 
 				ParameterInfo[] parameters = method.GetParameters();
 
-				if (parameters.Length != 0)
+				if (parameters.Length != 2)
 				{
-					Debug.LogError($"Parser Method {attribute.type.FullName}.{method.Name} is Invalid. Parameter count must be 2.");
+					LogParserMethodError("Parameter count must be 2.");
 					function = null;
 					return false;
 				}
 
 				if (parameters[0].ParameterType != typeof(string))
 				{
-					Debug.LogError($"Parser Method {attribute.type.FullName}.{method.Name} is Invalid.\n " +
-						"The first parameter must by of type string.");
+					LogParserMethodError("The first parameter must be of type string.");
 					function = null;
 					return false;
 				}
 
-				if (parameters[0].ParameterType != typeof(string))
+				if (!parameters[1].IsOut)
 				{
-					Debug.LogError($"Parser Method {attribute.type.FullName}.{method.Name} is Invalid.\n" +
-						$"The second parameter must match the type given to the attribute: {attribute.type.Name}.");
+					LogParserMethodError("The second parameter must be a out parameter.");
+					function = null;
+					return false;
+				}
+
+				Type param2 = parameters[1].ParameterType;
+				if (param2 != typeof(object).MakeByRefType())
+				{
+					LogParserMethodError("The second parameter must be of type object.");
 					function = null;
 					return false;
 				}
 
 				try
 				{
-					ParameterExpression stringParam = Expression.Parameter(typeof(string));
-					ParameterExpression objParam = Expression.Parameter(typeof(object).MakeByRefType());
-					UnaryExpression cast = Expression.Convert(objParam, attribute.type);
-					MethodCallExpression call = Expression.Call(method, stringParam, cast);
-					Expression<DebugLogConsole.ParseFunction> expression = Expression.Lambda<DebugLogConsole.ParseFunction>(call, stringParam, objParam);
-					function = expression.Compile();
+					function = (DebugLogConsole.ParseFunction)Delegate.CreateDelegate(typeof(DebugLogConsole.ParseFunction), method);
 					return true;
 				}
 				catch (Exception e)
 				{
-					Debug.LogError($"Parser Method {attribute.type.FullName}.{method.Name} Error.\n" +
-						$"The second parameter must match the type given to the attribute: {attribute.type.Name}.");
+					Debug.LogError($"Parser Method {attribute.type.FullName}.{method.Name} Error.\n" + e.Message);
 					function = null;
 					return false;
 				}
+			}
+
+			private void LogParserMethodError(string message)
+			{
+				const string format = "Parser Method {0}.{1} is Invalid.\n{2}\nex: public static bool {1}(string input, out {3}|object result)";
+				string error = string.Format(format, method.DeclaringType.FullName, method.Name, message, attribute.type.Name);
+				Debug.LogError(error);
 			}
 		}
 		public readonly struct Command
