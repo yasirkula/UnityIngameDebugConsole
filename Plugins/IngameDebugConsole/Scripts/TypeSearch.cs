@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using UnityEngine;
 
@@ -74,7 +73,7 @@ namespace IngameDebugConsole
 				}
 				catch (Exception e)
 				{
-					Debug.LogError($"Parser Method {attribute.type.FullName}.{method.Name} Error.\n" + e.Message);
+					LogParserMethodError(e.Message);
 					function = null;
 					return false;
 				}
@@ -120,7 +119,8 @@ namespace IngameDebugConsole
 
 				if (consoleMethods.Any() && parserAttribute != null)
 				{
-					Debug.LogError($"Method {type.FullName}.{method.Name} cannot be both a Parameter Parser and a Console Command.");
+					const string errorFormat = "Method {0}.{1} cannot be both a Console Parser and a Console Command.";
+					Debug.LogError(string.Format(errorFormat, type.FullName, method.Name));
 					continue;
 				}
 
