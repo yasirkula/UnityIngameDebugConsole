@@ -198,8 +198,8 @@ namespace IngameDebugConsole
 		{
 			try
 			{
-				IEnumerable<IConsoleMethod> consoleMethods = TypeSearch.GetConsoleMethods(assembly.GetExportedTypes());
-				foreach (IConsoleMethod consoleMethod in consoleMethods)
+				IEnumerable<IConsoleMethodInfo> consoleMethods = TypeSearch.GetConsoleMethods(assembly.GetExportedTypes());
+				foreach (IConsoleMethodInfo consoleMethod in consoleMethods)
 				{
 					consoleMethod.Load();
 				}
@@ -506,7 +506,7 @@ namespace IngameDebugConsole
 			AddCommand( command, description, method, instance, parameterNames );
 		}
 
-		private static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
+		public static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
 		{
 			if( string.IsNullOrEmpty( command ) )
 			{

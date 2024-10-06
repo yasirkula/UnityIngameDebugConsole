@@ -2,7 +2,7 @@
 
 namespace IngameDebugConsole
 {
-	public interface IConsoleMethod
+	public interface IConsoleMethodInfo
 	{
 		MethodInfo Method { get; }
 		int Order { get; }

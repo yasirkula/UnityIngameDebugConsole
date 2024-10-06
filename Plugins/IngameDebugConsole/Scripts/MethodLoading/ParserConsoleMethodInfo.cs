@@ -2,13 +2,13 @@
 
 namespace IngameDebugConsole
 {
-	public readonly struct ParserConsoleMethod : IConsoleMethod
+	public readonly struct ParserConsoleMethodInfo : IConsoleMethodInfo
 	{
 		public MethodInfo Method { get; }
 		public int Order => 0;
 		public readonly ConsoleCustomTypeParserAttribute attribute;
 
-		public ParserConsoleMethod(MethodInfo method, ConsoleCustomTypeParserAttribute parserAttribute)
+		public ParserConsoleMethodInfo(MethodInfo method, ConsoleCustomTypeParserAttribute parserAttribute)
 		{
 			this.Method = method;
 			attribute = parserAttribute;

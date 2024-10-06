@@ -8,9 +8,9 @@ namespace IngameDebugConsole
 {
 	public static class TypeSearch
 	{
-		public static IEnumerable<IConsoleMethod> GetConsoleMethods(params Type[] types)
+		public static IEnumerable<IConsoleMethodInfo> GetConsoleMethods(params Type[] types)
 		{
-			Dictionary<int, List<IConsoleMethod>> methods = new();
+			Dictionary<int, List<IConsoleMethodInfo>> methods = new();
 			int maxOrder = 0;
 
 			for (int t = 0; t < types.Length; t++)
@@ -34,20 +34,20 @@ namespace IngameDebugConsole
 
 					if (parserAttribute != null)
 					{
-						yield return new ParserConsoleMethod(method, parserAttribute);
+						yield return new ParserConsoleMethodInfo(method, parserAttribute);
 					}
 
 					foreach (ConsoleMethodAttribute command in consoleMethods)
 					{
-						IConsoleMethod commandMethod = new CommandConsoleMethod(method, command);
+						IConsoleMethodInfo commandMethod = new CommandConsoleMethodInfo(method, command);
 						maxOrder = Add(methods, commandMethod, maxOrder);
 					}
 				}
 			}
 
-			for (int i = 0; i < maxOrder; i++)
+			for (int i = 1; i <= maxOrder; i++)
 			{
-				if (!methods.TryGetValue(i, out List<IConsoleMethod> list))
+				if (!methods.TryGetValue(i, out List<IConsoleMethodInfo> list))
 					continue;
 
 				for (int m = 0; m < list.Count; m++)
@@ -57,12 +57,12 @@ namespace IngameDebugConsole
 			}
 		}
 
-		private static int Add(Dictionary<int, List<IConsoleMethod>> methods, IConsoleMethod method, int currentMaxOrder)
+		private static int Add(Dictionary<int, List<IConsoleMethodInfo>> methods, IConsoleMethodInfo method, int currentMaxOrder)
 		{
 			int order = method.Order;
-			if (!methods.TryGetValue(order, out List<IConsoleMethod> list))
+			if (!methods.TryGetValue(order, out List<IConsoleMethodInfo> list))
 			{
-				list = new List<IConsoleMethod>();
+				list = new List<IConsoleMethodInfo>();
 				methods[order] = list;
 			}
 
