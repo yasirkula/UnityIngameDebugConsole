@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Text;
 using Object = UnityEngine.Object;
+using System.Linq;
 #if UNITY_EDITOR && UNITY_2021_1_OR_NEWER
 using SystemInfo = UnityEngine.Device.SystemInfo; // To support Device Simulator on Unity 2021.1+
 #endif
@@ -197,17 +198,10 @@ namespace IngameDebugConsole
 		{
 			try
 			{
-				foreach( Type type in assembly.GetExportedTypes() )
+				IEnumerable<IConsoleMethodInfo> consoleMethods = TypeSearch.GetConsoleMethods(assembly.GetExportedTypes());
+				foreach (IConsoleMethodInfo consoleMethod in consoleMethods)
 				{
-					foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
-					{
-						foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
-						{
-							ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
-							if( consoleMethod != null )
-								AddCommand( consoleMethod.Command, consoleMethod.Description, method, null, consoleMethod.ParameterNames );
-						}
-					}
+					consoleMethod.Load();
 				}
 			}
 			catch( NotSupportedException ) { }
@@ -376,6 +370,79 @@ namespace IngameDebugConsole
 				typeReadableNames[type] = typeReadableName;
 		}
 
+		public static void AddCustomParameterType(MethodInfo method, Type type, string readableName)
+		{
+			if (TryBuildFunction(method, out ParseFunction func))
+				AddCustomParameterType(type, func, readableName);
+		}
+
+		private static bool TryBuildFunction(MethodInfo method, out ParseFunction function)
+		{
+			void LogParserMethodError(string message)
+			{
+				const string format = "Parser Method {0}.{1} is Invalid.\n{2}\nex: public static bool {1}(string input, out object result)";
+				string error = string.Format(format, method.DeclaringType.FullName, method.Name, message);
+				Debug.LogError(error);
+			}
+
+			if (!method.IsStatic)
+			{
+				LogParserMethodError("Method must be static.");
+				function = null;
+				return false;
+			}
+
+			if (method.ReturnType != typeof(bool))
+			{
+				LogParserMethodError("Return type must be bool.");
+				function = null;
+				return false;
+			}
+
+			ParameterInfo[] parameters = method.GetParameters();
+
+			if (parameters.Length != 2)
+			{
+				LogParserMethodError("Parameter count must be 2.");
+				function = null;
+				return false;
+			}
+
+			if (parameters[0].ParameterType != typeof(string))
+			{
+				LogParserMethodError("The first parameter must be of type string.");
+				function = null;
+				return false;
+			}
+
+			if (!parameters[1].IsOut)
+			{
+				LogParserMethodError("The second parameter must be a out parameter.");
+				function = null;
+				return false;
+			}
+
+			Type param2 = parameters[1].ParameterType;
+			if (param2 != typeof(object).MakeByRefType())
+			{
+				LogParserMethodError("The second parameter must be of type object.");
+				function = null;
+				return false;
+			}
+
+			try
+			{
+				function = (ParseFunction)Delegate.CreateDelegate(typeof(ParseFunction), method);
+				return true;
+			}
+			catch (Exception e)
+			{
+				LogParserMethodError(e.Message);
+				function = null;
+				return false;
+			}
+		}
+
 		// Remove a custom Type from the list of recognized command parameter Types
 		public static void RemoveCustomParameterType( Type type )
 		{
@@ -439,7 +506,7 @@ namespace IngameDebugConsole
 			AddCommand( command, description, method, instance, parameterNames );
 		}
 
-		private static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
+		public static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
 		{
 			if( string.IsNullOrEmpty( command ) )
 			{
