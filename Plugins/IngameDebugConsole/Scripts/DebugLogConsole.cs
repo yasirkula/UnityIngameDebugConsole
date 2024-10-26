@@ -383,27 +383,10 @@ namespace IngameDebugConsole
 				typeReadableNames[type] = typeReadableName;
 		}
 
-		public static void AddCustomParameterType(MethodInfo method, Type type, string readableName)
+		internal static void AddCustomParameterType(MethodInfo method, Type type, string readableName)
 		{
-			if (TryBuildCustomParameterFunction(method, out ParseFunction func, false))
-				AddCustomParameterType(type, func, readableName);
-		}
-
-		private static bool TryBuildCustomParameterFunction(MethodInfo method, out ParseFunction function, bool validate)
-		{
-			try
-			{
-				function = (ParseFunction)Delegate.CreateDelegate(typeof(ParseFunction), method);
-				return true;
-			}
-			catch (Exception e)
-			{
-				const string format = "Parser Method {0}.{1} is Invalid.\n{2}\nex: public static bool {1}(string input, out object result)";
-				string error = string.Format(format, method.DeclaringType.FullName, method.Name, e.Message);
-				Debug.LogError(error);
-				function = null;
-				return false;
-			}
+			ParseFunction function = (ParseFunction)Delegate.CreateDelegate(typeof(ParseFunction), method);
+			AddCustomParameterType(type, function, readableName);
 		}
 
 		// Remove a custom Type from the list of recognized command parameter Types
