@@ -13,7 +13,7 @@ namespace IngameDebugConsole
 		public string Description { get { return m_description; } }
 		public string[] ParameterNames { get { return m_parameterNames; } }
 
-		public override int Order => 1;
+		public override int Order { get { return 1; } }
 
 		public ConsoleMethodAttribute( string command, string description, params string[] parameterNames )
 		{

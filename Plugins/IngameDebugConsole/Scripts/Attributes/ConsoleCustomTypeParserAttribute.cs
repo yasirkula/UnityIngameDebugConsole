@@ -8,7 +8,7 @@ namespace IngameDebugConsole
 		public readonly Type type;
 		public readonly string readableName;
 
-		public override int Order => 0;
+		public override int Order { get { return 0; } }
 
 		public ConsoleCustomTypeParserAttribute(Type type, string readableName)
 		{
