@@ -452,7 +452,7 @@ namespace IngameDebugConsole
 			AddCommand( command, description, method, instance, parameterNames );
 		}
 
-		public static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
+		internal static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
 		{
 			if( string.IsNullOrEmpty( command ) )
 			{
