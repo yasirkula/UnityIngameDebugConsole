@@ -197,20 +197,16 @@ namespace IngameDebugConsole
 		{
 			try
 			{
-				Type[] types = assembly.GetExportedTypes();
-				List<ConsoleAttribute> methods = new();
-				const BindingFlags BindingAttr = BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly;
-				for (int t = 0; t < types.Length; t++)
+				List<ConsoleAttribute> methods = new List<ConsoleAttribute>();
+				foreach (Type type in assembly.GetExportedTypes())
 				{
-					MethodInfo[] typeMethods = types[t].GetMethods(BindingAttr);
-					for (int m = 0; m < typeMethods.Length; m++)
+					foreach (MethodInfo method in type.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly))
 					{
-						MethodInfo method = typeMethods[m];
-						IEnumerable<ConsoleAttribute> attributes = method.GetCustomAttributes<ConsoleAttribute>(true);
-						foreach (ConsoleAttribute attribute in attributes)
+						foreach (object attribute in method.GetCustomAttributes(typeof(ConsoleAttribute), true))
 						{
-							attribute.SetMethod(method);
-							methods.Add(attribute);
+							ConsoleAttribute consoleAttribute = (ConsoleAttribute)attribute;
+							consoleAttribute.SetMethod(method);
+							methods.Add(consoleAttribute);
 						}
 					}
 				}
