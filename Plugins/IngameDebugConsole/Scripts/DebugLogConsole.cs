@@ -197,17 +197,24 @@ namespace IngameDebugConsole
 		{
 			try
 			{
+				List<ConsoleAttribute> methods = new List<ConsoleAttribute>();
 				foreach( Type type in assembly.GetExportedTypes() )
 				{
 					foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
 					{
-						foreach( object attribute in method.GetCustomAttributes( typeof( ConsoleMethodAttribute ), false ) )
+						foreach( object attribute in method.GetCustomAttributes( typeof(ConsoleAttribute), true ) )
 						{
-							ConsoleMethodAttribute consoleMethod = attribute as ConsoleMethodAttribute;
-							if( consoleMethod != null )
-								AddCommand( consoleMethod.Command, consoleMethod.Description, method, null, consoleMethod.ParameterNames );
+							ConsoleAttribute consoleAttribute = (ConsoleAttribute)attribute;
+							consoleAttribute.SetMethod(method);
+							methods.Add(consoleAttribute);
 						}
 					}
+				}
+
+				methods.Sort((a, b) => a.Order.CompareTo(b.Order));
+				for (int i = 0; i < methods.Count; i++)
+				{
+					methods[i].Load();
 				}
 			}
 			catch( NotSupportedException ) { }
@@ -376,6 +383,12 @@ namespace IngameDebugConsole
 				typeReadableNames[type] = typeReadableName;
 		}
 
+		internal static void AddCustomParameterType(MethodInfo method, Type type, string readableName)
+		{
+			ParseFunction function = (ParseFunction)Delegate.CreateDelegate(typeof(ParseFunction), method);
+			AddCustomParameterType(type, function, readableName);
+		}
+
 		// Remove a custom Type from the list of recognized command parameter Types
 		public static void RemoveCustomParameterType( Type type )
 		{
@@ -439,7 +452,7 @@ namespace IngameDebugConsole
 			AddCommand( command, description, method, instance, parameterNames );
 		}
 
-		private static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
+		internal static void AddCommand( string command, string description, MethodInfo method, object instance, string[] parameterNames )
 		{
 			if( string.IsNullOrEmpty( command ) )
 			{
