@@ -202,9 +202,8 @@ namespace IngameDebugConsole
 				{
 					foreach( MethodInfo method in type.GetMethods( BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly ) )
 					{
-						foreach( object attribute in method.GetCustomAttributes( typeof(ConsoleAttribute), true ) )
+						foreach( ConsoleAttribute consoleAttribute in method.GetCustomAttributes( typeof(ConsoleAttribute), false ) )
 						{
-							ConsoleAttribute consoleAttribute = (ConsoleAttribute)attribute;
 							consoleAttribute.SetMethod(method);
 							methods.Add(consoleAttribute);
 						}
@@ -381,12 +380,6 @@ namespace IngameDebugConsole
 
 			if( !string.IsNullOrEmpty( typeReadableName ) )
 				typeReadableNames[type] = typeReadableName;
-		}
-
-		internal static void AddCustomParameterType(MethodInfo method, Type type, string readableName)
-		{
-			ParseFunction function = (ParseFunction)Delegate.CreateDelegate(typeof(ParseFunction), method);
-			AddCustomParameterType(type, function, readableName);
 		}
 
 		// Remove a custom Type from the list of recognized command parameter Types

@@ -10,7 +10,7 @@ namespace IngameDebugConsole
 
 		public override int Order { get { return 0; } }
 
-		public ConsoleCustomTypeParserAttribute(Type type, string readableName)
+		public ConsoleCustomTypeParserAttribute(Type type, string readableName = null)
 		{
 			this.type = type;
 			this.readableName = readableName;
@@ -18,7 +18,7 @@ namespace IngameDebugConsole
 
 		public override void Load()
 		{
-			DebugLogConsole.AddCustomParameterType(Method, type, readableName);
+			DebugLogConsole.AddCustomParameterType(type, (DebugLogConsole.ParseFunction)Delegate.CreateDelegate(typeof(DebugLogConsole.ParseFunction), Method), readableName);
 		}
 	}
 }

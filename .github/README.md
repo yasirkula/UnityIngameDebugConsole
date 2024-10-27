@@ -196,6 +196,8 @@ Use `DebugLogConsole.RemoveCommand( string command )` or one of the `DebugLogCon
 
 ### Extending Supported Parameter Types
 
+- **Strongly Typed Functions**
+
 Use `DebugLogConsole.AddCustomParameterType( Type type, ParseFunction parseFunction, string typeReadableName = null )`:
 
 ```csharp
@@ -251,4 +253,24 @@ public class TestScript : MonoBehaviour
 }
 ```
 
-To remove the custom parameter type, you can use `DebugLogConsole.RemoveCustomParameterType( Type type )`.
+- **ConsoleCustomTypeParser Attribute**
+
+Simply add **IngameDebugConsole.ConsoleCustomTypeParser** attribute to your functions. These functions must have the following signature: `public static bool ParseFunction( string input, out object output );`
+
+```csharp
+using UnityEngine;
+using IngameDebugConsole;
+
+public class TestScript : MonoBehaviour
+{
+	[ConsoleCustomTypeParser( typeof( Person ) )]
+	public static bool ParsePerson( string input, out object output )
+	{
+		// Same as above...
+	}
+}
+```
+
+### Removing Supported Custom Parameter Types
+
+Use `DebugLogConsole.RemoveCustomParameterType( Type type )`.
