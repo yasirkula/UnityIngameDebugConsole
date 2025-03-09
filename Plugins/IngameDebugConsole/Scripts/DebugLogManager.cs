@@ -1442,7 +1442,6 @@ namespace IngameDebugConsole
 			// Swap the value of collapse mode
 			isCollapseOn = !isCollapseOn;
 
-			SnapToBottom = true;
 			collapseButton.color = isCollapseOn ? collapseButtonSelectedColor : collapseButtonNormalColor;
 			recycledListView.SetCollapseMode( isCollapseOn );
 
@@ -1684,6 +1683,7 @@ namespace IngameDebugConsole
 		// Determine the filtered list of debug entries to show on screen
 		private void FilterLogs()
 		{
+			recycledListView.OnBeforeFilterLogs();
 			logEntriesToShow.Clear();
 
 			if( timestampsOfLogEntriesToShow != null )
@@ -1757,7 +1757,7 @@ namespace IngameDebugConsole
 			}
 
 			// Update the recycled list view
-			recycledListView.DeselectSelectedLogItem();
+			recycledListView.OnAfterFilterLogs();
 			OnLogEntriesUpdated( true, true );
 		}
 

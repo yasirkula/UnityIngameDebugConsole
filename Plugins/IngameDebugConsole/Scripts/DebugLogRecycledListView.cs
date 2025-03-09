@@ -36,6 +36,10 @@ namespace IngameDebugConsole
 		private float heightOfSelectedLogEntry;
 		private float DeltaHeightOfSelectedLogEntry { get { return heightOfSelectedLogEntry - logItemHeight; } }
 
+		/// These properties are used by <see cref="OnBeforeFilterLogs"/> and <see cref="OnAfterFilterLogs"/>.
+		private int collapsedOrderOfSelectedLogEntry;
+		private float scrollDistanceToSelectedLogEntry;
+
 		// Log items used to visualize the visible debug entries
 		private readonly DynamicCircularBuffer<DebugLogItem> visibleLogItems = new DynamicCircularBuffer<DebugLogItem>( 32 );
 
@@ -126,6 +130,57 @@ namespace IngameDebugConsole
 			selectedLogEntry = null;
 			indexOfSelectedLogEntry = int.MaxValue;
 			heightOfSelectedLogEntry = 0f;
+		}
+
+		/// <summary>
+		/// Cache the currently selected log item's properties so that its position can be restored after <see cref="OnAfterFilterLogs"/> is called.
+		/// </summary>
+		public void OnBeforeFilterLogs()
+		{
+			collapsedOrderOfSelectedLogEntry = 0;
+			scrollDistanceToSelectedLogEntry = 0f;
+
+			if( selectedLogEntry != null )
+			{
+				if( !isCollapseOn )
+				{
+					for( int i = 0; i < indexOfSelectedLogEntry; i++ )
+					{
+						if( entriesToShow[i] == selectedLogEntry )
+							collapsedOrderOfSelectedLogEntry++;
+					}
+				}
+
+				scrollDistanceToSelectedLogEntry = indexOfSelectedLogEntry * ItemHeight - transformComponent.anchoredPosition.y;
+			}
+		}
+
+		/// <summary>
+		/// See <see cref="OnBeforeFilterLogs"/>.
+		/// </summary>
+		public void OnAfterFilterLogs()
+		{
+			// Refresh selected log entry's index
+			int newIndexOfSelectedLogEntry = -1;
+			if( selectedLogEntry != null )
+			{
+				for( int i = 0; i < entriesToShow.Count; i++ )
+				{
+					if( entriesToShow[i] == selectedLogEntry && collapsedOrderOfSelectedLogEntry-- == 0 )
+					{
+						newIndexOfSelectedLogEntry = i;
+						break;
+					}
+				}
+			}
+
+			if( newIndexOfSelectedLogEntry < 0 )
+				DeselectSelectedLogItem();
+			else
+			{
+				indexOfSelectedLogEntry = newIndexOfSelectedLogEntry;
+				transformComponent.anchoredPosition = new Vector2( 0f, newIndexOfSelectedLogEntry * ItemHeight - scrollDistanceToSelectedLogEntry );
+			}
 		}
 
 		// Number of debug entries may have changed, update the list
