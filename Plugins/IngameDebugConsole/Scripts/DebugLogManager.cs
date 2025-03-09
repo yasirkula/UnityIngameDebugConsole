@@ -228,7 +228,7 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private Sprite errorLog;
 
-		private Sprite[] logSpriteRepresentations;
+		internal static Sprite[] logSpriteRepresentations;
 
 		// Visuals for resize button
 		[SerializeField]
@@ -1192,7 +1192,7 @@ namespace IngameDebugConsole
 			{
 				// It is not a duplicate,
 				// add it to the list of unique debug entries
-				logEntry.logTypeSpriteRepresentation = logSpriteRepresentations[(int) logType];
+				logEntry.logType = logType;
 				logEntry.collapsedIndex = collapsedLogEntries.Count;
 
 				collapsedLogEntries.Add( logEntry );
@@ -1222,7 +1222,6 @@ namespace IngameDebugConsole
 			// If this debug entry matches the current filters,
 			// add it to the list of debug entries to show
 			int logEntryIndexInEntriesToShow = -1;
-			Sprite logTypeSpriteRepresentation = logEntry.logTypeSpriteRepresentation;
 			if( isCollapseOn && isEntryInCollapsedEntryList )
 			{
 				if( isLogWindowVisible || timestampsOfLogEntriesToShow != null )
@@ -1243,9 +1242,9 @@ namespace IngameDebugConsole
 				}
 			}
 			else if( ( !isInSearchMode || queuedLogEntry.MatchesSearchTerm( searchTerm ) ) && ( logFilter == DebugLogFilter.All ||
-			   ( logTypeSpriteRepresentation == infoLog && ( ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info ) ) ||
-			   ( logTypeSpriteRepresentation == warningLog && ( ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning ) ) ||
-			   ( logTypeSpriteRepresentation == errorLog && ( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) ) ) )
+			   ( logType == LogType.Log && ( ( logFilter & DebugLogFilter.Info ) == DebugLogFilter.Info ) ) ||
+			   ( logType == LogType.Warning && ( ( logFilter & DebugLogFilter.Warning ) == DebugLogFilter.Warning ) ) ||
+			   ( logType != LogType.Log && logType != LogType.Warning && ( ( logFilter & DebugLogFilter.Error ) == DebugLogFilter.Error ) ) ) )
 			{
 				logEntriesToShow.Add( logEntry );
 				logEntryIndexInEntriesToShow = logEntriesToShow.Count - 1;
@@ -1327,9 +1326,9 @@ namespace IngameDebugConsole
 			if( !isCollapseOn && logEntriesToShow[removedLogEntriesToShowCount] == logEntry )
 				removedLogEntriesToShowCount++;
 
-			if( logEntry.logTypeSpriteRepresentation == infoLog )
+			if( logEntry.logType == LogType.Log )
 				infoEntryCount--;
-			else if( logEntry.logTypeSpriteRepresentation == warningLog )
+			else if( logEntry.logType == LogType.Warning )
 				warningEntryCount--;
 			else
 				errorEntryCount--;
@@ -1733,12 +1732,12 @@ namespace IngameDebugConsole
 							continue;
 
 						bool shouldShowLog = false;
-						if( logEntry.logTypeSpriteRepresentation == infoLog )
+						if( logEntry.logType == LogType.Log )
 						{
 							if( isInfoEnabled )
 								shouldShowLog = true;
 						}
-						else if( logEntry.logTypeSpriteRepresentation == warningLog )
+						else if( logEntry.logType == LogType.Warning )
 						{
 							if( isWarningEnabled )
 								shouldShowLog = true;

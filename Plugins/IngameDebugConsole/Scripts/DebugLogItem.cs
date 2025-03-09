@@ -149,7 +149,7 @@ namespace IngameDebugConsole
 			transformComponent.sizeDelta = size;
 
 			SetText( logEntry, logEntryTimestamp, isExpanded );
-			logTypeImage.sprite = logEntry.logTypeSpriteRepresentation;
+			logTypeImage.sprite = DebugLogManager.logSpriteRepresentations[(int) logEntry.logType];
 		}
 
 		// Show the collapsed count of the debug entry
