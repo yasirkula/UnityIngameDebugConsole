@@ -1797,6 +1797,14 @@ namespace IngameDebugConsole
 			return sb.ToString();
 		}
 
+		/// <param name="logTimestamps">Is <c>null</c> if <see cref="captureLogTimestamps"/> is <c>false</c>. Indices are in sync with <paramref name="logEntries"/>.</param>
+		/// <remarks>You mustn't modify the returned buffers in any way.</remarks>
+		public void GetAllLogs( out DynamicCircularBuffer<DebugLogEntry> logEntries, out DynamicCircularBuffer<DebugLogEntryTimestamp> logTimestamps )
+		{
+			logEntries = uncollapsedLogEntries;
+			logTimestamps = uncollapsedLogEntriesTimestamps;
+		}
+
 		public void SaveLogsToFile()
 		{
 			SaveLogsToFile( Path.Combine( Application.persistentDataPath, System.DateTime.Now.ToString( "dd-MM-yyyy--HH-mm-ss" ) + ".txt" ) );
