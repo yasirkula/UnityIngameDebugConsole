@@ -439,7 +439,7 @@ namespace IngameDebugConsole
 		private bool isQuittingApplication;
 #endif
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 		private DebugLogLogcatListener logcatListener;
 #endif
 
@@ -601,7 +601,7 @@ namespace IngameDebugConsole
 
 			if( receiveLogcatLogsInAndroid )
 			{
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 				if( logcatListener == null )
 					logcatListener = new DebugLogLogcatListener();
 
@@ -634,7 +634,7 @@ namespace IngameDebugConsole
 			if( !receiveLogsWhileInactive )
 				Application.logMessageReceivedThreaded -= ReceivedLog;
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 			if( logcatListener != null )
 				logcatListener.Stop();
 #endif
@@ -717,7 +717,7 @@ namespace IngameDebugConsole
 			lastFrameCount = Time.frameCount;
 #endif
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 			if( logcatListener != null )
 			{
 				string log;
