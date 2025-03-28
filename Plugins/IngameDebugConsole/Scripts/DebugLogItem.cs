@@ -14,7 +14,7 @@ namespace IngameDebugConsole
 	{
 		#region Platform Specific Elements
 #if !UNITY_2018_1_OR_NEWER
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 		private static AndroidJavaClass m_ajc = null;
 		private static AndroidJavaClass AJC
 		{

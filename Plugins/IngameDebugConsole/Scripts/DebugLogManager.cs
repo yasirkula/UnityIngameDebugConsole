@@ -439,7 +439,7 @@ namespace IngameDebugConsole
 		private bool isQuittingApplication;
 #endif
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 		private DebugLogLogcatListener logcatListener;
 #endif
 
@@ -601,11 +601,17 @@ namespace IngameDebugConsole
 
 			if( receiveLogcatLogsInAndroid )
 			{
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if UNITY_ANDROID
+#if UNITY_ANDROID_JNI
+#if !UNITY_EDITOR
 				if( logcatListener == null )
 					logcatListener = new DebugLogLogcatListener();
 
 				logcatListener.Start( logcatArguments );
+#endif
+#else
+				Debug.LogWarning( "Android JNI module must be enabled in Package Manager for \"Receive Logcat Logs In Android\" to work." );
+#endif
 #endif
 			}
 
@@ -634,7 +640,7 @@ namespace IngameDebugConsole
 			if( !receiveLogsWhileInactive )
 				Application.logMessageReceivedThreaded -= ReceivedLog;
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 			if( logcatListener != null )
 				logcatListener.Stop();
 #endif
@@ -717,7 +723,7 @@ namespace IngameDebugConsole
 			lastFrameCount = Time.frameCount;
 #endif
 
-#if !UNITY_EDITOR && UNITY_ANDROID
+#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 			if( logcatListener != null )
 			{
 				string log;

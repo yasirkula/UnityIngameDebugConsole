@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR || UNITY_ANDROID
+#if (UNITY_EDITOR || UNITY_ANDROID) && UNITY_ANDROID_JNI
 using System.Collections.Generic;
 using UnityEngine;
 
