@@ -601,11 +601,17 @@ namespace IngameDebugConsole
 
 			if( receiveLogcatLogsInAndroid )
 			{
-#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
+#if UNITY_ANDROID
+#if UNITY_ANDROID_JNI
+#if !UNITY_EDITOR
 				if( logcatListener == null )
 					logcatListener = new DebugLogLogcatListener();
 
 				logcatListener.Start( logcatArguments );
+#endif
+#else
+				Debug.LogWarning( "Android JNI module must be enabled in Package Manager for \"Receive Logcat Logs In Android\" to work." );
+#endif
 #endif
 			}
 
