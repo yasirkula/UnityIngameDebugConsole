@@ -39,7 +39,7 @@ namespace IngameDebugConsole
 		private TextMeshProUGUI logCountText;
 
 		[SerializeField]
-		private RectTransform copyLogButton;
+		private Button copyLogButton;
 #pragma warning restore 0649
 
 		// Debug entry to show with this log item
@@ -67,8 +67,9 @@ namespace IngameDebugConsole
 
 			logTextOriginalPosition = logText.rectTransform.anchoredPosition;
 			logTextOriginalSize = logText.rectTransform.sizeDelta;
-			copyLogButtonHeight = copyLogButton.anchoredPosition.y + copyLogButton.sizeDelta.y + 2f; // 2f: space between text and button
+			copyLogButtonHeight = ( copyLogButton.transform as RectTransform ).anchoredPosition.y + ( copyLogButton.transform as RectTransform ).sizeDelta.y + 2f; // 2f: space between text and button
 
+			copyLogButton.onClick.AddListener( CopyLog );
 #if !UNITY_EDITOR && UNITY_WEBGL
 			copyLogButton.gameObject.AddComponent<DebugLogItemCopyWebGL>().Initialize( this );
 #endif
@@ -185,7 +186,7 @@ namespace IngameDebugConsole
 #endif
 		}
 
-		public void CopyLog()
+		private void CopyLog()
 		{
 #if UNITY_EDITOR || !UNITY_WEBGL
 			string log = GetCopyContent();
