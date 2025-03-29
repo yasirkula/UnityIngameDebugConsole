@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Text;
+using TMPro;
 #if UNITY_EDITOR
 using UnityEditor;
 using System.Text.RegularExpressions;
@@ -27,7 +28,7 @@ namespace IngameDebugConsole
 		public CanvasGroup CanvasGroup { get { return canvasGroupComponent; } }
 
 		[SerializeField]
-		private Text logText;
+		private TextMeshProUGUI logText;
 		[SerializeField]
 		private Image logTypeImage;
 
@@ -35,7 +36,7 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private GameObject logCountParent;
 		[SerializeField]
-		private Text logCountText;
+		private TextMeshProUGUI logCountText;
 
 		[SerializeField]
 		private RectTransform copyLogButton;
@@ -83,7 +84,6 @@ namespace IngameDebugConsole
 			Vector2 size = transformComponent.sizeDelta;
 			if( isExpanded )
 			{
-				logText.horizontalOverflow = HorizontalWrapMode.Wrap;
 				size.y = listView.SelectedItemHeight;
 
 				if( !copyLogButton.gameObject.activeSelf )
@@ -96,7 +96,6 @@ namespace IngameDebugConsole
 			}
 			else
 			{
-				logText.horizontalOverflow = HorizontalWrapMode.Overflow;
 				size.y = listView.ItemHeight;
 
 				if( copyLogButton.gameObject.activeSelf )
@@ -117,7 +116,7 @@ namespace IngameDebugConsole
 		// Show the collapsed count of the debug entry
 		public void ShowCount()
 		{
-			logCountText.text = logEntry.count.ToString();
+			logCountText.SetText( "{0}", logEntry.count );
 
 			if( !logCountParent.activeSelf )
 				logCountParent.SetActive( true );
@@ -211,18 +210,21 @@ namespace IngameDebugConsole
 			}
 		}
 
+		/// Here, we're using <see cref="TMP_Text.GetRenderedValues(bool)"/> instead of <see cref="TMP_Text.preferredHeight"/> because the latter doesn't take
+		/// <see cref="TMP_Text.maxVisibleCharacters"/> into account. However, for <see cref="TMP_Text.GetRenderedValues(bool)"/> to work, we need to give it
+		/// enough space (increase log item's height) and let it regenerate its mesh <see cref="TMP_Text.ForceMeshUpdate"/>.
 		public float CalculateExpandedHeight( DebugLogEntry logEntry, DebugLogEntryTimestamp? logEntryTimestamp )
 		{
 			string text = logText.text;
-			HorizontalWrapMode wrapMode = logText.horizontalOverflow;
+			Vector2 size = ( transform as RectTransform ).sizeDelta;
 
+			( transform as RectTransform ).sizeDelta = new Vector2( size.x, 10000f );
 			SetText( logEntry, logEntryTimestamp, true );
-			logText.horizontalOverflow = HorizontalWrapMode.Wrap;
+			logText.ForceMeshUpdate();
+			float result = logText.GetRenderedValues( true ).y + copyLogButtonHeight;
 
-			float result = logText.preferredHeight + copyLogButtonHeight;
-
+			( transform as RectTransform ).sizeDelta = size;
 			logText.text = text;
-			logText.horizontalOverflow = wrapMode;
 
 			return Mathf.Max( listView.ItemHeight, result );
 		}
