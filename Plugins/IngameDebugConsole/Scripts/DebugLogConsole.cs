@@ -122,8 +122,12 @@ namespace IngameDebugConsole
 		// CompareInfo used for case-insensitive command name comparison
 		internal static readonly CompareInfo caseInsensitiveComparer = new CultureInfo( "en-US" ).CompareInfo;
 
-		static DebugLogConsole()
+		[RuntimeInitializeOnLoadMethod( RuntimeInitializeLoadType.SubsystemRegistration )] // Configurable Enter Play Mode: https://docs.unity3d.com/Manual/DomainReloading.html
+		private static void ResetStatics()
 		{
+			methods.Clear();
+			OnCommandExecuted = null;
+
 #if !IDG_DISABLE_HELP_COMMAND
 			AddCommand( "help", "Prints all commands", LogAllCommands );
 			AddCommand<string>( "help", "Prints all matching commands", LogAllCommandsWithName );
