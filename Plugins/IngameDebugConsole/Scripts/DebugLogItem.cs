@@ -12,44 +12,6 @@ namespace IngameDebugConsole
 {
 	public class DebugLogItem : MonoBehaviour, IPointerClickHandler
 	{
-		#region Platform Specific Elements
-#if !UNITY_2018_1_OR_NEWER
-#if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
-		private static AndroidJavaClass m_ajc = null;
-		private static AndroidJavaClass AJC
-		{
-			get
-			{
-				if( m_ajc == null )
-					m_ajc = new AndroidJavaClass( "com.yasirkula.unity.DebugConsole" );
-
-				return m_ajc;
-			}
-		}
-
-		private static AndroidJavaObject m_context = null;
-		private static AndroidJavaObject Context
-		{
-			get
-			{
-				if( m_context == null )
-				{
-					using( AndroidJavaObject unityClass = new AndroidJavaClass( "com.unity3d.player.UnityPlayer" ) )
-					{
-						m_context = unityClass.GetStatic<AndroidJavaObject>( "currentActivity" );
-					}
-				}
-
-				return m_context;
-			}
-		}
-#elif !UNITY_EDITOR && UNITY_IOS
-		[System.Runtime.InteropServices.DllImport( "__Internal" )]
-		private static extern void _DebugConsole_CopyText( string text );
-#endif
-#endif
-		#endregion
-
 #pragma warning disable 0649
 		// Cached components
 		[SerializeField]
@@ -228,16 +190,8 @@ namespace IngameDebugConsole
 		{
 #if UNITY_EDITOR || !UNITY_WEBGL
 			string log = GetCopyContent();
-			if( string.IsNullOrEmpty( log ) )
-				return;
-
-#if UNITY_EDITOR || UNITY_2018_1_OR_NEWER || ( !UNITY_ANDROID && !UNITY_IOS )
-			GUIUtility.systemCopyBuffer = log;
-#elif UNITY_ANDROID
-			AJC.CallStatic( "CopyText", Context, log );
-#elif UNITY_IOS
-			_DebugConsole_CopyText( log );
-#endif
+			if( !string.IsNullOrEmpty( log ) )
+				GUIUtility.systemCopyBuffer = log;
 #endif
 		}
 

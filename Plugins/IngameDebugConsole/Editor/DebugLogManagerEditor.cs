@@ -39,9 +39,7 @@ namespace IngameDebugConsole
 		private SerializedProperty popupAvoidsScreenCutout;
 		private SerializedProperty autoFocusOnCommandInputField;
 
-#if UNITY_2017_3_OR_NEWER
 		private readonly GUIContent popupVisibilityLogFilterLabel = new GUIContent( "Log Filter", "Determines which log types will show the popup on screen" );
-#endif
 		private readonly GUIContent receivedLogTypesLabel = new GUIContent( "Received Log Types", "Only these logs will be received by the console window, other logs will simply be skipped" );
 		private readonly GUIContent receiveInfoLogsLabel = new GUIContent( "Info" );
 		private readonly GUIContent receiveWarningLogsLabel = new GUIContent( "Warning" );
@@ -118,21 +116,9 @@ namespace IngameDebugConsole
 			if( popupVisibility.intValue == (int) PopupVisibility.WhenLogReceived )
 			{
 				EditorGUI.indentLevel++;
-#if UNITY_2017_3_OR_NEWER
 				Rect rect = EditorGUILayout.GetControlRect();
 				EditorGUI.BeginProperty( rect, GUIContent.none, popupVisibilityLogFilter );
 				popupVisibilityLogFilter.intValue = (int) (DebugLogFilter) EditorGUI.EnumFlagsField( rect, popupVisibilityLogFilterLabel, (DebugLogFilter) popupVisibilityLogFilter.intValue );
-#else
-				EditorGUI.BeginProperty( new Rect(), GUIContent.none, popupVisibilityLogFilter );
-				EditorGUI.BeginChangeCheck();
-
-				bool infoLog = EditorGUILayout.Toggle( "Info", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Info ) == DebugLogFilter.Info );
-				bool warningLog = EditorGUILayout.Toggle( "Warning", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Warning ) == DebugLogFilter.Warning );
-				bool errorLog = EditorGUILayout.Toggle( "Error", ( (DebugLogFilter) popupVisibilityLogFilter.intValue & DebugLogFilter.Error ) == DebugLogFilter.Error );
-
-				if( EditorGUI.EndChangeCheck() )
-					popupVisibilityLogFilter.intValue = ( infoLog ? (int) DebugLogFilter.Info : 0 ) | ( warningLog ? (int) DebugLogFilter.Warning : 0 ) | ( errorLog ? (int) DebugLogFilter.Error : 0 );
-#endif
 				EditorGUI.EndProperty();
 				EditorGUI.indentLevel--;
 			}

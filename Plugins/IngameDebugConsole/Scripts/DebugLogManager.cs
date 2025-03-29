@@ -180,16 +180,12 @@ namespace IngameDebugConsole
 		private bool receiveLogcatLogsInAndroid = false;
 
 #pragma warning disable 0414
-#if UNITY_2018_3_OR_NEWER // On older Unity versions, disabling CS0169 is problematic: "Cannot restore warning 'CS0169' because it was disabled globally"
 #pragma warning disable 0169
-#endif
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "Native logs will be filtered using these arguments. If left blank, all native logs of the application will be logged to the console. But if you want to e.g. see Admob's logs only, you can enter \"-s Ads\" (without quotes) here" )]
 		private string logcatArguments;
-#if UNITY_2018_3_OR_NEWER
 #pragma warning restore 0169
-#endif
 #pragma warning restore 0414
 
 		[SerializeField]
@@ -435,9 +431,7 @@ namespace IngameDebugConsole
 		// Callbacks for log window show/hide events
 		public System.Action OnLogWindowShown, OnLogWindowHidden;
 
-#if UNITY_EDITOR
 		private bool isQuittingApplication;
-#endif
 
 #if !UNITY_EDITOR && UNITY_ANDROID && UNITY_ANDROID_JNI
 		private DebugLogLogcatListener logcatListener;
@@ -564,12 +558,9 @@ namespace IngameDebugConsole
 				Application.logMessageReceivedThreaded += ReceivedLog;
 			}
 
-#if UNITY_EDITOR && UNITY_2018_1_OR_NEWER
 			// OnApplicationQuit isn't reliable on some Unity versions when Application.wantsToQuit is used; Application.quitting is the only reliable solution on those versions
 			// https://issuetracker.unity3d.com/issues/onapplicationquit-method-is-called-before-application-dot-wantstoquit-event-is-raised
-			Application.quitting -= OnApplicationQuitting;
 			Application.quitting += OnApplicationQuitting;
-#endif
 
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 			toggleBinding.performed += ( context ) =>
@@ -676,9 +667,7 @@ namespace IngameDebugConsole
 			if( receiveLogsWhileInactive )
 				Application.logMessageReceivedThreaded -= ReceivedLog;
 
-#if UNITY_EDITOR && UNITY_2018_1_OR_NEWER
 			Application.quitting -= OnApplicationQuitting;
-#endif
 		}
 
 #if UNITY_EDITOR
@@ -697,16 +686,12 @@ namespace IngameDebugConsole
 				filterErrorButton.gameObject.SetActive( receiveErrorLogs || receiveExceptionLogs );
 			}
 		}
-
-#if UNITY_2018_1_OR_NEWER
-		private void OnApplicationQuitting()
-#else
-		private void OnApplicationQuit()
 #endif
+
+		private void OnApplicationQuitting()
 		{
 			isQuittingApplication = true;
 		}
-#endif
 
 		// Window is resized, update the list
 		private void OnRectTransformDimensionsChange()
@@ -752,10 +737,8 @@ namespace IngameDebugConsole
 
 		private void LateUpdate()
 		{
-#if UNITY_EDITOR
 			if( isQuittingApplication )
 				return;
-#endif
 
 			int numberOfLogsToProcess = isLogWindowVisible ? queuedLogEntries.Count : ( queuedLogEntries.Count - queuedLogLimit );
 			ProcessQueuedLogs( numberOfLogsToProcess );
@@ -1059,10 +1042,8 @@ namespace IngameDebugConsole
 		// A debug entry is received
 		public void ReceivedLog( string logString, string stackTrace, LogType logType )
 		{
-#if UNITY_EDITOR
 			if( isQuittingApplication )
 				return;
-#endif
 
 			switch( logType )
 			{
@@ -1828,7 +1809,7 @@ namespace IngameDebugConsole
 			if( !avoidScreenCutout )
 				return;
 
-#if UNITY_2017_2_OR_NEWER && ( UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS )
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
 			// Check if there is a cutout at the top of the screen
 			int screenHeight = Screen.height;
 			float safeYMax = Screen.safeArea.yMax;

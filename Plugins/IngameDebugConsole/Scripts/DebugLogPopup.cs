@@ -203,7 +203,7 @@ namespace IngameDebugConsole
 
 			if( debugManager.popupAvoidsScreenCutout )
 			{
-#if UNITY_2017_2_OR_NEWER && ( UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS )
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
 				Rect safeArea = Screen.safeArea;
 
 				int screenWidth = Screen.width;
