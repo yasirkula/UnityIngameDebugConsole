@@ -201,7 +201,7 @@ namespace IngameDebugConsole
 
 		[SerializeField]
 		[Tooltip( "If a log is longer than this limit, it will be truncated. This helps avoid reaching Unity's 65000 vertex limit for UI canvases" )]
-		private int maxLogLength = 10000;
+		internal int maxLogLength = 10000;
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
 		[SerializeField]
@@ -1054,44 +1054,6 @@ namespace IngameDebugConsole
 				case LogType.Error: if( !receiveErrorLogs ) return; break;
 				case LogType.Assert:
 				case LogType.Exception: if( !receiveExceptionLogs ) return; break;
-			}
-
-			// Truncate the log if it is longer than maxLogLength
-			int logLength = logString.Length;
-			if( stackTrace == null )
-			{
-				if( logLength > maxLogLength )
-					logString = logString.Substring( 0, maxLogLength - 11 ) + "<truncated>";
-			}
-			else
-			{
-				logLength += stackTrace.Length;
-				if( logLength > maxLogLength )
-				{
-					// Decide which log component(s) to truncate
-					int halfMaxLogLength = maxLogLength / 2;
-					if( logString.Length >= halfMaxLogLength )
-					{
-						if( stackTrace.Length >= halfMaxLogLength )
-						{
-							// Truncate both logString and stackTrace
-							logString = logString.Substring( 0, halfMaxLogLength - 11 ) + "<truncated>";
-
-							// If stackTrace doesn't end with a blank line, its last line won't be visible in the console for some reason
-							stackTrace = stackTrace.Substring( 0, halfMaxLogLength - 12 ) + "<truncated>\n";
-						}
-						else
-						{
-							// Truncate logString
-							logString = logString.Substring( 0, maxLogLength - stackTrace.Length - 11 ) + "<truncated>";
-						}
-					}
-					else
-					{
-						// Truncate stackTrace
-						stackTrace = stackTrace.Substring( 0, maxLogLength - logString.Length - 12 ) + "<truncated>\n";
-					}
-				}
 			}
 
 			QueuedDebugLogEntry queuedLogEntry = new QueuedDebugLogEntry( logString, stackTrace, logType );

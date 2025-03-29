@@ -69,6 +69,8 @@ namespace IngameDebugConsole
 			logTextOriginalSize = logText.rectTransform.sizeDelta;
 			copyLogButtonHeight = ( copyLogButton.transform as RectTransform ).anchoredPosition.y + ( copyLogButton.transform as RectTransform ).sizeDelta.y + 2f; // 2f: space between text and button
 
+			logText.maxVisibleCharacters = listView.manager.maxLogLength;
+
 			copyLogButton.onClick.AddListener( CopyLog );
 #if !UNITY_EDITOR && UNITY_WEBGL
 			copyLogButton.gameObject.AddComponent<DebugLogItemCopyWebGL>().Initialize( this );
