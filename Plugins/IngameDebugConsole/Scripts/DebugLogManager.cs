@@ -1763,9 +1763,9 @@ namespace IngameDebugConsole
 			}
 
 			if( uncollapsedLogEntriesTimestamps != null )
-				length += count * 12; // Timestamp: "[HH:mm:ss]: "
+				length += count * 30;
 
-			length += 100; // Just in case...
+			length += 200; // Just in case...
 
 			StringBuilder sb = new StringBuilder( length );
 			for( int i = 0; i < count; i++ )
@@ -1774,12 +1774,15 @@ namespace IngameDebugConsole
 
 				if( uncollapsedLogEntriesTimestamps != null )
 				{
-					uncollapsedLogEntriesTimestamps[i].AppendTime( sb );
+					uncollapsedLogEntriesTimestamps[i].AppendFullTimestamp( sb );
 					sb.Append( ": " );
 				}
 
 				sb.AppendLine( entry.logString ).AppendLine( entry.stackTrace ).AppendLine();
 			}
+
+			sb.Append( "Current time: " ).AppendLine( ( System.DateTime.UtcNow + localTimeUtcOffset ).ToString( "F" ) );
+			sb.Append( "Version: " ).AppendLine( Application.version );
 
 			return sb.ToString();
 		}
