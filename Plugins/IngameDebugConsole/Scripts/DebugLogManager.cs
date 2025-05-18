@@ -1755,6 +1755,9 @@ namespace IngameDebugConsole
 		/// <remarks>You mustn't modify the returned buffers in any way.</remarks>
 		public void GetAllLogs( out DynamicCircularBuffer<DebugLogEntry> logEntries, out DynamicCircularBuffer<DebugLogEntryTimestamp> logTimestamps )
 		{
+			// Process all pending logs since we want to return "all" logs
+			ProcessQueuedLogs( queuedLogEntries.Count );
+
 			logEntries = uncollapsedLogEntries;
 			logTimestamps = uncollapsedLogEntriesTimestamps;
 		}
