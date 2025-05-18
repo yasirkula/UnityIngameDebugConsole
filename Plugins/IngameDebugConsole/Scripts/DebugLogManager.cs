@@ -99,7 +99,7 @@ namespace IngameDebugConsole
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "If enabled, console window will initially be invisible" )]
-		private bool startMinimized = false;
+		private bool startMinimized = true;
 
 		[SerializeField]
 		[HideInInspector]

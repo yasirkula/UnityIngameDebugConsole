@@ -846,7 +846,7 @@ MonoBehaviour:
   popupOpacity: 1
   popupVisibility: 0
   popupVisibilityLogFilter: -1
-  startMinimized: 0
+  startMinimized: 1
   toggleWithKey: 1
   toggleKey: 96
   enableSearchbar: 1
