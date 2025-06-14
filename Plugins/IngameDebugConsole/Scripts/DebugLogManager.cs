@@ -222,6 +222,9 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private DebugLogItem logItemPrefab;
 
+        [SerializeField]
+        internal TMP_FontAsset logItemFontOverride;
+
 		[SerializeField]
 		private TextMeshProUGUI commandSuggestionPrefab;
 
