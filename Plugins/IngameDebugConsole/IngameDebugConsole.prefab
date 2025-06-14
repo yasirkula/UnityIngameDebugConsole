@@ -868,7 +868,8 @@ MonoBehaviour:
   logcatArguments: 
   avoidScreenCutout: 1
   popupAvoidsScreenCutout: 0
-  maxLogLength: 10000
+  maxCollapsedLogLength: 200
+  maxExpandedLogLength: 10000
   autoFocusOnCommandInputField: 1
   logItemPrefab: {fileID: 11408050, guid: 391be5df5ef62f345bb76a1051c04da7, type: 3}
   commandSuggestionPrefab: {fileID: 6838696818539158795, guid: 5e66896448428cf46a1854dbdc014914,
@@ -3470,7 +3471,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12.3
+  m_fontSize: 16
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -4095,7 +4096,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 3.5
+  m_fontSize: 16
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

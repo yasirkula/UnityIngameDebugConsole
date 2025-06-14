@@ -69,8 +69,6 @@ namespace IngameDebugConsole
 			logTextOriginalSize = logText.rectTransform.sizeDelta;
 			copyLogButtonHeight = ( copyLogButton.transform as RectTransform ).anchoredPosition.y + ( copyLogButton.transform as RectTransform ).sizeDelta.y + 2f; // 2f: space between text and button
 
-			logText.maxVisibleCharacters = listView.manager.maxLogLength;
-
 			copyLogButton.onClick.AddListener( CopyLog );
 #if !UNITY_EDITOR && UNITY_WEBGL
 			copyLogButton.gameObject.AddComponent<DebugLogItemCopyWebGL>().Initialize( this );
@@ -141,29 +139,47 @@ namespace IngameDebugConsole
 				SetText( logEntry, timestamp, isExpanded );
 		}
 
-		private void SetText( DebugLogEntry logEntry, DebugLogEntryTimestamp? logEntryTimestamp, bool isExpanded )
-		{
-			if( !logEntryTimestamp.HasValue || ( !isExpanded && !listView.manager.alwaysDisplayTimestamps ) )
-				logText.text = isExpanded ? logEntry.ToString() : logEntry.logString;
-			else
-			{
-				StringBuilder sb = listView.manager.sharedStringBuilder;
-				sb.Length = 0;
+        private void SetText(DebugLogEntry logEntry, DebugLogEntryTimestamp? logEntryTimestamp, bool isExpanded)
+        {
+            string text = isExpanded ? logEntry.ToString() : logEntry.logString;
+            int maxLogLength = isExpanded ? listView.manager.maxExpandedLogLength : listView.manager.maxCollapsedLogLength;
 
-				if( isExpanded )
-				{
-					logEntryTimestamp.Value.AppendFullTimestamp( sb );
-					sb.Append( ": " ).Append( logEntry.ToString() );
-				}
-				else
-				{
-					logEntryTimestamp.Value.AppendTime( sb );
-					sb.Append( " " ).Append( logEntry.logString );
-				}
+            if (!logEntryTimestamp.HasValue || (!isExpanded && !listView.manager.alwaysDisplayTimestamps))
+            {
+                if (text.Length <= maxLogLength)
+                    logText.text = text;
+                else
+                {
+                    if (listView.manager.textBuffer.Length < maxLogLength)
+                        listView.manager.textBuffer = new char[maxLogLength];
 
-				logText.text = sb.ToString();
-			}
-		}
+                    text.CopyTo(0, listView.manager.textBuffer, 0, maxLogLength);
+                    logText.SetText(listView.manager.textBuffer, 0, maxLogLength);
+                }
+            }
+            else
+            {
+                StringBuilder sb = listView.manager.sharedStringBuilder;
+                sb.Length = 0;
+
+                if (isExpanded)
+                {
+                    logEntryTimestamp.Value.AppendFullTimestamp(sb);
+                    sb.Append(": ").Append(text, 0, Mathf.Min(text.Length, maxLogLength - sb.Length));
+                }
+                else
+                {
+                    logEntryTimestamp.Value.AppendTime(sb);
+                    sb.Append(" ").Append(text, 0, Mathf.Min(text.Length, maxLogLength - sb.Length));
+                }
+
+                if (listView.manager.textBuffer.Length < sb.Length)
+                    listView.manager.textBuffer = new char[sb.Length];
+
+                sb.CopyTo(0, listView.manager.textBuffer, 0, sb.Length);
+                logText.SetText(listView.manager.textBuffer, 0, sb.Length);
+            }
+        }
 
 		// This log item is clicked, show the debug entry's stack trace
 		public void OnPointerClick( PointerEventData eventData )

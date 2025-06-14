@@ -199,9 +199,13 @@ namespace IngameDebugConsole
 		[Tooltip( "If enabled, on Android and iOS devices with notch screens, the console window's popup won't be obscured by the screen cutouts" )]
 		internal bool popupAvoidsScreenCutout = false;
 
-		[SerializeField]
-		[Tooltip( "If a log is longer than this limit, it will be truncated. This helps avoid reaching Unity's 65000 vertex limit for UI canvases" )]
-		internal int maxLogLength = 10000;
+        [SerializeField]
+        [Tooltip("If a log that isn't expanded is longer than this limit, it will be truncated. This greatly optimizes scrolling speed of collapsed logs if their log messages are long.")]
+        internal int maxCollapsedLogLength = 200;
+
+        [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("maxLogLength")]
+        [Tooltip("If an expanded log is longer than this limit, it will be truncated. This optimizes scrolling speed while an expanded log is visible.")]
+        internal int maxExpandedLogLength = 10000;
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
 		[SerializeField]
@@ -406,6 +410,12 @@ namespace IngameDebugConsole
 
 		// StringBuilder used by various functions
 		internal StringBuilder sharedStringBuilder;
+
+        /// <summary>
+        /// Used for <see cref="TMP_Text.SetText(char[])"/>.
+        /// </summary>
+        [System.NonSerialized]
+        internal char[] textBuffer = new char[4096];
 
 		// Offset of DateTime.Now from DateTime.UtcNow
 		private System.TimeSpan localTimeUtcOffset;
