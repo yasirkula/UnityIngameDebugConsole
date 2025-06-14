@@ -20,6 +20,7 @@ namespace IngameDebugConsole
 		private SerializedProperty toggleKey;
 		private SerializedProperty enableSearchbar;
 		private SerializedProperty topSearchbarMinWidth;
+		private SerializedProperty copyAllLogsOnResizeButtonClick;
 		private SerializedProperty receiveLogsWhileInactive;
 		private SerializedProperty receiveInfoLogs;
 		private SerializedProperty receiveWarningLogs;
@@ -76,6 +77,7 @@ namespace IngameDebugConsole
 			maxLogCount = serializedObject.FindProperty( "maxLogCount" );
 			logsToRemoveAfterMaxLogCount = serializedObject.FindProperty( "logsToRemoveAfterMaxLogCount" );
 			queuedLogLimit = serializedObject.FindProperty( "queuedLogLimit" );
+            copyAllLogsOnResizeButtonClick = serializedObject.FindProperty("copyAllLogsOnResizeButtonClick");
 			clearCommandAfterExecution = serializedObject.FindProperty( "clearCommandAfterExecution" );
 			commandHistorySize = serializedObject.FindProperty( "commandHistorySize" );
 			showCommandSuggestions = serializedObject.FindProperty( "showCommandSuggestions" );
@@ -132,6 +134,8 @@ namespace IngameDebugConsole
 			EditorGUILayout.PropertyField( enableSearchbar );
 			if( enableSearchbar.boolValue )
 				DrawSubProperty( topSearchbarMinWidth );
+
+            EditorGUILayout.PropertyField(copyAllLogsOnResizeButtonClick);
 
 			EditorGUILayout.Space();
 

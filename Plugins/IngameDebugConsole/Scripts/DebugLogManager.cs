@@ -126,6 +126,10 @@ namespace IngameDebugConsole
 		[Tooltip( "Width of the canvas determines whether the searchbar will be located inside the menu bar or underneath the menu bar. This way, the menu bar doesn't get too crowded on narrow screens. This value determines the minimum width of the canvas for the searchbar to appear inside the menu bar" )]
 		private float topSearchbarMinWidth = 360f;
 
+        [SerializeField, HideInInspector]
+        [Tooltip("If enabled, clicking the resize button of the console window will copy all logs to clipboard. It'll also play a scale animation to give feedback.")]
+        internal bool copyAllLogsOnResizeButtonClick;
+
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "If enabled, the console window will continue receiving logs in the background even if its GameObject is inactive. But the console window's GameObject needs to be activated at least once because its Awake function must be triggered for this to work" )]
@@ -1722,27 +1726,41 @@ namespace IngameDebugConsole
 			OnLogEntriesUpdated( true, true );
 		}
 
-		public string GetAllLogs()
+        public string GetAllLogs()
+        {
+            return GetAllLogs(int.MaxValue, float.PositiveInfinity);
+        }
+
+        /// <param name="maxLogCount">Maximum allowed log count.</param>
+        /// <param name="maxElapsedTime">Maximum allowed time interval (in seconds) between now and the logs' arrival time (requires <see cref="captureLogTimestamps"/> to be enabled).</param>
+        public string GetAllLogs(int maxLogCount, float maxElapsedTime)
 		{
 			// Process all pending logs since we want to return "all" logs
 			ProcessQueuedLogs( queuedLogEntries.Count );
 
-			int count = uncollapsedLogEntries.Count;
+            int startIndex = uncollapsedLogEntries.Count - Mathf.Min(uncollapsedLogEntries.Count, maxLogCount);
+            if (uncollapsedLogEntriesTimestamps != null)
+            {
+                float currentElapsedSeconds = Time.realtimeSinceStartup;
+                while (startIndex < uncollapsedLogEntries.Count && currentElapsedSeconds - uncollapsedLogEntriesTimestamps[startIndex].elapsedSeconds > maxElapsedTime)
+                    startIndex++;
+            }
+
 			int length = 0;
 			int newLineLength = System.Environment.NewLine.Length;
-			for( int i = 0; i < count; i++ )
+            for (int i = startIndex; i < uncollapsedLogEntries.Count; i++)
 			{
 				DebugLogEntry entry = uncollapsedLogEntries[i];
 				length += entry.logString.Length + entry.stackTrace.Length + newLineLength * 3;
 			}
 
-			if( uncollapsedLogEntriesTimestamps != null )
-				length += count * 30;
+            if (uncollapsedLogEntriesTimestamps != null)
+                length += (uncollapsedLogEntries.Count - startIndex) * 30;
 
 			length += 200; // Just in case...
 
 			StringBuilder sb = new StringBuilder( length );
-			for( int i = 0; i < count; i++ )
+            for (int i = startIndex; i < uncollapsedLogEntries.Count; i++)
 			{
 				DebugLogEntry entry = uncollapsedLogEntries[i];
 
