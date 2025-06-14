@@ -28,6 +28,15 @@ namespace IngameDebugConsole
 					startIndex = 0;
 			}
 		}
+
+        public T[] ToArray()
+        {
+            T[] result = new T[Count];
+            for (int i = 0; i < Count; i++)
+                result[i] = this[i];
+
+            return result;
+        }
 	}
 
 	public class DynamicCircularBuffer<T>
