@@ -158,36 +158,32 @@ namespace IngameDebugConsole
 			};
 #endif
 
-#if UNITY_EDITOR || !NETFX_CORE
-			foreach( Assembly assembly in AppDomain.CurrentDomain.GetAssemblies() )
-#else
-			foreach( Assembly assembly in new Assembly[] { typeof( DebugLogConsole ).Assembly } ) // On UWP, at least search this plugin's Assembly for console methods
-#endif
-			{
-#if( NET_4_6 || NET_STANDARD_2_0 ) && ( UNITY_EDITOR || !NETFX_CORE )
-				if( assembly.IsDynamic )
-					continue;
+            foreach (Assembly assembly in GetAllAssemblies() ?? new Assembly[] { typeof(DebugLogConsole).Assembly }) // On UWP, at least search this plugin's Assembly for console methods
+            {
+#if (NET_4_6 || NET_STANDARD_2_0) && (UNITY_EDITOR || !NETFX_CORE)
+                if (assembly.IsDynamic)
+                    continue;
 #endif
 
 
 #if UNITY_EDITOR || !NETFX_CORE
-				string assemblyName = assembly.GetName().Name;
-				bool ignoreAssembly = false;
-				for( int i = 0; i < ignoredAssemblies.Length; i++ )
-				{
-					if( caseInsensitiveComparer.IsPrefix( assemblyName, ignoredAssemblies[i], CompareOptions.IgnoreCase ) )
-					{
-						ignoreAssembly = true;
-						break;
-					}
-				}
+                string assemblyName = assembly.GetName().Name;
+                bool ignoreAssembly = false;
+                for (int i = 0; i < ignoredAssemblies.Length; i++)
+                {
+                    if (caseInsensitiveComparer.IsPrefix(assemblyName, ignoredAssemblies[i], CompareOptions.IgnoreCase))
+                    {
+                        ignoreAssembly = true;
+                        break;
+                    }
+                }
 
-				if( ignoreAssembly )
-					continue;
+                if (ignoreAssembly)
+                    continue;
 #endif
 
-				SearchAssemblyForConsoleMethods( assembly );
-			}
+                SearchAssemblyForConsoleMethods(assembly);
+            }
 		}
 
 		public static void SearchAssemblyForConsoleMethods( Assembly assembly )
@@ -221,6 +217,17 @@ namespace IngameDebugConsole
 				Debug.LogError( "Couldn't search assembly for [ConsoleMethod] attributes: " + assembly.GetName().Name + "\n" + e.ToString() );
 			}
 		}
+
+        public static IReadOnlyList<Assembly> GetAllAssemblies()
+        {
+#if UNITY_6000_4_OR_NEWER
+            return UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies();
+#elif UNITY_EDITOR || !NETFX_CORE
+            return AppDomain.CurrentDomain.GetAssemblies();
+#else
+            return null;
+#endif
+        }
 
 		public static List<ConsoleMethodInfo> GetAllCommands()
 		{
