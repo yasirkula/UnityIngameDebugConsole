@@ -550,6 +550,7 @@ namespace IngameDebugConsole
 			commandInputField.onValidateInput += OnValidateCommand;
 			commandInputField.onValueChanged.AddListener( OnEditCommand );
 			commandInputField.onEndEdit.AddListener( OnEndEditCommand );
+            commandInputField.onSubmit.AddListener(OnSubmitCommand);
 			hideButton.onClick.AddListener( HideLogWindow );
 			clearButton.onClick.AddListener( ClearLogs );
 			collapseButton.GetComponent<Button>().onClick.AddListener( CollapseButtonPressed );
@@ -1026,25 +1027,7 @@ namespace IngameDebugConsole
 			}
 			else if( addedChar == '\n' ) // Command is submitted
 			{
-				// Clear the command field
-				if( clearCommandAfterExecution )
-					commandInputField.text = string.Empty;
-
-				if( text.Length > 0 )
-				{
-					if( commandHistory.Count == 0 || commandHistory[commandHistory.Count - 1] != text )
-						commandHistory.Add( text );
-
-					commandHistoryIndex = -1;
-					unfinishedCommand = null;
-
-					// Execute the command
-					DebugLogConsole.ExecuteCommand( text );
-
-					// Snap to bottom and select the latest entry
-					SnapToBottom = true;
-				}
-
+                OnSubmitCommand(text);
 				return '\0';
 			}
 
@@ -1615,6 +1598,29 @@ namespace IngameDebugConsole
             }
 
             commandSuggestionsContainer.gameObject.SetActive(false);
+        }
+
+        // Command input field has been submitted
+        private void OnSubmitCommand(string command)
+        {
+            // Clear the command field
+            if (clearCommandAfterExecution)
+                commandInputField.text = string.Empty;
+
+            if (command.Length > 0)
+            {
+                if (commandHistory.Count == 0 || commandHistory[commandHistory.Count - 1] != command)
+                    commandHistory.Add(command);
+
+                commandHistoryIndex = -1;
+                unfinishedCommand = null;
+
+                // Execute the command
+                DebugLogConsole.ExecuteCommand(command);
+
+                // Snap to bottom and select the latest entry
+                SnapToBottom = true;
+            }
         }
 
 		// Debug window is being resized,
