@@ -46,6 +46,7 @@ namespace IngameDebugConsole
 	public class DebugLogManager : MonoBehaviour
 	{
 		public static DebugLogManager Instance { get; private set; }
+        public static bool AllowMultipleInstances;
 
 		[Header( "Properties" )]
 		[SerializeField]
@@ -232,7 +233,7 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private Sprite errorLog;
 
-		internal static Sprite[] logSpriteRepresentations;
+		internal Sprite[] logSpriteRepresentations;
 
 		// Visuals for resize button
 		[SerializeField]
@@ -424,20 +425,20 @@ namespace IngameDebugConsole
 
 		private void Awake()
 		{
-			// Only one instance of debug console is allowed
-			if( !Instance )
-			{
-				Instance = this;
+            // Only one instance of debug console is allowed
+            if (Instance == null)
+            {
+                Instance = this;
 
-				// If it is a singleton object, don't destroy it between scene changes
-				if( singleton )
-					DontDestroyOnLoad( gameObject );
-			}
-			else if( Instance != this )
-			{
-				Destroy( gameObject );
-				return;
-			}
+                // If it is a singleton object, don't destroy it between scene changes
+                if (singleton)
+                    DontDestroyOnLoad(gameObject);
+            }
+            else if (!AllowMultipleInstances && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
 
 			pooledLogEntries = new Stack<DebugLogEntry>( 64 );
 			pooledLogItems = new Stack<DebugLogItem>( 16 );

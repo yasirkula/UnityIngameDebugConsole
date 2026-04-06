@@ -320,6 +320,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 298319a3c52d37442b63e30622b8c05d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  manager: {fileID: 11452418}
   maxLogCount: 2147483647
   maxElapsedTime: Infinity
 --- !u!1 &118212
