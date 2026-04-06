@@ -166,17 +166,17 @@ namespace IngameDebugConsole
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "If enabled, the command input field at the bottom of the console window will automatically be cleared after entering a command" )]
-		private bool clearCommandAfterExecution = true;
+        internal bool clearCommandAfterExecution = true;
 
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "Console keeps track of the previously entered commands. This value determines the capacity of the command history (you can scroll through the history via up and down arrow keys while the command input field is focused)" )]
-		private int commandHistorySize = 15;
+		internal int commandHistorySize = 15;
 
 		[SerializeField]
 		[HideInInspector]
 		[Tooltip( "If enabled, while typing a command, all of the matching commands' signatures will be displayed in a popup" )]
-		private bool showCommandSuggestions = true;
+		internal bool showCommandSuggestions = true;
 
 		[SerializeField]
 		[HideInInspector]
@@ -224,9 +224,6 @@ namespace IngameDebugConsole
         [SerializeField]
         internal TMP_FontAsset logItemFontOverride;
 
-		[SerializeField]
-		private TextMeshProUGUI commandSuggestionPrefab;
-
 		// Visuals for different log types
 		[SerializeField]
 		private Sprite infoLog;
@@ -253,11 +250,6 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private Color filterButtonsSelectedColor;
 
-		[SerializeField]
-		private string commandSuggestionHighlightStart = "<color=orange>";
-		[SerializeField]
-		private string commandSuggestionHighlightEnd = "</color>";
-
 		[Header( "Internal References" )]
 		[SerializeField]
 		private RectTransform logWindowTR;
@@ -267,11 +259,8 @@ namespace IngameDebugConsole
 		[SerializeField]
 		private RectTransform logItemsContainer;
 
-		[SerializeField]
-		private RectTransform commandSuggestionsContainer;
-
-		[SerializeField]
-		private TMP_InputField commandInputField;
+        [SerializeField]
+        private CommandInputField commandInputField;
 
 		[SerializeField]
 		private Button hideButton;
@@ -385,21 +374,6 @@ namespace IngameDebugConsole
 		private object logEntriesLock;
 		private int pendingLogToAutoExpand;
 
-		// Command suggestions that match the currently entered command
-		private List<TextMeshProUGUI> commandSuggestionInstances;
-		private int visibleCommandSuggestionInstances = 0;
-		private List<ConsoleMethodInfo> matchingCommandSuggestions;
-		private List<int> commandCaretIndexIncrements;
-		private string commandInputFieldPrevCommand;
-		private string commandInputFieldPrevCommandName;
-		private int commandInputFieldPrevParamCount = -1;
-		private int commandInputFieldPrevCaretPos = -1;
-		private int commandInputFieldPrevCaretArgumentIndex = -1;
-
-		// Value of the command input field when autocomplete was first requested
-		private string commandInputFieldAutoCompleteBase;
-		private bool commandInputFieldAutoCompletedNow;
-
 		// Pools for memory efficiency
 		private Stack<DebugLogEntry> pooledLogEntries;
 		private Stack<DebugLogItem> pooledLogItems;
@@ -407,11 +381,6 @@ namespace IngameDebugConsole
 		/// Variables used by <see cref="RemoveOldestLogs"/>
 		private bool anyCollapsedLogRemoved;
 		private int removedLogEntriesToShowCount;
-
-		// History of the previously entered commands
-		private CircularBuffer<string> commandHistory;
-		private int commandHistoryIndex = -1;
-		private string unfinishedCommand;
 
 		// StringBuilder used by various functions
 		internal StringBuilder sharedStringBuilder;
@@ -472,11 +441,7 @@ namespace IngameDebugConsole
 
 			pooledLogEntries = new Stack<DebugLogEntry>( 64 );
 			pooledLogItems = new Stack<DebugLogItem>( 16 );
-			commandSuggestionInstances = new List<TextMeshProUGUI>( 8 );
-			matchingCommandSuggestions = new List<ConsoleMethodInfo>( 8 );
-			commandCaretIndexIncrements = new List<int>( 8 );
 			queuedLogEntries = new DynamicCircularBuffer<QueuedDebugLogEntry>( Mathf.Clamp( queuedLogLimit, 16, 4096 ) );
-			commandHistory = new CircularBuffer<string>( commandHistorySize );
 
 			logEntriesLock = new object();
 			sharedStringBuilder = new StringBuilder( 1024 );
@@ -514,6 +479,7 @@ namespace IngameDebugConsole
 			}
 
 			recycledListView.Initialize( this, logEntriesToShow, timestampsOfLogEntriesToShow, logItemPrefab.Transform.sizeDelta.y );
+            commandInputField.Initialize(this);
 
 			if( minimumWidth < 100f )
 				minimumWidth = 100f;
@@ -543,14 +509,7 @@ namespace IngameDebugConsole
 			filterWarningButton.gameObject.SetActive( receiveWarningLogs );
 			filterErrorButton.gameObject.SetActive( receiveErrorLogs || receiveExceptionLogs );
 
-			if( commandSuggestionsContainer.gameObject.activeSelf )
-				commandSuggestionsContainer.gameObject.SetActive( false );
-
 			// Register to UI events
-			commandInputField.onValidateInput += OnValidateCommand;
-			commandInputField.onValueChanged.AddListener( OnEditCommand );
-			commandInputField.onEndEdit.AddListener( OnEndEditCommand );
-            commandInputField.onSubmit.AddListener(OnSubmitCommand);
 			hideButton.onClick.AddListener( HideLogWindow );
 			clearButton.onClick.AddListener( ClearLogs );
 			collapseButton.GetComponent<Button>().onClick.AddListener( CollapseButtonPressed );
@@ -900,49 +859,6 @@ namespace IngameDebugConsole
 					if( snapToBottomButton.activeSelf != ( scrollPos > 1E-6f && scrollPos < 0.9999f ) )
 						snapToBottomButton.SetActive( !snapToBottomButton.activeSelf );
 				}
-
-				if( showCommandSuggestions && commandInputField.isFocused && commandInputField.caretPosition != commandInputFieldPrevCaretPos )
-					RefreshCommandSuggestions( commandInputField.text );
-
-				if( commandInputField.isFocused && commandHistory.Count > 0 )
-				{
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-					if( Keyboard.current != null )
-#endif
-					{
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-						if( Keyboard.current[Key.UpArrow].wasPressedThisFrame )
-#else
-						if( Input.GetKeyDown( KeyCode.UpArrow ) )
-#endif
-						{
-							if( commandHistoryIndex == -1 )
-							{
-								commandHistoryIndex = commandHistory.Count - 1;
-								unfinishedCommand = commandInputField.text;
-							}
-							else if( --commandHistoryIndex < 0 )
-								commandHistoryIndex = 0;
-
-							commandInputField.text = commandHistory[commandHistoryIndex];
-							commandInputField.caretPosition = commandInputField.text.Length;
-						}
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-						else if( Keyboard.current[Key.DownArrow].wasPressedThisFrame && commandHistoryIndex != -1 )
-#else
-						else if( Input.GetKeyDown( KeyCode.DownArrow ) && commandHistoryIndex != -1 )
-#endif
-						{
-							if( ++commandHistoryIndex < commandHistory.Count )
-								commandInputField.text = commandHistory[commandHistoryIndex];
-							else
-							{
-								commandHistoryIndex = -1;
-								commandInputField.text = unfinishedCommand ?? string.Empty;
-							}
-						}
-					}
-				}
 			}
 
 			if( screenDimensionsChanged )
@@ -971,9 +887,9 @@ namespace IngameDebugConsole
 			OnLogEntriesUpdated( true, true );
 
 #if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
-			// Focus on the command input field on standalone platforms when the console is opened
-			if( autoFocusOnCommandInputField )
-				StartCoroutine( ActivateCommandInputFieldCoroutine() );
+            // Focus on the command input field on standalone platforms when the console is opened
+            if (autoFocusOnCommandInputField)
+                StartCoroutine(commandInputField.ActivateCommandInputFieldCoroutine());
 #endif
 
 			isLogWindowVisible = true;
@@ -1002,36 +918,6 @@ namespace IngameDebugConsole
 
 			if( OnLogWindowHidden != null )
 				OnLogWindowHidden();
-		}
-
-		// Command field input is changed, check if command is submitted
-		private char OnValidateCommand( string text, int charIndex, char addedChar )
-		{
-			if( addedChar == '\t' ) // Autocomplete attempt
-			{
-				if( !string.IsNullOrEmpty( text ) )
-				{
-					if( string.IsNullOrEmpty( commandInputFieldAutoCompleteBase ) )
-						commandInputFieldAutoCompleteBase = text;
-
-					string autoCompletedCommand = DebugLogConsole.GetAutoCompleteCommand( commandInputFieldAutoCompleteBase, text );
-					if( !string.IsNullOrEmpty( autoCompletedCommand ) && autoCompletedCommand != text )
-					{
-						commandInputFieldAutoCompletedNow = true;
-						commandInputField.text = autoCompletedCommand;
-						commandInputField.stringPosition = autoCompletedCommand.Length;
-					}
-				}
-
-				return '\0';
-			}
-			else if( addedChar == '\n' ) // Command is submitted
-			{
-                OnSubmitCommand(text);
-				return '\0';
-			}
-
-			return addedChar;
 		}
 
 		// A debug entry is received
@@ -1447,182 +1333,6 @@ namespace IngameDebugConsole
 			}
 		}
 
-		// Show suggestions for the currently entered command
-		private void RefreshCommandSuggestions( string command )
-		{
-			if( !showCommandSuggestions )
-				return;
-
-			commandInputFieldPrevCaretPos = commandInputField.caretPosition;
-
-			// Don't recalculate the command suggestions if the input command hasn't changed (i.e. only caret's position has changed)
-			bool commandChanged = command != commandInputFieldPrevCommand;
-			bool commandNameOrParametersChanged = false;
-			if( commandChanged )
-			{
-				commandInputFieldPrevCommand = command;
-
-				matchingCommandSuggestions.Clear();
-				commandCaretIndexIncrements.Clear();
-
-				string prevCommandName = commandInputFieldPrevCommandName;
-				int numberOfParameters;
-				DebugLogConsole.GetCommandSuggestions( command, matchingCommandSuggestions, commandCaretIndexIncrements, ref commandInputFieldPrevCommandName, out numberOfParameters );
-				if( prevCommandName != commandInputFieldPrevCommandName || numberOfParameters != commandInputFieldPrevParamCount )
-				{
-					commandInputFieldPrevParamCount = numberOfParameters;
-					commandNameOrParametersChanged = true;
-				}
-			}
-
-			int caretArgumentIndex = 0;
-			int caretPos = commandInputField.caretPosition;
-			for( int i = 0; i < commandCaretIndexIncrements.Count && caretPos > commandCaretIndexIncrements[i]; i++ )
-				caretArgumentIndex++;
-
-			if( caretArgumentIndex != commandInputFieldPrevCaretArgumentIndex )
-				commandInputFieldPrevCaretArgumentIndex = caretArgumentIndex;
-			else if( !commandChanged || !commandNameOrParametersChanged )
-			{
-				// Command suggestions don't need to be updated if:
-				// a) neither the entered command nor the argument that the caret is hovering has changed
-				// b) entered command has changed but command's name hasn't changed, parameter count hasn't changed and the argument
-				//    that the caret is hovering hasn't changed (i.e. user has continued typing a parameter's value)
-				return;
-			}
-
-			if( matchingCommandSuggestions.Count == 0 )
-				OnEndEditCommand( command );
-			else
-			{
-				if( !commandSuggestionsContainer.gameObject.activeSelf )
-					commandSuggestionsContainer.gameObject.SetActive( true );
-
-				int suggestionInstancesCount = commandSuggestionInstances.Count;
-				int suggestionsCount = matchingCommandSuggestions.Count;
-
-				for( int i = 0; i < suggestionsCount; i++ )
-				{
-					if( i >= visibleCommandSuggestionInstances )
-					{
-						if( i >= suggestionInstancesCount )
-							commandSuggestionInstances.Add( Instantiate( commandSuggestionPrefab, commandSuggestionsContainer, false ) );
-						else
-							commandSuggestionInstances[i].gameObject.SetActive( true );
-
-						visibleCommandSuggestionInstances++;
-					}
-
-					ConsoleMethodInfo suggestedCommand = matchingCommandSuggestions[i];
-					sharedStringBuilder.Length = 0;
-					if( caretArgumentIndex > 0 )
-						sharedStringBuilder.Append( suggestedCommand.command );
-					else
-						sharedStringBuilder.Append( commandSuggestionHighlightStart ).Append( matchingCommandSuggestions[i].command ).Append( commandSuggestionHighlightEnd );
-
-					if( suggestedCommand.parameters.Length > 0 )
-					{
-						sharedStringBuilder.Append( " " );
-
-						// If the command name wasn't highlighted, a parameter must always be highlighted
-						int caretParameterIndex = caretArgumentIndex - 1;
-						if( caretParameterIndex >= suggestedCommand.parameters.Length )
-							caretParameterIndex = suggestedCommand.parameters.Length - 1;
-
-						for( int j = 0; j < suggestedCommand.parameters.Length; j++ )
-						{
-							if( caretParameterIndex != j )
-								sharedStringBuilder.Append( suggestedCommand.parameters[j] );
-							else
-								sharedStringBuilder.Append( commandSuggestionHighlightStart ).Append( suggestedCommand.parameters[j] ).Append( commandSuggestionHighlightEnd );
-						}
-					}
-
-					commandSuggestionInstances[i].text = sharedStringBuilder.ToString();
-				}
-
-				for( int i = visibleCommandSuggestionInstances - 1; i >= suggestionsCount; i-- )
-					commandSuggestionInstances[i].gameObject.SetActive( false );
-
-				visibleCommandSuggestionInstances = suggestionsCount;
-			}
-		}
-
-		// Command input field's text has changed
-		private void OnEditCommand( string command )
-		{
-			RefreshCommandSuggestions( command );
-
-			if( !commandInputFieldAutoCompletedNow )
-				commandInputFieldAutoCompleteBase = null;
-			else // This change was caused by autocomplete
-				commandInputFieldAutoCompletedNow = false;
-		}
-
-        // Command input field has lost focus
-        private void OnEndEditCommand(string command)
-        {
-            if (!commandSuggestionsContainer.gameObject.activeSelf)
-                return;
-
-            // Check if any command suggestion is clicked
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-            if (visibleCommandSuggestionInstances > 0 && Pointer.current != null && Pointer.current.press.wasPressedThisFrame)
-#else
-            if (visibleCommandSuggestionInstances > 0 && Input.GetMouseButtonDown(0))
-#endif
-            {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-                Vector2 pointerPosition = Pointer.current.position.ReadValue();
-#else
-                Vector2 pointerPosition = Input.mousePosition;
-#endif
-
-                Canvas canvas = commandInputField.textComponent.canvas;
-                Camera canvasCamera = (canvas.renderMode == RenderMode.ScreenSpaceOverlay || (canvas.renderMode == RenderMode.ScreenSpaceCamera && canvas.worldCamera == null)) ? null : (canvas.worldCamera != null) ? canvas.worldCamera : Camera.main;
-                if (RectTransformUtility.RectangleContainsScreenPoint(commandSuggestionsContainer, pointerPosition, canvasCamera) && RectTransformUtility.ScreenPointToLocalPointInRectangle(commandSuggestionsContainer, pointerPosition, canvasCamera, out Vector2 localPoint))
-                {
-                    /// <see cref="commandSuggestionInstances"/> have their Pivot Y set to 1 so we need localPoint to have the same pivot value.
-                    localPoint.y -= commandSuggestionsContainer.rect.height;
-
-                    for (int i = 0; i < visibleCommandSuggestionInstances; i++)
-                    {
-                        if (localPoint.y >= commandSuggestionInstances[i].rectTransform.anchoredPosition.y - commandSuggestionInstances[i].rectTransform.sizeDelta.y * commandSuggestionInstances[i].rectTransform.pivot.y)
-                        {
-                            commandInputField.text = matchingCommandSuggestions[i].command + ((matchingCommandSuggestions[i].parameters.Length > 0) ? " " : null);
-                            StartCoroutine(ActivateCommandInputFieldCoroutine());
-                            return;
-                        }
-                    }
-                }
-            }
-
-            commandSuggestionsContainer.gameObject.SetActive(false);
-        }
-
-        // Command input field has been submitted
-        private void OnSubmitCommand(string command)
-        {
-            // Clear the command field
-            if (clearCommandAfterExecution)
-                commandInputField.text = string.Empty;
-
-            if (command.Length > 0)
-            {
-                if (commandHistory.Count == 0 || commandHistory[commandHistory.Count - 1] != command)
-                    commandHistory.Add(command);
-
-                commandHistoryIndex = -1;
-                unfinishedCommand = null;
-
-                // Execute the command
-                DebugLogConsole.ExecuteCommand(command);
-
-                // Snap to bottom and select the latest entry
-                SnapToBottom = true;
-            }
-        }
-
 		// Debug window is being resized,
 		// Set the sizeDelta property of the window accordingly while
 		// preventing window dimensions from going below the minimum dimensions
@@ -1860,23 +1570,6 @@ namespace IngameDebugConsole
 			}
 #endif
 		}
-
-        private IEnumerator ActivateCommandInputFieldCoroutine()
-        {
-            yield return null;
-
-            /// Don't select the text during this automated activation of <see cref="TMP_InputField"/> because it's distracting.
-            bool onFocusSelectAll = commandInputField.onFocusSelectAll;
-            commandInputField.onFocusSelectAll = false;
-
-            commandInputField.ActivateInputField();
-
-            /// Wait for <see cref="TMP_InputField.LateUpdate"/> because input field's activation is handled there.
-            yield return null;
-
-            commandInputField.MoveTextEnd(false);
-            commandInputField.onFocusSelectAll = onFocusSelectAll;
-        }
 
 		// Pool an unused log item
 		internal void PoolLogItem( DebugLogItem logItem )
