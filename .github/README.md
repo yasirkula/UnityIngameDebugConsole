@@ -42,6 +42,10 @@ Add `ENABLE_INPUT_SYSTEM` compiler directive to **Player Settings/Scripting Defi
 
 Remove `Unity.InputSystem` assembly from **IngameDebugConsole.Runtime** Assembly Definition File's *Assembly Definition References* list.
 
+- **Android build fails with error message "D8: java.lang.NullPointerException Failed to transform IngameDebugConsole-.aar"**
+
+The plugin is using "Gradle version" `7.5.1` and "Android Gradle plug-in version" `7.4.2`. Make sure your Unity version is compatible: https://docs.unity3d.com/2021.3/Documentation/Manual/android-gradle-overview.html
+
 - **"Receive Logcat Logs In Android" isn't working, it says "java.lang.ClassNotFoundException: com.yasirkula.unity.DebugConsoleLogcatLogger" in Logcat**
 
 If you are sure that your plugin is up-to-date, then enable **Custom Proguard File** option from *Player Settings* and add the following line to that file: `-keep class com.yasirkula.unity.* { *; }`

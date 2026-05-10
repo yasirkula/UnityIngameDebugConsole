@@ -1,0 +1,20 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace = 'com.yasirkula.ingamedebugconsole'
+    compileSdk = 33
+
+    defaultConfig {
+        minSdk = 19
+        consumerProguardFiles "consumer-rules.pro"
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+}

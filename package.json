@@ -1,7 +1,12 @@
 {
   "name": "com.yasirkula.ingamedebugconsole",
   "displayName": "In-game Debug Console",
-  "version": "1.8.6",
+  "version": "1.8.7",
+  "author": {
+    "name": "yasirkula",
+    "email": "yasirkula@gmail.com",
+    "url": "https://github.com/yasirkula"
+  },
   "documentationUrl": "https://github.com/yasirkula/UnityIngameDebugConsole",
   "changelogUrl": "https://github.com/yasirkula/UnityIngameDebugConsole/releases",
   "licensesUrl": "https://github.com/yasirkula/UnityIngameDebugConsole/blob/master/LICENSE.txt",
