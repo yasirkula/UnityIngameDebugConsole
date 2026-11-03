@@ -47,6 +47,7 @@ namespace IngameDebugConsole
         private string autoCompleteBase;
         /// <summary><c>true</c> immediately after the user presses Tab to initiate auto-complete.</summary>
         private bool hasAutoCompletedNow;
+        private int lastAutoCompleteFrame = -1;
 
         /// <summary>History of the previously entered commands.</summary>
         private CircularBuffer<string> commandHistory;
@@ -206,6 +207,12 @@ namespace IngameDebugConsole
         {
             if (addedChar == '\t') // Autocomplete attempt
             {
+                // onValidateInput can be invoked twice for one Tab press.
+                if (Time.frameCount == lastAutoCompleteFrame)
+                    return '\0';
+
+                lastAutoCompleteFrame = Time.frameCount;
+
                 if (!string.IsNullOrEmpty(command))
                 {
                     if (string.IsNullOrEmpty(autoCompleteBase))
