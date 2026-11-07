@@ -1,4 +1,4 @@
-= In-game Debug Console (v1.9.0) =
+= In-game Debug Console (v1.9.1) =
 
 Documentation: https://github.com/yasirkula/UnityIngameDebugConsole
 FAQ: https://github.com/yasirkula/UnityIngameDebugConsole#faq

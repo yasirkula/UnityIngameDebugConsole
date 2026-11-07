@@ -152,13 +152,7 @@ namespace IngameDebugConsole
                         if (poppedEvent.character == 0 && poppedEvent.modifiers == EventModifiers.None && CompositionLength() == 0 && IsCompositionActive() == true)
                             break;
 
-                        char ch = poppedEvent.keyCode switch
-                        {
-                            KeyCode.Return or KeyCode.KeypadEnter => '\n',
-                            KeyCode.Tab => '\t',
-                            _ => poppedEvent.character,
-                        };
-
+                        char ch = poppedEvent.character;
                         if (ch == '\t' || ch == '\n')
                             Append(ch);
                         else if (KeyPressed(poppedEvent) == EditState.Finish)
