@@ -70,6 +70,12 @@ namespace IngameDebugConsole
             if (listView.manager.logItemFontOverride != null)
                 logText.font = listView.manager.logItemFontOverride;
 
+            // TextMeshPro always converts \uXXXX and \UXXXXXXXX sequences to single characters, even when parseCtrlCharacters is disabled.
+            // TextMeshPro's missing character warning contains such a sequence, so displaying that warning here logs the same warning again, forever.
+            // parseCtrlCharacters is enabled so that "\\" is rendered as a single backslash, and SetText doubles every backslash in the log.
+            // Because of this, log text must always be assigned via SetText (assigning it directly would also interpret \n, \t, etc.).
+            logText.parseCtrlCharacters = true;
+
 			copyLogButton.onClick.AddListener( CopyLog );
 #if !UNITY_EDITOR && UNITY_WEBGL
 			copyLogButton.gameObject.AddComponent<DebugLogItemCopyWebGL>().Initialize( this );
@@ -140,46 +146,53 @@ namespace IngameDebugConsole
 				SetText( logEntry, timestamp, isExpanded );
 		}
 
+        // Displays the log exactly as it was logged, without letting TextMeshPro interpret escape sequences in it
         private void SetText(DebugLogEntry logEntry, DebugLogEntryTimestamp? logEntryTimestamp, bool isExpanded)
         {
             string text = isExpanded ? logEntry.ToString() : logEntry.logString;
             int maxLogLength = isExpanded ? listView.manager.maxExpandedLogLength : listView.manager.maxCollapsedLogLength;
 
-            if (!logEntryTimestamp.HasValue || (!isExpanded && !listView.manager.alwaysDisplayTimestamps))
-            {
-                if (text.Length <= maxLogLength)
-                    logText.text = text;
-                else
-                {
-                    if (listView.manager.textBuffer.Length < maxLogLength)
-                        listView.manager.textBuffer = new char[maxLogLength];
+            StringBuilder sb = listView.manager.sharedStringBuilder;
+            sb.Length = 0;
 
-                    text.CopyTo(0, listView.manager.textBuffer, 0, maxLogLength);
-                    logText.SetText(listView.manager.textBuffer, 0, maxLogLength);
-                }
-            }
-            else
+            if (logEntryTimestamp.HasValue && (isExpanded || listView.manager.alwaysDisplayTimestamps))
             {
-                StringBuilder sb = listView.manager.sharedStringBuilder;
-                sb.Length = 0;
-
                 if (isExpanded)
                 {
                     logEntryTimestamp.Value.AppendFullTimestamp(sb);
-                    sb.Append(": ").Append(text, 0, Mathf.Min(text.Length, maxLogLength - sb.Length));
+                    sb.Append(": ");
                 }
                 else
                 {
                     logEntryTimestamp.Value.AppendTime(sb);
-                    sb.Append(" ").Append(text, 0, Mathf.Min(text.Length, maxLogLength - sb.Length));
+                    sb.Append(" ");
                 }
-
-                if (listView.manager.textBuffer.Length < sb.Length)
-                    listView.manager.textBuffer = new char[sb.Length];
-
-                sb.CopyTo(0, listView.manager.textBuffer, 0, sb.Length);
-                logText.SetText(listView.manager.textBuffer, 0, sb.Length);
             }
+
+            AppendWithEscapedBackslashes(sb, text, Mathf.Min(text.Length, maxLogLength - sb.Length));
+
+            if (listView.manager.textBuffer.Length < sb.Length)
+                listView.manager.textBuffer = new char[sb.Length];
+
+            sb.CopyTo(0, listView.manager.textBuffer, 0, sb.Length);
+            logText.SetText(listView.manager.textBuffer, 0, sb.Length);
+        }
+
+        // Appends the first 'length' characters of 'text' to 'sb' while doubling every backslash.
+        // 'length' is counted before doubling, so logs are still truncated at the same position as before.
+        private static void AppendWithEscapedBackslashes(StringBuilder sb, string text, int length)
+        {
+            int start = 0;
+            for (int i = 0; i < length; i++)
+            {
+                if (text[i] == '\\')
+                {
+                    sb.Append(text, start, i + 1 - start).Append('\\');
+                    start = i + 1;
+                }
+            }
+
+            sb.Append(text, start, length - start);
         }
 
 		// This log item is clicked, show the debug entry's stack trace
