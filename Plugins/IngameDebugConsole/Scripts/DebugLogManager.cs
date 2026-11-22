@@ -936,6 +936,11 @@ namespace IngameDebugConsole
 				case LogType.Exception: if( !receiveExceptionLogs ) return; break;
 			}
 
+			// Ignore TextMeshPro's missing character warnings that come from log items. They contain \uXXXX sequences that TextMeshPro converts even if parseCtrlCharacters
+			// is disabled, so displaying them would log the same warnings again, forever. Log items also log them again whenever they're scrolled into view
+			if( logType == LogType.Warning && logString != null && logString.StartsWith( "The character with Unicode value", System.StringComparison.Ordinal ) && logString.EndsWith( "[LogText].", System.StringComparison.Ordinal ) )
+				return;
+
 			QueuedDebugLogEntry queuedLogEntry = new QueuedDebugLogEntry( logString, stackTrace, logType );
 			DebugLogEntryTimestamp queuedLogEntryTimestamp;
 			if( queuedLogEntriesTimestamps != null )
